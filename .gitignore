@@ -1,0 +1,4 @@
+scratches/
+*.env
+dist/
+.coverage*

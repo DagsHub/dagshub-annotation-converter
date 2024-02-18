@@ -1,0 +1,96 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dagshub-annotation-converter"
+dynamic = ["version"]
+description = 'Annotation converter between different formats'
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "Kirill Bolashev", email = "kirill@dagshub.com" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+  "pydantic",
+  "pyyaml",
+  "typing_extensions",
+  "pandas",
+  "pillow",
+]
+
+[project.urls]
+Documentation = "https://github.com/dagshub/dagshub-annotation-converter#readme"
+Issues = "https://github.com/dagshub/dagshub-annotation-converter/issues"
+Source = "https://github.com/dagshub/dagshub-annotation-converter"
+
+[tool.hatch.version]
+path = "dagshub_annotation_converter/__init__.py"
+
+[tool.hatch.envs.default]
+dependencies = [
+  "coverage[toml]>=6.5",
+  "pytest",
+  "pandas-stubs",
+  "types-pillow",
+  "types-pyyaml",
+]
+
+[tool.hatch.envs.default.scripts]
+test = "pytest {args:tests}"
+test-cov = "coverage run -m pytest {args:tests}"
+cov-report = [
+  "- coverage combine",
+  "coverage report",
+]
+cov = [
+  "test-cov",
+  "cov-report",
+]
+
+[[tool.hatch.envs.all.matrix]]
+python = ["3.8", "3.9", "3.10", "3.11", "3.12"]
+
+[tool.hatch.envs.types]
+dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/dagshub_annotation_converter tests}"
+
+[tool.coverage.run]
+source_pkgs = ["dagshub_annotation_converter", "tests"]
+branch = true
+parallel = true
+omit = [
+  "dagshub_annotation_converter/__init__.py",
+]
+
+[tool.coverage.paths]
+dagshub_annotation_converter = ["dagshub_annotation_converter", "*/dagshub-annotation-converter/src/dagshub_annotation_converter"]
+tests = ["tests", "*/dagshub-annotation-converter/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+
+[tool.mypy]
+exclude = [
+  "^scratches/**"
+]
