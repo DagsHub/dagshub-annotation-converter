@@ -63,6 +63,9 @@ class DagshubDatasourceExporter:
         self.ds.upload_metadata_from_dataframe(df)
         self.ds.metadata_field(self.annotation_field).set_annotation().apply()
 
+        logger.warning(f"Uploaded annotations to datasource [{self.ds.source.name}]"
+                       f" of repo [{self.ds.source.repoApi.full_name}]")
+
     def convert_annotated_file(self, f: AnnotatedFile) -> LabelStudioTask:
         task = LabelStudioTask()
         for ann in f.annotations:

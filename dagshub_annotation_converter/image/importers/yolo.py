@@ -44,6 +44,7 @@ class YoloImporter:
         project = AnnotationProject()
         project.categories = self._parse_categories()
         self._parse_images(project)
+        logger.warning(f"Imported {len(project.files)} YOLO annotations.")
         return project
 
     def _parse_categories(self) -> Categories:
