@@ -32,13 +32,28 @@ logger = logging.getLogger(__name__)
 
 class DagshubDatasourceExporter:
     def __init__(
-        self, datasource: "Datasource", annotation_field="exported_annotation"
+        self,
+        datasource: "Datasource",
+        annotation_field="exported_annotation",
+        upload_classes=True
     ):
+        """
+
+        :param datasource: Datasource to upload to
+        :param annotation_field: Annotation field to fill
+        :param upload_classes: If True, adds the classes to a <annotation_field>_classes field
+        """
+
         self.ds = datasource
         self.annotation_field = annotation_field
+        self.upload_classes = upload_classes
+
+    @property
+    def _annotation_classes_field(self):
+        return f"{self.annotation_field}_classes"
 
     def export(self, project: AnnotationProject):
-        res: list[tuple[str, bytes]] = []
+        res: list[tuple] = []
 
         for f in project.files:
             # TODO: make sure this works with:
@@ -56,10 +71,15 @@ class DagshubDatasourceExporter:
             task.data[
                 "image"
             ] = download_path  # Required for correctly loading the dp image
-            res.append((str(relpath), task.model_dump_json().encode()))
+            data = [str(relpath), task.model_dump_json().encode()]
+            if self.upload_classes:
+                data.append(", ".join([cat.name for cat in f.categories]))
+            res.append(tuple(data))
+        columns = ["path", self.annotation_field]
+        if self.upload_classes:
+            columns.append(self._annotation_classes_field)
 
-        # print(res)
-        df = pd.DataFrame(res, columns=["path", self.annotation_field])
+        df = pd.DataFrame(res, columns=columns)
         self.ds.upload_metadata_from_dataframe(df)
         self.ds.metadata_field(self.annotation_field).set_annotation().apply()
 

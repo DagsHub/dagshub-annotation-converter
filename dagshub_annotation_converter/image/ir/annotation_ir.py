@@ -152,6 +152,16 @@ class AnnotatedFile(BaseModel):
     image_width: Optional[int] = None
     image_height: Optional[int] = None
 
+    @property
+    def categories(self) -> List[Category]:
+        res = []
+        for ann in self.annotations:
+            if hasattr(ann, "category"):
+                category = ann.category
+                if category not in res:
+                    res.append(category)
+        return res
+
 
 class AnnotationProject(BaseModel):
     categories: Categories = Categories()
