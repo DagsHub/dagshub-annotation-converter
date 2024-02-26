@@ -2,7 +2,7 @@ import datetime
 import random
 import sys
 import uuid
-from typing import Any
+from typing import Any, Sequence
 
 from pydantic import BaseModel, SerializeAsAny, Field
 
@@ -28,3 +28,7 @@ class LabelStudioTask(BaseModel):
         if len(self.annotations) == 0:
             self.annotations.append(AnnotationsContainer())
         self.annotations[0].result.append(annotation)
+
+    def add_annotations(self, annotations: Sequence[AnnotationResultABC]):
+        for ann in annotations:
+            self.add_annotation(ann)

@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from enum import Enum
 from os import PathLike
-from typing import List, Optional, Union, Dict
+from typing import List, Optional, Union, Dict, Any
 from typing_extensions import Self
 
 from pydantic import BaseModel
@@ -146,6 +146,64 @@ class SegmentationAnnotation(AnnotationABC):
         self.points.append(SegmentationPoint(x=x, y=y))
 
 
+class KeyPoint(BaseModel):
+    x: float
+    y: float
+    is_visible: Optional[bool] = None
+
+
+class PoseAnnotation(AnnotationABC):
+    category: Category
+
+    # Parameters of the bounding box
+    top: float
+    left: float
+    width: float
+    height: float
+
+    points: List[KeyPoint] = []
+    state: NormalizationState = NormalizationState.DENORMALIZED
+
+    def normalized(self, image_width: int, image_height: int) -> Self:
+        if self.state == NormalizationState.NORMALIZED:
+            return self.copy()
+
+        res: "Self" = self.copy()
+        new_points: List[KeyPoint] = [point.copy() for point in self.points]
+        for point in new_points:
+            point.x = point.x / image_width
+            point.y = point.y / image_height
+
+        res.top = res.top / image_height
+        res.left = res.left / image_width
+        res.width = res.width / image_width
+        res.height = res.height / image_height
+        res.state = NormalizationState.NORMALIZED
+
+        return res
+
+    def denormalized(self, image_width: int, image_height: int) -> Self:
+        if self.state == NormalizationState.DENORMALIZED:
+            return self.copy()
+
+        res: "Self" = self.copy()
+        new_points: List[KeyPoint] = [point.copy() for point in self.points]
+        for point in new_points:
+            point.x = point.x * image_width
+            point.y = point.y * image_height
+
+        res.top = res.top * image_height
+        res.left = res.left * image_width
+        res.width = res.width * image_width
+        res.height = res.height * image_height
+        res.state = NormalizationState.DENORMALIZED
+
+        return res
+
+    def add_point(self, x: float, y: float, is_visible: Optional[bool]):
+        self.points.append(KeyPoint(x=x, y=y, is_visible=is_visible))
+
+
 class AnnotatedFile(BaseModel):
     file: PathLike
     annotations: List[AnnotationABC] = []
@@ -166,3 +224,4 @@ class AnnotatedFile(BaseModel):
 class AnnotationProject(BaseModel):
     categories: Categories = Categories()
     files: List[AnnotatedFile] = []
+    additional_metadata: Dict[str, Any] = {}

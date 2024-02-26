@@ -1,19 +1,21 @@
 import logging
 import urllib.parse
 from pathlib import PurePosixPath
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Tuple, Sequence
 
 from dagshub_annotation_converter.image.ir.annotation_ir import (
     AnnotationProject,
     AnnotatedFile,
     AnnotationABC,
     SegmentationAnnotation,
-    BBoxAnnotation,
+    BBoxAnnotation, PoseAnnotation,
 )
 
 import pandas as pd
 
 from dagshub_annotation_converter.schema.label_studio.abc import AnnotationResultABC
+from dagshub_annotation_converter.schema.label_studio.keypointlabels import KeyPointLabelsAnnotation, \
+    KeyPointLabelsAnnotationValue
 from dagshub_annotation_converter.schema.label_studio.polygonlabels import (
     PolygonLabelsAnnotation,
     PolygonLabelsAnnotationValue,
@@ -32,10 +34,10 @@ logger = logging.getLogger(__name__)
 
 class DagshubDatasourceExporter:
     def __init__(
-        self,
-        datasource: "Datasource",
-        annotation_field="exported_annotation",
-        upload_classes=True
+            self,
+            datasource: "Datasource",
+            annotation_field="exported_annotation",
+            upload_classes=True
     ):
         """
 
@@ -89,22 +91,25 @@ class DagshubDatasourceExporter:
     def convert_annotated_file(self, f: AnnotatedFile) -> LabelStudioTask:
         task = LabelStudioTask()
         for ann in f.annotations:
-            task.add_annotation(self.convert_annotation(f, ann))
+            task.add_annotations(self.convert_annotation(f, ann))
         return task
 
     def convert_annotation(
-        self, f: AnnotatedFile, annotation: AnnotationABC
-    ) -> AnnotationResultABC:
+            self, f: AnnotatedFile, annotation: AnnotationABC
+    ) -> Sequence[AnnotationResultABC]:
         # Todo: dynamic dispatch
         if isinstance(annotation, SegmentationAnnotation):
-            return self.convert_segmentation(f, annotation)
+            return [self.convert_segmentation(f, annotation)]
         if isinstance(annotation, BBoxAnnotation):
-            return self.convert_bbox(f, annotation)
+            return [self.convert_bbox(f, annotation)]
+        if isinstance(annotation, PoseAnnotation):
+            bbox, keypoints = self.convert_pose(f, annotation)
+            return [bbox, *keypoints]
         raise RuntimeError(f"Unknown type: {type(annotation)}")
 
     @staticmethod
     def convert_segmentation(
-        f: AnnotatedFile, annotation: SegmentationAnnotation
+            f: AnnotatedFile, annotation: SegmentationAnnotation
     ) -> PolygonLabelsAnnotation:
         assert f.image_width is not None
         assert f.image_height is not None
@@ -124,7 +129,7 @@ class DagshubDatasourceExporter:
 
     @staticmethod
     def convert_bbox(
-        f: AnnotatedFile, annotation: BBoxAnnotation
+            f: AnnotatedFile, annotation: BBoxAnnotation
     ) -> RectangleLabelsAnnotation:
         assert f.image_width is not None
         assert f.image_height is not None
@@ -144,3 +149,42 @@ class DagshubDatasourceExporter:
             value=value,
         )
         return res
+
+    @staticmethod
+    def convert_pose(
+            f: AnnotatedFile, annotation: PoseAnnotation
+    ) -> Tuple[RectangleLabelsAnnotation, List[KeyPointLabelsAnnotation]]:
+        assert f.image_width is not None
+        assert f.image_height is not None
+
+        annotation = annotation.normalized(f.image_width, f.image_height)
+        value = RectangleLabelsAnnotationValue(
+            x=annotation.left * 100,
+            y=annotation.top * 100,
+            width=annotation.width * 100,
+            height=annotation.height * 100,
+            rectanglelabels=[annotation.category.name],
+        )
+        bbox = RectangleLabelsAnnotation(
+            original_width=f.image_width,
+            original_height=f.image_height,
+            image_rotation=0.0,
+            value=value,
+        )
+
+        keypoints: List[KeyPointLabelsAnnotation] = []
+        for kp in annotation.points:
+            # Ignore explicitly invisible points
+            if kp.is_visible is not None and not kp.is_visible:
+                continue
+            kp_val = KeyPointLabelsAnnotationValue(x=kp.x * 100, y=kp.y * 100, width=1.0,
+                                                   keypointlabels=[annotation.category.name])
+            ann = KeyPointLabelsAnnotation(
+                original_width=f.image_width,
+                original_height=f.image_height,
+                image_rotation=0.0,
+                value=kp_val,
+            )
+            keypoints.append(ann)
+
+        return bbox, keypoints

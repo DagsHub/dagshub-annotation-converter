@@ -2,7 +2,7 @@ import logging
 import os
 from os import PathLike
 from pathlib import Path
-from typing import Union, Literal, Tuple
+from typing import Union, Literal, Tuple, Dict, Optional
 
 import yaml
 from PIL import Image
@@ -13,7 +13,7 @@ from dagshub_annotation_converter.image.ir.annotation_ir import (
     AnnotatedFile,
     SegmentationAnnotation,
     BBoxAnnotation,
-    NormalizationState, AnnotationABC,
+    NormalizationState, AnnotationABC, PoseAnnotation,
 )
 from dagshub_annotation_converter.image.util import is_image, get_extension
 
@@ -22,13 +22,13 @@ logger = logging.getLogger(__name__)
 
 class YoloImporter:
     def __init__(
-        self,
-        data_dir: Union[str, PathLike],
-        annotation_type: Literal["bbox", "segmentation"],
-        image_dir_name: str = "images",
-        label_dir_name: str = "labels",
-        label_extension: str = ".txt",
-        meta_file: Union[str, PathLike] = "annotations.yaml",
+            self,
+            data_dir: Union[str, PathLike],
+            annotation_type: Literal["bbox", "segmentation", "pose"],
+            image_dir_name: str = "images",
+            label_dir_name: str = "labels",
+            label_extension: str = ".txt",
+            meta_file: Union[str, PathLike] = "annotations.yaml",
     ):
         # TODO: handle colocated annotations (in the same dir)
         self.data_dir = data_dir
@@ -42,16 +42,22 @@ class YoloImporter:
 
     def parse(self) -> AnnotationProject:
         project = AnnotationProject()
-        project.categories = self._parse_categories()
+        self._parse_yolo_meta(project)
         self._parse_images(project)
         logger.warning(f"Imported {len(project.files)} YOLO annotations.")
         return project
 
-    def _parse_categories(self) -> Categories:
+    def _parse_yolo_meta(self, project: AnnotationProject):
         with open(self.meta_file) as f:
             meta_dict = yaml.safe_load(f)
+        project.categories = self._parse_categories(meta_dict)
+        if self.annotation_type == "pose":
+            project.additional_metadata["yolo_keypoint_shape"] = meta_dict["kpt_shape"]
+            project.additional_metadata["yolo_flip_idx"] = meta_dict.get("flip_idx")
+
+    def _parse_categories(self, yolo_meta: Dict) -> Categories:
         categories = Categories()
-        for cat_id, cat_name in meta_dict["names"].items():
+        for cat_id, cat_name in yolo_meta["names"].items():
             categories.add(cat_name, cat_id)
         return categories
 
@@ -85,7 +91,7 @@ class YoloImporter:
         return Path(*new_parts)
 
     def _parse_annotation(
-        self, img: Path, annotation: Path, project: AnnotationProject
+            self, img: Path, annotation: Path, project: AnnotationProject
     ) -> AnnotatedFile:
         res = AnnotatedFile(file=img)
         res.image_width, res.image_height = self._get_image_dimensions(img)
@@ -97,6 +103,10 @@ class YoloImporter:
                     ann = self._parse_segment(line, project.categories)
                 elif self.annotation_type == "bbox":
                     ann = self._parse_bbox(line, project.categories)
+                elif self.annotation_type == "pose":
+                    # dimensions is either 2 or 3, [x, y, (optional) visibility]
+                    keypoint_dimensions = project.additional_metadata["yolo_keypoint_shape"][1]
+                    ann = self._parse_pose(line, project.categories, keypoint_dimensions)
                 else:
                     raise RuntimeError(
                         f"Unknown annotation type [{self.annotation_type}]"
@@ -136,8 +146,7 @@ class YoloImporter:
         width = float(vals[3])
         height = float(vals[4])
 
-        top = middle_y - height / 2.0
-        left = middle_x - width / 2.0
+        top, left, width, height = YoloImporter._convert_bbox_from_middle_to_top_left(middle_x, middle_y, width, height)
 
         res = BBoxAnnotation(
             top=top,
@@ -150,9 +159,57 @@ class YoloImporter:
         return res
 
     @staticmethod
+    def _parse_pose(line: str, categories: Categories, keypoint_dimensions: int) -> PoseAnnotation:
+        vals = line.split()
+        category = categories.get(int(vals[0]))
+        if category is None:
+            raise RuntimeError(
+                f"Unknown category {category}. Imported categories from the .yaml: {categories}"
+            )
+        middle_x = float(vals[1])
+        middle_y = float(vals[2])
+        width = float(vals[3])
+        height = float(vals[4])
+
+        top, left, width, height = YoloImporter._convert_bbox_from_middle_to_top_left(middle_x, middle_y, width, height)
+
+        res = PoseAnnotation(
+            category=category,
+            top=top,
+            left=left,
+            width=width,
+            height=height,
+            state=NormalizationState.NORMALIZED,
+        )
+
+        for i in range(5, len(vals) - 1, keypoint_dimensions):
+            x = float(vals[i])
+            y = float(vals[i + 1])
+            is_visible: Optional[bool] = None
+            if keypoint_dimensions == 3:
+                is_visible = float(vals[i + 2]) > 0
+            res.add_point(x, y, is_visible)
+
+        return res
+
+
+    @staticmethod
     def _get_image_dimensions(filepath: Path) -> Tuple[int, int]:
         with Image.open(filepath) as img:
             return img.width, img.height
+
+    @staticmethod
+    def _convert_bbox_from_middle_to_top_left(middle_x: float, middle_y: float, width: float, height: float) -> Tuple[float, float, float, float]:
+        """
+        Converts the YOLO bbox format which has the point in the middle, to a bbox with the point in the top-left
+        Returns:
+             top, left, width, height
+        """
+        top = middle_y - height / 2.0
+        left = middle_x - width / 2.0
+
+        return top, left, width, height
+
 
 
 if __name__ == "__main__":
