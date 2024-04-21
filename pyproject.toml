@@ -47,6 +47,8 @@ dependencies = [
   "pandas-stubs",
   "types-pillow",
   "types-pyyaml",
+  "types-lxml",
+  "lxml-stubs",
 ]
 
 [tool.hatch.envs.default.scripts]
@@ -67,6 +69,7 @@ python = ["3.8", "3.9", "3.10", "3.11", "3.12"]
 [tool.hatch.envs.types]
 dependencies = [
   "mypy>=1.0.0",
+  "ruff>=0.3.7",
 ]
 [tool.hatch.envs.types.scripts]
 check = "mypy --install-types --non-interactive {args:src/dagshub_annotation_converter tests}"

@@ -3,19 +3,24 @@ import urllib.parse
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, List, Tuple, Sequence
 
+from dagshub.data_engine import dtypes
+
 from dagshub_annotation_converter.image.ir.annotation_ir import (
     AnnotationProject,
     AnnotatedFile,
     AnnotationABC,
     SegmentationAnnotation,
-    BBoxAnnotation, PoseAnnotation,
+    BBoxAnnotation,
+    PoseAnnotation,
 )
 
 import pandas as pd
 
 from dagshub_annotation_converter.schema.label_studio.abc import AnnotationResultABC
-from dagshub_annotation_converter.schema.label_studio.keypointlabels import KeyPointLabelsAnnotation, \
-    KeyPointLabelsAnnotationValue
+from dagshub_annotation_converter.schema.label_studio.keypointlabels import (
+    KeyPointLabelsAnnotation,
+    KeyPointLabelsAnnotationValue,
+)
 from dagshub_annotation_converter.schema.label_studio.polygonlabels import (
     PolygonLabelsAnnotation,
     PolygonLabelsAnnotationValue,
@@ -34,21 +39,27 @@ logger = logging.getLogger(__name__)
 
 class DagshubDatasourceExporter:
     def __init__(
-            self,
-            datasource: "Datasource",
-            annotation_field="exported_annotation",
-            upload_classes=True
+        self,
+        datasource: "Datasource",
+        annotation_field="exported_annotation",
+        upload_classes=True,
+        relativize_paths=True,
     ):
         """
 
         :param datasource: Datasource to upload to
         :param annotation_field: Annotation field to fill
         :param upload_classes: If True, adds the classes to a <annotation_field>_classes field
+        :param relativize_paths: If True, tries to relativize the paths of the datapoints relative to their path in repo
+            If False, the paths are inserted as is.
+            Toggle this off only if you're 100% sure that the paths of the annotations
+            are the same as the paths in the datasource
         """
 
         self.ds = datasource
         self.annotation_field = annotation_field
         self.upload_classes = upload_classes
+        self.relativize_paths = relativize_paths
 
     @property
     def _annotation_classes_field(self):
@@ -62,18 +73,17 @@ class DagshubDatasourceExporter:
             # - absolute paths
             # - bucket datasources
             fpath = PurePosixPath(f.file)
-            try:
-                relpath = fpath.relative_to(self.ds.source.source_prefix)
-            except:
-                logger.warning(f"File {fpath} is not part of the datasource, skipping")
-                continue
+            if self.relativize_paths:
+                try:
+                    fpath = fpath.relative_to(self.ds.source.source_prefix)
+                except:
+                    logger.warning(f"File {fpath} is not part of the datasource, skipping")
+                    continue
             task = self.convert_annotated_file(f)
-            download_url = self.ds.source.raw_path(str(relpath))
+            download_url = self.ds.source.raw_path(str(fpath))
             download_path = urllib.parse.urlparse(download_url).path
-            task.data[
-                "image"
-            ] = download_path  # Required for correctly loading the dp image
-            data = [str(relpath), task.model_dump_json().encode()]
+            task.data["image"] = download_path  # Required for correctly loading the dp image
+            data = [str(fpath), task.model_dump_json().encode()]
             if self.upload_classes:
                 data.append(", ".join([cat.name for cat in f.categories]))
             res.append(tuple(data))
@@ -83,10 +93,12 @@ class DagshubDatasourceExporter:
 
         df = pd.DataFrame(res, columns=columns)
         self.ds.upload_metadata_from_dataframe(df)
-        self.ds.metadata_field(self.annotation_field).set_annotation().apply()
+        self.ds.metadata_field(self.annotation_field).set_type(dtypes.Blob).set_annotation().apply()
 
-        logger.warning(f"Uploaded annotations to datasource [{self.ds.source.name}]"
-                       f" of repo [{self.ds.source.repoApi.full_name}]")
+        logger.warning(
+            f"Uploaded annotations to datasource [{self.ds.source.name}]"
+            f" of repo [{self.ds.source.repoApi.full_name}]"
+        )
 
     def convert_annotated_file(self, f: AnnotatedFile) -> LabelStudioTask:
         task = LabelStudioTask()
@@ -94,9 +106,7 @@ class DagshubDatasourceExporter:
             task.add_annotations(self.convert_annotation(f, ann))
         return task
 
-    def convert_annotation(
-            self, f: AnnotatedFile, annotation: AnnotationABC
-    ) -> Sequence[AnnotationResultABC]:
+    def convert_annotation(self, f: AnnotatedFile, annotation: AnnotationABC) -> Sequence[AnnotationResultABC]:
         # Todo: dynamic dispatch
         if isinstance(annotation, SegmentationAnnotation):
             return [self.convert_segmentation(f, annotation)]
@@ -108,17 +118,13 @@ class DagshubDatasourceExporter:
         raise RuntimeError(f"Unknown type: {type(annotation)}")
 
     @staticmethod
-    def convert_segmentation(
-            f: AnnotatedFile, annotation: SegmentationAnnotation
-    ) -> PolygonLabelsAnnotation:
+    def convert_segmentation(f: AnnotatedFile, annotation: SegmentationAnnotation) -> PolygonLabelsAnnotation:
         assert f.image_width is not None
         assert f.image_height is not None
 
         annotation = annotation.normalized(f.image_width, f.image_height)
         points = [[p.x * 100, p.y * 100] for p in annotation.points]
-        value = PolygonLabelsAnnotationValue(
-            points=points, polygonlabels=[annotation.category.name]
-        )
+        value = PolygonLabelsAnnotationValue(points=points, polygonlabels=[annotation.category.name])
         res = PolygonLabelsAnnotation(
             original_width=f.image_width,
             original_height=f.image_height,
@@ -128,9 +134,7 @@ class DagshubDatasourceExporter:
         return res
 
     @staticmethod
-    def convert_bbox(
-            f: AnnotatedFile, annotation: BBoxAnnotation
-    ) -> RectangleLabelsAnnotation:
+    def convert_bbox(f: AnnotatedFile, annotation: BBoxAnnotation) -> RectangleLabelsAnnotation:
         assert f.image_width is not None
         assert f.image_height is not None
 
@@ -152,7 +156,7 @@ class DagshubDatasourceExporter:
 
     @staticmethod
     def convert_pose(
-            f: AnnotatedFile, annotation: PoseAnnotation
+        f: AnnotatedFile, annotation: PoseAnnotation
     ) -> Tuple[RectangleLabelsAnnotation, List[KeyPointLabelsAnnotation]]:
         assert f.image_width is not None
         assert f.image_height is not None
@@ -177,8 +181,10 @@ class DagshubDatasourceExporter:
             # Ignore explicitly invisible points
             if kp.is_visible is not None and not kp.is_visible:
                 continue
-            kp_val = KeyPointLabelsAnnotationValue(x=kp.x * 100, y=kp.y * 100, width=1.0,
-                                                   keypointlabels=[annotation.category.name])
+
+            kp_val = KeyPointLabelsAnnotationValue(
+                x=kp.x * 100, y=kp.y * 100, width=1.0, keypointlabels=[annotation.category.name]
+            )
             ann = KeyPointLabelsAnnotation(
                 original_width=f.image_width,
                 original_height=f.image_height,
