@@ -38,11 +38,24 @@ class Categories(BaseModel):
         except KeyError:
             return default
 
-    def add(self, name: str, id: Optional[int] = None):
+    def get_or_create(self, name: str) -> Category:
+        if name not in self:
+            return self.add(name)
+        return self[name]
+
+    def __contains__(self, item: str):
+        return item in self._name_lookup
+
+    def add(self, name: str, id: Optional[int] = None) -> Category:
         if id is None:
-            id = max(self._id_lookup.keys()) + 1
-        self.categories.append(Category(name=name, id=id))
+            if len(self._id_lookup):
+                id = max(self._id_lookup.keys()) + 1
+            else:
+                id = 1
+        new_category = Category(name=name, id=id)
+        self.categories.append(new_category)
         self.regenerate_dicts()
+        return new_category
 
     def regenerate_dicts(self):
         self._id_lookup = {k.id: k for k in self.categories}
@@ -122,10 +135,7 @@ class SegmentationAnnotation(AnnotationABC):
 
         return SegmentationAnnotation(
             category=self.category,
-            points=[
-                SegmentationPoint(x=p.x * image_width, y=p.y * image_height)
-                for p in self.points
-            ],
+            points=[SegmentationPoint(x=p.x * image_width, y=p.y * image_height) for p in self.points],
             state=NormalizationState.DENORMALIZED,
         )
 
@@ -135,10 +145,7 @@ class SegmentationAnnotation(AnnotationABC):
 
         return SegmentationAnnotation(
             category=self.category,
-            points=[
-                SegmentationPoint(x=p.x / image_width, y=p.y / image_height)
-                for p in self.points
-            ],
+            points=[SegmentationPoint(x=p.x / image_width, y=p.y / image_height) for p in self.points],
             state=NormalizationState.NORMALIZED,
         )
 
@@ -178,6 +185,7 @@ class PoseAnnotation(AnnotationABC):
         res.left = res.left / image_width
         res.width = res.width / image_width
         res.height = res.height / image_height
+        res.points = new_points
         res.state = NormalizationState.NORMALIZED
 
         return res
@@ -196,6 +204,7 @@ class PoseAnnotation(AnnotationABC):
         res.left = res.left * image_width
         res.width = res.width * image_width
         res.height = res.height * image_height
+        res.points = new_points
         res.state = NormalizationState.DENORMALIZED
 
         return res
@@ -203,9 +212,29 @@ class PoseAnnotation(AnnotationABC):
     def add_point(self, x: float, y: float, is_visible: Optional[bool]):
         self.points.append(KeyPoint(x=x, y=y, is_visible=is_visible))
 
+    @staticmethod
+    def from_points(category: Category, points: List[KeyPoint], state: NormalizationState) -> "PoseAnnotation":
+        point_xs = list(map(lambda p: p.x, points))
+        point_ys = list(map(lambda p: p.y, points))
+
+        min_x = min(point_xs)
+        max_x = max(point_xs)
+        min_y = min(point_ys)
+        max_y = max(point_ys)
+
+        return PoseAnnotation(
+            top=min_y,
+            left=min_x,
+            width=max_x - min_x,
+            height=max_y - min_y,
+            points=points,
+            category=category,
+            state=state,
+        )
+
 
 class AnnotatedFile(BaseModel):
-    file: PathLike
+    file: Union[PathLike, str]
     annotations: List[AnnotationABC] = []
     image_width: Optional[int] = None
     image_height: Optional[int] = None
