@@ -1,8 +1,10 @@
 import logging
 import urllib.parse
+from functools import cached_property
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, List, Tuple, Sequence
 
+from dagshub.common.api import UserAPI
 from dagshub.data_engine import dtypes
 
 from dagshub_annotation_converter.image.ir.annotation_ir import (
@@ -65,6 +67,10 @@ class DagshubDatasourceExporter:
     def _annotation_classes_field(self):
         return f"{self.annotation_field}_classes"
 
+    @cached_property
+    def _current_user(self) -> UserAPI:
+        return UserAPI.get_current_user(host=self.ds.source.repoApi.host)
+
     def export(self, project: AnnotationProject):
         res: list[tuple] = []
 
@@ -101,7 +107,7 @@ class DagshubDatasourceExporter:
         )
 
     def convert_annotated_file(self, f: AnnotatedFile) -> LabelStudioTask:
-        task = LabelStudioTask()
+        task = LabelStudioTask(user_id=self._current_user.user_id)
         for ann in f.annotations:
             task.add_annotations(self.convert_annotation(f, ann))
         return task

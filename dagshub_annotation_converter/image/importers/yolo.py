@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Union, Literal, Tuple, Dict, Optional
 
 import yaml
-from PIL import Image
 
 from dagshub_annotation_converter.image.ir.annotation_ir import (
     AnnotationProject,
@@ -13,7 +12,9 @@ from dagshub_annotation_converter.image.ir.annotation_ir import (
     AnnotatedFile,
     SegmentationAnnotation,
     BBoxAnnotation,
-    NormalizationState, AnnotationABC, PoseAnnotation,
+    NormalizationState,
+    AnnotationABC,
+    PoseAnnotation,
 )
 from dagshub_annotation_converter.image.util import is_image, get_extension
 
@@ -22,13 +23,13 @@ logger = logging.getLogger(__name__)
 
 class YoloImporter:
     def __init__(
-            self,
-            data_dir: Union[str, PathLike],
-            annotation_type: Literal["bbox", "segmentation", "pose"],
-            image_dir_name: str = "images",
-            label_dir_name: str = "labels",
-            label_extension: str = ".txt",
-            meta_file: Union[str, PathLike] = "annotations.yaml",
+        self,
+        data_dir: Union[str, PathLike],
+        annotation_type: Literal["bbox", "segmentation", "pose"],
+        image_dir_name: str = "images",
+        label_dir_name: str = "labels",
+        label_extension: str = ".txt",
+        meta_file: Union[str, PathLike] = "annotations.yaml",
     ):
         # TODO: handle colocated annotations (in the same dir)
         self.data_dir = data_dir
@@ -73,9 +74,7 @@ class YoloImporter:
                     continue
                 annotation = self._get_annotation_file(img)
                 if not annotation.exists():
-                    logger.warning(
-                        f"Couldn't find annotation file [{annotation}] for image file [{img}]"
-                    )
+                    logger.warning(f"Couldn't find annotation file [{annotation}] for image file [{img}]")
                     continue
                 project.files.append(self._parse_annotation(img, annotation, project))
 
@@ -90,9 +89,7 @@ class YoloImporter:
         new_parts[-1] = new_parts[-1].replace(get_extension(img), self.label_extension)
         return Path(*new_parts)
 
-    def _parse_annotation(
-            self, img: Path, annotation: Path, project: AnnotationProject
-    ) -> AnnotatedFile:
+    def _parse_annotation(self, img: Path, annotation: Path, project: AnnotationProject) -> AnnotatedFile:
         res = AnnotatedFile(file=img)
         res.image_width, res.image_height = self._get_image_dimensions(img)
 
@@ -108,12 +105,8 @@ class YoloImporter:
                     keypoint_dimensions = project.additional_metadata["yolo_keypoint_shape"][1]
                     ann = self._parse_pose(line, project.categories, keypoint_dimensions)
                 else:
-                    raise RuntimeError(
-                        f"Unknown annotation type [{self.annotation_type}]"
-                    )
-                res.annotations.append(
-                    ann.denormalized(res.image_width, res.image_height)
-                )
+                    raise RuntimeError(f"Unknown annotation type [{self.annotation_type}]")
+                res.annotations.append(ann.denormalized(res.image_width, res.image_height))
         return res
 
     @staticmethod
@@ -121,12 +114,8 @@ class YoloImporter:
         vals = line.split()
         category = categories.get(int(vals[0]))
         if category is None:
-            raise RuntimeError(
-                f"Unknown category {category}. Imported categories from the .yaml: {categories}"
-            )
-        res = SegmentationAnnotation(
-            category=category, state=NormalizationState.NORMALIZED
-        )
+            raise RuntimeError(f"Unknown category {category}. Imported categories from the .yaml: {categories}")
+        res = SegmentationAnnotation(category=category, state=NormalizationState.NORMALIZED)
         for i in range(1, len(vals) - 1, 2):
             x = float(vals[i])
             y = float(vals[i + 1])
@@ -138,9 +127,7 @@ class YoloImporter:
         vals = line.split()
         category = categories.get(int(vals[0]))
         if category is None:
-            raise RuntimeError(
-                f"Unknown category {category}. Imported categories from the .yaml: {categories}"
-            )
+            raise RuntimeError(f"Unknown category {category}. Imported categories from the .yaml: {categories}")
         middle_x = float(vals[1])
         middle_y = float(vals[2])
         width = float(vals[3])
@@ -163,9 +150,7 @@ class YoloImporter:
         vals = line.split()
         category = categories.get(int(vals[0]))
         if category is None:
-            raise RuntimeError(
-                f"Unknown category {category}. Imported categories from the .yaml: {categories}"
-            )
+            raise RuntimeError(f"Unknown category {category}. Imported categories from the .yaml: {categories}")
         middle_x = float(vals[1])
         middle_y = float(vals[2])
         width = float(vals[3])
@@ -192,14 +177,16 @@ class YoloImporter:
 
         return res
 
-
     @staticmethod
     def _get_image_dimensions(filepath: Path) -> Tuple[int, int]:
-        with Image.open(filepath) as img:
-            return img.width, img.height
+        return 3840, 2160
+        # with Image.open(filepath) as img:
+        #     return img.width, img.height
 
     @staticmethod
-    def _convert_bbox_from_middle_to_top_left(middle_x: float, middle_y: float, width: float, height: float) -> Tuple[float, float, float, float]:
+    def _convert_bbox_from_middle_to_top_left(
+        middle_x: float, middle_y: float, width: float, height: float
+    ) -> Tuple[float, float, float, float]:
         """
         Converts the YOLO bbox format which has the point in the middle, to a bbox with the point in the top-left
         Returns:
@@ -211,11 +198,8 @@ class YoloImporter:
         return top, left, width, height
 
 
-
 if __name__ == "__main__":
     # logging.basicConfig(level=logging.DEBUG)
     os.chdir("/Users/kirillbolashev/temp/COCO_1K")
-    importer = YoloImporter(
-        data_dir="data", annotation_type="segmentation", meta_file="custom_coco.yaml"
-    )
+    importer = YoloImporter(data_dir="data", annotation_type="segmentation", meta_file="custom_coco.yaml")
     importer.parse()
