@@ -6,7 +6,7 @@ from typing import Union, Literal, Tuple, Dict, Optional
 
 import yaml
 
-from dagshub_annotation_converter.image.ir.annotation_ir import (
+from dagshub_annotation_converter.schema.ir.annotation_ir import (
     AnnotationProject,
     Categories,
     AnnotatedFile,

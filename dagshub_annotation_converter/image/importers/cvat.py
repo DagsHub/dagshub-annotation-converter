@@ -7,7 +7,7 @@ from zipfile import ZipFile
 import lxml.etree
 import lxml
 
-from dagshub_annotation_converter.image.ir.annotation_ir import (
+from dagshub_annotation_converter.schema.ir.annotation_ir import (
     AnnotationProject,
     AnnotatedFile,
     BBoxAnnotation,

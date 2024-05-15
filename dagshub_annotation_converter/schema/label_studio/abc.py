@@ -1,6 +1,9 @@
 import uuid
+from abc import abstractmethod
 
 from pydantic import BaseModel, Field
+
+from dagshub_annotation_converter.schema.ir.annotation_ir import AnnotationABC, AnnotationProject
 
 
 class AnnotationResultABC(BaseModel):
@@ -16,3 +19,6 @@ class ImageAnnotationResultABC(AnnotationResultABC):
     origin: str = "manual"
     to_name: str = "image"
     from_name: str = "label"
+
+    @abstractmethod
+    def to_ir_annotation(self, project: AnnotationProject) -> list[AnnotationABC]: ...

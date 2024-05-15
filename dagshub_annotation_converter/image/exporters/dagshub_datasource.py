@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, List, Tuple, Sequence
 from dagshub.common.api import UserAPI
 from dagshub.data_engine import dtypes
 
-from dagshub_annotation_converter.image.ir.annotation_ir import (
+from dagshub_annotation_converter.schema.ir.annotation_ir import (
     AnnotationProject,
     AnnotatedFile,
     AnnotationABC,
