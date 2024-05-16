@@ -62,7 +62,7 @@ class DagshubDatasourceImporter:
         project = AnnotationProject()
 
         self.query_result.get_blob_fields(
-            *self.datasource.annotation_fields,
+            *self.annotation_fields,
             load_into_memory=True,
             # cache_on_disk=False   # FIXME: turn on for prod
         )

@@ -5,7 +5,9 @@ from pathlib import Path
 from typing import Union, Literal, Tuple, Dict, Optional
 
 import yaml
+from PIL import Image
 
+from dagshub_annotation_converter.image.util.path_util import yolo_img_path_to_label_path
 from dagshub_annotation_converter.schema.ir.annotation_ir import (
     AnnotationProject,
     Categories,
@@ -72,7 +74,9 @@ class YoloImporter:
                 if not is_image(img):
                     logger.debug(f"Skipping {img} because it's not an image")
                     continue
-                annotation = self._get_annotation_file(img)
+                annotation = yolo_img_path_to_label_path(
+                    img, self.image_dir_name, self.label_dir_name, self.label_extension
+                )
                 if not annotation.exists():
                     logger.warning(f"Couldn't find annotation file [{annotation}] for image file [{img}]")
                     continue
@@ -179,9 +183,8 @@ class YoloImporter:
 
     @staticmethod
     def _get_image_dimensions(filepath: Path) -> Tuple[int, int]:
-        return 3840, 2160
-        # with Image.open(filepath) as img:
-        #     return img.width, img.height
+        with Image.open(filepath) as img:
+            return img.width, img.height
 
     @staticmethod
     def _convert_bbox_from_middle_to_top_left(
