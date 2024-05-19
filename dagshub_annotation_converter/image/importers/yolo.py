@@ -5,8 +5,10 @@ from pathlib import Path
 from typing import Union, Literal, Tuple, Dict, Optional
 
 import yaml
+from PIL import Image
 
-from dagshub_annotation_converter.image.ir.annotation_ir import (
+from dagshub_annotation_converter.image.util.path_util import yolo_img_path_to_label_path
+from dagshub_annotation_converter.schema.ir.annotation_ir import (
     AnnotationProject,
     Categories,
     AnnotatedFile,
@@ -53,8 +55,15 @@ class YoloImporter:
             meta_dict = yaml.safe_load(f)
         project.categories = self._parse_categories(meta_dict)
         if self.annotation_type == "pose":
-            project.additional_metadata["yolo_keypoint_shape"] = meta_dict["kpt_shape"]
-            project.additional_metadata["yolo_flip_idx"] = meta_dict.get("flip_idx")
+            keypoint_shape = meta_dict["kpt_shape"]
+            flip_idx = meta_dict.get("flip_idx")
+
+            for cat in project.categories:
+                project.pose_config.pose_points[cat] = keypoint_shape[0]
+                if flip_idx is not None:
+                    project.pose_config.flipped_points[cat] = flip_idx
+
+            project.import_config.yolo.keypoint_shape = keypoint_shape[1]
 
     def _parse_categories(self, yolo_meta: Dict) -> Categories:
         categories = Categories()
@@ -72,7 +81,9 @@ class YoloImporter:
                 if not is_image(img):
                     logger.debug(f"Skipping {img} because it's not an image")
                     continue
-                annotation = self._get_annotation_file(img)
+                annotation = yolo_img_path_to_label_path(
+                    img, self.image_dir_name, self.label_dir_name, self.label_extension
+                )
                 if not annotation.exists():
                     logger.warning(f"Couldn't find annotation file [{annotation}] for image file [{img}]")
                     continue
@@ -102,7 +113,7 @@ class YoloImporter:
                     ann = self._parse_bbox(line, project.categories)
                 elif self.annotation_type == "pose":
                     # dimensions is either 2 or 3, [x, y, (optional) visibility]
-                    keypoint_dimensions = project.additional_metadata["yolo_keypoint_shape"][1]
+                    keypoint_dimensions = project.import_config.yolo.keypoint_shape
                     ann = self._parse_pose(line, project.categories, keypoint_dimensions)
                 else:
                     raise RuntimeError(f"Unknown annotation type [{self.annotation_type}]")
@@ -179,9 +190,8 @@ class YoloImporter:
 
     @staticmethod
     def _get_image_dimensions(filepath: Path) -> Tuple[int, int]:
-        return 3840, 2160
-        # with Image.open(filepath) as img:
-        #     return img.width, img.height
+        with Image.open(filepath) as img:
+            return img.width, img.height
 
     @staticmethod
     def _convert_bbox_from_middle_to_top_left(

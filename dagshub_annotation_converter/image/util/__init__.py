@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from dagshub_annotation_converter.image.util.path_util import get_extension
+
 _supported_image_formats = None
 
 
@@ -12,13 +14,6 @@ def supported_image_formats() -> set[str]:
         supported = {ex for ex, f in exts.items() if f in Image.OPEN}
         _supported_image_formats = supported
     return _supported_image_formats
-
-
-def get_extension(path: Path) -> str:
-    name = path.name
-    ext_dot_index = name.rfind(".")
-    ext = name[ext_dot_index:]
-    return ext
 
 
 def is_image(path: Path) -> bool:

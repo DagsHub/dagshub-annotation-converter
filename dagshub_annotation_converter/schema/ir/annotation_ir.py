@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from enum import Enum
 from os import PathLike
-from typing import List, Optional, Union, Dict, Any
+from typing import List, Optional, Union, Dict, Literal
 from typing_extensions import Self
 
 from pydantic import BaseModel
@@ -14,6 +14,9 @@ This file contains classes for the intermediate representation of the annotation
 class Category(BaseModel):
     name: str
     id: int
+
+    def __hash__(self):
+        return hash(self.name)
 
 
 class NormalizationState(Enum):
@@ -31,6 +34,9 @@ class Categories(BaseModel):
             return self._id_lookup[item]
         else:
             return self._name_lookup[item]
+
+    def __iter__(self):
+        return self.categories.__iter__()
 
     def get(self, item: Union[int, str], default=None) -> Category:
         try:
@@ -63,6 +69,8 @@ class Categories(BaseModel):
 
 
 class AnnotationABC(BaseModel):
+    imported_id: Optional[str] = None
+
     @abstractmethod
     def normalized(self, image_width: int, image_height: int) -> Self:
         """
@@ -250,7 +258,48 @@ class AnnotatedFile(BaseModel):
         return res
 
 
+class PoseConfig(BaseModel):
+    pose_points: dict[Category, int] = {}
+    flipped_points: dict[Category, list[int]] = {}
+
+    def bind_pose_points_to_max(self) -> int:
+        """
+        Sets the pose_points to be the maximum value (useful for YOLO exports)
+        :return the max value it's been set to
+        """
+        max_val = max(self.pose_points.values())
+        for cat in self.pose_points:
+            self.pose_points[cat] = max_val
+        return max_val
+
+
+class YoloImportConfig(BaseModel):
+    keypoint_shape: Literal[2, 3] = 2
+
+
+class ImportConfig(BaseModel):
+    yolo: YoloImportConfig = YoloImportConfig()
+
+
 class AnnotationProject(BaseModel):
     categories: Categories = Categories()
     files: List[AnnotatedFile] = []
-    additional_metadata: Dict[str, Any] = {}
+    pose_config: PoseConfig = PoseConfig()
+    import_config: ImportConfig = ImportConfig()
+
+    def regenerate_pose_points(self):
+        """
+        Recalculates number of points in a pose for each category and puts it in proj.pose_config.pose_points
+        """
+        max_points: dict[Category, int] = {}
+        for f in self.files:
+            for ann in f.annotations:
+                if not isinstance(ann, PoseAnnotation):
+                    continue
+                current_max = max_points.get(ann.category, 0)
+                ann_count = len(ann.points)
+
+                if ann_count > current_max:
+                    max_points[ann.category] = ann_count
+
+        self.pose_config.pose_points = max_points
