@@ -1,6 +1,6 @@
 import datetime
 import random
-from typing import Any, Sequence, Annotated, Type
+from typing import Any, Sequence, Annotated, Type, Optional
 
 from pydantic import BaseModel, SerializeAsAny, Field, BeforeValidator
 
@@ -36,7 +36,7 @@ AnnotationsList = Annotated[list[SerializeAsAny[AnnotationResultABC]], BeforeVal
 
 
 class AnnotationsContainer(BaseModel):
-    completed_by: int
+    completed_by: Optional[int] = None
     result: AnnotationsList = []
     ground_truth: bool = False
 

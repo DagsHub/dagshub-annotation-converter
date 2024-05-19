@@ -151,6 +151,7 @@ class YoloExporter:
 
     def export(self, project: AnnotationProject):
         # Write the metadata file
+        Path(self.meta_file).parent.mkdir(parents=True, exist_ok=True)
         with open(self.meta_file, "w") as f:
             dt_now = datetime.datetime.now()
             f.write(
