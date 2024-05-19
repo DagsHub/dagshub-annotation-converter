@@ -109,10 +109,12 @@ class DagshubDatasourceExporter:
     def convert_annotated_file(self, f: AnnotatedFile) -> LabelStudioTask:
         task = LabelStudioTask(user_id=self._current_user.user_id)
         for ann in f.annotations:
-            task.add_annotations(self.convert_annotation(f, ann))
+            task.add_annotations(self.convert_annotation(f, task, ann))
         return task
 
-    def convert_annotation(self, f: AnnotatedFile, annotation: AnnotationABC) -> Sequence[AnnotationResultABC]:
+    def convert_annotation(
+        self, f: AnnotatedFile, task: LabelStudioTask, annotation: AnnotationABC
+    ) -> Sequence[AnnotationResultABC]:
         # Todo: dynamic dispatch
         if isinstance(annotation, SegmentationAnnotation):
             return [self.convert_segmentation(f, annotation)]
@@ -120,6 +122,7 @@ class DagshubDatasourceExporter:
             return [self.convert_bbox(f, annotation)]
         if isinstance(annotation, PoseAnnotation):
             bbox, keypoints = self.convert_pose(f, annotation)
+            task.log_pose_metadata(bbox, keypoints)
             return [bbox, *keypoints]
         raise RuntimeError(f"Unknown type: {type(annotation)}")
 

@@ -41,6 +41,10 @@ class AnnotationsContainer(BaseModel):
     ground_truth: bool = False
 
 
+PosePointsLookupKey = "pose_points"
+PoseBBoxLookupKey = "pose_boxes"
+
+
 class LabelStudioTask(BaseModel):
     annotations: list[AnnotationsContainer] = Field(
         default_factory=lambda: [],
@@ -62,3 +66,12 @@ class LabelStudioTask(BaseModel):
     def add_annotations(self, annotations: Sequence[AnnotationResultABC]):
         for ann in annotations:
             self.add_annotation(ann)
+
+    def log_pose_metadata(self, bbox: RectangleLabelsAnnotation, keypoints: list[KeyPointLabelsAnnotation]):
+        if PosePointsLookupKey not in self.data:
+            self.data[PosePointsLookupKey] = []
+        if PoseBBoxLookupKey not in self.data:
+            self.data[PoseBBoxLookupKey] = []
+
+        self.data[PoseBBoxLookupKey].append(bbox.id)
+        self.data[PosePointsLookupKey].append([point.id for point in keypoints])
