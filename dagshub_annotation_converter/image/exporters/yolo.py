@@ -3,7 +3,7 @@ import logging
 from abc import abstractmethod
 from os import PathLike
 from pathlib import Path
-from typing import Union, Literal
+from typing import Union, Literal, Any
 
 import yaml
 
@@ -14,6 +14,7 @@ from dagshub_annotation_converter.schema.ir.annotation_ir import (
     SegmentationAnnotation,
     BBoxAnnotation,
     PoseAnnotation,
+    KeyPoint,
 )
 
 YoloAnnotationType = Literal["bbox", "segmentation", "pose"]
@@ -79,8 +80,13 @@ class SegmentationExporterStrategy(YoloExporterStrategy):
 
 class PoseExporterStrategy(YoloExporterStrategy):
     def get_yolo_yaml(self, project: AnnotationProject) -> str:
-        yaml_structure = {"names": {cat.id: cat.name for cat in project.categories.categories}}
-        yaml_structure["kpt_shape"] = [keypoints_n, 3]
+        yaml_structure: dict[str, Any] = {"names": {cat.id: cat.name for cat in project.categories.categories}}
+        if len(project.pose_config.pose_points) == 0:
+            project.regenerate_pose_points()
+
+        max_points = project.pose_config.bind_pose_points_to_max()
+
+        yaml_structure["kpt_shape"] = [max_points, 3]
         return yaml.dump(yaml_structure)
 
     def convert_file(self, project: AnnotationProject, f: AnnotatedFile):
@@ -97,7 +103,13 @@ class PoseExporterStrategy(YoloExporterStrategy):
             middle_x = ann.left + (ann.width / 2)
             middle_y = ann.top + (ann.height / 2)
             res += f"{ann.category.id} {middle_x} {middle_y} {ann.width} {ann.height} "
-            res += " ".join([f"{p.x} {p.y} {1 if p.is_visible or p.is_visible is None else 0}" for p in ann.points])
+            points = ann.points
+            # Fill out the remaining until we hit the max
+            category_n_points = project.pose_config.pose_points.get(ann.category, len(points))
+            if len(points) < category_n_points:
+                delta = category_n_points - len(points)
+                points.extend([KeyPoint(x=0.0, y=0.0, is_visible=False)] * delta)
+            res += " ".join([f"{p.x} {p.y} {1 if p.is_visible or p.is_visible is None else 0}" for p in points])
         if wrong_annotation_counter != 0:
             logger.warning(f"Skipped {wrong_annotation_counter} non-pose annotation(s) for file {f.file}")
         return res

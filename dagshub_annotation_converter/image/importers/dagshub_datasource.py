@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional, Union, TypeGuard
 
 from dagshub_annotation_converter.schema.ir.annotation_ir import (
@@ -30,7 +29,6 @@ class DagshubDatasourceImporter:
         self,
         datasource_or_queryresult: Union["Datasource", "QueryResult"],
         annotation_fields: Optional[Union[str, List[str]]] = None,
-        download_path: Optional[Union[str, Path]] = None,
     ):
         """
 
@@ -39,7 +37,6 @@ class DagshubDatasourceImporter:
         :param annotation_fields: List of names of fields to get annotations from.
             If ``None``, loads all annotation fields.
             Loading multiple fields concatenates the annotations together.
-        :param download_path: Where to download the datapoints. If None, they won't be downloaded.
         """
         from dagshub.data_engine.model.datasource import Datasource
 
@@ -67,14 +64,11 @@ class DagshubDatasourceImporter:
         return self._query_result
 
     def parse(self) -> AnnotationProject:
-        # TODO: handle self.download_path
-
         project = AnnotationProject()
 
         self.query_result.get_blob_fields(
             *self.annotation_fields,
             load_into_memory=True,
-            # cache_on_disk=False   # FIXME: turn on for prod
         )
 
         for dp in self.query_result:

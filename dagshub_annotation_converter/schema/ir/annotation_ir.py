@@ -262,6 +262,16 @@ class PoseConfig(BaseModel):
     pose_points: dict[Category, int] = {}
     flipped_points: dict[Category, list[int]] = {}
 
+    def bind_pose_points_to_max(self) -> int:
+        """
+        Sets the pose_points to be the maximum value (useful for YOLO exports)
+        :return the max value it's been set to
+        """
+        max_val = max(self.pose_points.values())
+        for cat in self.pose_points:
+            self.pose_points[cat] = max_val
+        return max_val
+
 
 class YoloImportConfig(BaseModel):
     keypoint_shape: Literal[2, 3] = 2
@@ -276,3 +286,20 @@ class AnnotationProject(BaseModel):
     files: List[AnnotatedFile] = []
     pose_config: PoseConfig = PoseConfig()
     import_config: ImportConfig = ImportConfig()
+
+    def regenerate_pose_points(self):
+        """
+        Recalculates number of points in a pose for each category and puts it in proj.pose_config.pose_points
+        """
+        max_points: dict[Category, int] = {}
+        for f in self.files:
+            for ann in f.annotations:
+                if not isinstance(ann, PoseAnnotation):
+                    continue
+                current_max = max_points.get(ann.category, 0)
+                ann_count = len(ann.points)
+
+                if ann_count > current_max:
+                    max_points[ann.category] = ann_count
+
+        self.pose_config.pose_points = max_points
