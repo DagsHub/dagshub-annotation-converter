@@ -8,14 +8,15 @@ The API is not stable and is subject to change.
 
 Support Matrix for image annotations
 
-| Export > \/ Import V              | YOLO v5+ BBox | YOLO v5+ Segmentation | COCO | DagsHub Datasource (Label Studio) | Label Studio | CVAT Image |
-|-----------------------------------|---------------|-----------------------|------|-----------------------------------|--------------|--------------|
-| YOLO v5+ BBox                     | -             |                       |      | ✅                                 |              |     |
-| YOLO v5+ Segmentation             |               | -                     |      |      ✅                            |              ||
-| COCO                              |               |                       | -    |                                   |              ||
-| DagsHub Datasource (Label Studio) |               |                       |      | -                                 |              ||
-| Label Studio                      |               |                       |      |                                   | -            ||
-| CVAT Image                        |               |                       |      |     ✅                            |          |-|
+| Export > \/ Import V              | YOLO v5+ BBox | YOLO v5+ Segmentation | Yolo Poses | COCO | DagsHub Datasource (Label Studio) | Label Studio | CVAT Image |
+|-----------------------------------|---------------|-----------------------|------------|------|-----------------------------------|--------------|------------|
+| YOLO v5+ BBox                     | -             |                       |            |      | ✅                                 |              |            |
+| YOLO v5+ Segmentation             |               | -                     |            |      | ✅                                 |              |            |
+| YOLO Poses                        |               |                       | -          |      | ✅                                 |              |            |
+| COCO                              |               |                       |            | -    |                                   |              |            |
+| DagsHub Datasource (Label Studio) | ✅             | ✅                     | ✅          |      | -                                 |              |            |
+| Label Studio                      |               |                       |            |      |                                   | -            |            |
+| CVAT Image                        |               |                       |            |      | ✅                                 |              | -          |
 
 Example usage, importing annotations from [COCO_1K](https://dagshub.com/Dean/COCO_1K) and uploading it into a DagsHub Datasource:
 
