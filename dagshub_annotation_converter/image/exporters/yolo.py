@@ -80,9 +80,6 @@ class SegmentationExporterStrategy(YoloExporterStrategy):
 class PoseExporterStrategy(YoloExporterStrategy):
     def get_yolo_yaml(self, project: AnnotationProject) -> str:
         yaml_structure = {"names": {cat.id: cat.name for cat in project.categories.categories}}
-        # TODO: find the number of keypoints somehow
-        raise NotImplementedError
-        keypoints_n = 0
         yaml_structure["kpt_shape"] = [keypoints_n, 3]
         return yaml.dump(yaml_structure)
 
@@ -152,6 +149,9 @@ class YoloExporter:
         # Write the annotations
         for annotated in project.files:
             converted = self.strategy.convert_file(project, annotated)
+            if not converted:
+                logger.warning(f"No annotations of fitting type found for file {annotated.file}")
+                continue
             annotation_file_path = yolo_img_path_to_label_path(
                 Path(annotated.file), self.image_dir_name, self.label_dir_name, self.label_extension
             )

@@ -1,4 +1,4 @@
-import itertools
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional, Union, TypeGuard
 
@@ -6,13 +6,23 @@ from dagshub_annotation_converter.schema.ir.annotation_ir import (
     AnnotationProject,
     AnnotatedFile,
     AnnotationABC,
+    BBoxAnnotation,
     PoseAnnotation,
+    KeyPoint,
+    NormalizationState,
+    Category,
 )
 from dagshub_annotation_converter.schema.label_studio.abc import ImageAnnotationResultABC, AnnotationResultABC
-from dagshub_annotation_converter.schema.label_studio.task import LabelStudioTask
+from dagshub_annotation_converter.schema.label_studio.task import (
+    LabelStudioTask,
+    PosePointsLookupKey,
+    PoseBBoxLookupKey,
+)
 
 if TYPE_CHECKING:
     from dagshub.data_engine.model.datasource import Datasource, QueryResult, Datapoint
+
+logger = logging.getLogger(__name__)
 
 
 class DagshubDatasourceImporter:
@@ -104,27 +114,81 @@ class DagshubDatasourceImporter:
             for annotation in annotations_obj:
                 f.annotations.extend(self.convert_ls_annotation_to_ir(project, f, annotation))
 
-        # For keypoints - since we're getting them one-by-one, we actually need to aggregate them.
-        # Sadly I don't know how to do it better than making a single pose out of them
+        self._consolidate_poses(f, task)
 
-        pose_annotations: list[PoseAnnotation] = list(
-            filter(lambda ann: isinstance(ann, PoseAnnotation), f.annotations)
-        )
-        non_pose_annotations = list(filter(lambda ann: not isinstance(ann, PoseAnnotation), f.annotations))
+    @staticmethod
+    def _consolidate_poses(f: AnnotatedFile, task: LabelStudioTask):
+        # For keypoints - try to rebuild the exact poses using the metadata that may be in the data of the task
+        if PosePointsLookupKey not in task.data or PoseBBoxLookupKey not in task.data:
+            return
 
-        aggregated_pose_annotations = []
+        # Build a dictionary of all annotation indexes in the task by id
+        # Keep the indexes instead of annotations so we can pop them for convenience
+        annotation_lookup = {ann.imported_id: ann for ann in f.annotations if ann.imported_id is not None}
+        pose_bboxes: list[str] = task.data[PoseBBoxLookupKey]
+        pose_points: list[list[str]] = task.data[PosePointsLookupKey]
 
-        pose_annotations.sort(key=lambda ann: ann.category.name)  # Needed for groupby to work
-        for cat, poses_iter in itertools.groupby(pose_annotations, key=lambda ann: ann.category):
-            poses: list[PoseAnnotation] = list(poses_iter)
-            all_points = []
-            for pose in poses:
-                all_points.extend(pose.points)
-            aggregated_annotation = PoseAnnotation.from_points(category=cat, points=all_points, state=poses[0].state)
-            aggregated_pose_annotations.append(aggregated_annotation)
+        annotations_to_remove: set[str] = set()
+        poses: list[PoseAnnotation] = []
 
-        f.annotations = non_pose_annotations
-        f.annotations.extend(aggregated_pose_annotations)
+        for bbox_id, point_ids in zip(pose_bboxes, pose_points):
+            # Fetch the bbox of the pose
+            maybe_bbox = annotation_lookup.get(bbox_id)
+            bbox: Optional[BBoxAnnotation] = None
+            category: Optional[Category] = None
+            if maybe_bbox is None:
+                logger.warning(
+                    f"Bounding box of pose with annotation ID {bbox_id} "
+                    f"does not exist in the task but exists in metadata"
+                )
+            elif not isinstance(maybe_bbox, BBoxAnnotation):
+                logger.warning(f"Bounding box of pose with annotation ID {bbox_id} is not a bounding box annotation")
+            else:
+                bbox = maybe_bbox
+                category = bbox.category
+                annotations_to_remove.add(bbox_id)
+            # Fetch the points
+            points: list[KeyPoint] = []
+            for point_id in point_ids:
+                maybe_point = annotation_lookup.get(point_id)
+                if maybe_point is None:
+                    logger.warning(
+                        f"Point of pose with annotation ID {bbox_id} "
+                        f"does not exist in the task but exists in metadata"
+                    )
+                    continue
+                elif not isinstance(maybe_point, PoseAnnotation):
+                    logger.warning(f"Point of pose with annotation ID {point_id} is not a point annotation")
+                    continue
+                else:
+                    if category is None:
+                        category = maybe_point.category
+                    points.extend(maybe_point.points)
+                    annotations_to_remove.add(point_id)
+
+            if len(points) == 0:
+                logger.warning(f"No points found for the pose on file {f.file}")
+                return
+
+            assert category is not None
+            sum_annotation = PoseAnnotation.from_points(
+                category=category, points=points, state=NormalizationState.NORMALIZED
+            )
+            if bbox is not None:
+                sum_annotation.width = bbox.width
+                sum_annotation.height = bbox.height
+                sum_annotation.top = bbox.top
+                sum_annotation.left = bbox.left
+
+            poses.append(sum_annotation)
+
+        logger.debug(f"Consolidated {len(poses)} pose annotations for file {f.file}")
+
+        if len(poses) == 0:
+            return
+
+        f.annotations = list(filter(lambda ann: ann.imported_id not in annotations_to_remove, f.annotations))
+        f.annotations.extend(poses)
 
     @staticmethod
     def convert_ls_annotation_to_ir(

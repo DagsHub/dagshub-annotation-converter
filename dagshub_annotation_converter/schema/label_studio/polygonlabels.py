@@ -24,4 +24,5 @@ class PolygonLabelsAnnotation(ImageAnnotationResultABC):
         res = SegmentationAnnotation(category=category, state=NormalizationState.NORMALIZED)
         for p in self.value.points:
             res.add_point(p[0] / 100.0, p[1] / 100.0)
+        res.imported_id = self.id
         return [res]

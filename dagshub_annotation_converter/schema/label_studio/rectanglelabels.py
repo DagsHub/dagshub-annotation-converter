@@ -30,4 +30,5 @@ class RectangleLabelsAnnotation(ImageAnnotationResultABC):
             width=self.value.width / 100.0,
             height=self.value.height / 100.0,
         )
+        res.imported_id = self.id
         return [res]

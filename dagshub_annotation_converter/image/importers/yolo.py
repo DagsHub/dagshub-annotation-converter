@@ -55,8 +55,15 @@ class YoloImporter:
             meta_dict = yaml.safe_load(f)
         project.categories = self._parse_categories(meta_dict)
         if self.annotation_type == "pose":
-            project.additional_metadata["yolo_keypoint_shape"] = meta_dict["kpt_shape"]
-            project.additional_metadata["yolo_flip_idx"] = meta_dict.get("flip_idx")
+            keypoint_shape = meta_dict["kpt_shape"]
+            flip_idx = meta_dict.get("flip_idx")
+
+            for cat in project.categories:
+                project.pose_config.pose_points[cat] = keypoint_shape[0]
+                if flip_idx is not None:
+                    project.pose_config.flipped_points[cat] = flip_idx
+
+            project.import_config.yolo.keypoint_shape = keypoint_shape[1]
 
     def _parse_categories(self, yolo_meta: Dict) -> Categories:
         categories = Categories()
@@ -106,7 +113,7 @@ class YoloImporter:
                     ann = self._parse_bbox(line, project.categories)
                 elif self.annotation_type == "pose":
                     # dimensions is either 2 or 3, [x, y, (optional) visibility]
-                    keypoint_dimensions = project.additional_metadata["yolo_keypoint_shape"][1]
+                    keypoint_dimensions = project.import_config.yolo.keypoint_shape
                     ann = self._parse_pose(line, project.categories, keypoint_dimensions)
                 else:
                     raise RuntimeError(f"Unknown annotation type [{self.annotation_type}]")
