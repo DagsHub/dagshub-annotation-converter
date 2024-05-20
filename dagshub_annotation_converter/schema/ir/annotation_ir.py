@@ -57,7 +57,7 @@ class Categories(BaseModel):
             if len(self._id_lookup):
                 id = max(self._id_lookup.keys()) + 1
             else:
-                id = 1
+                id = 0
         new_category = Category(name=name, id=id)
         self.categories.append(new_category)
         self.regenerate_dicts()
