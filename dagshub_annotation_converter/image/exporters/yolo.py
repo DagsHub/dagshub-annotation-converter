@@ -4,7 +4,7 @@ import os
 from abc import abstractmethod
 from os import PathLike
 from pathlib import Path
-from typing import Union, Literal, Any
+from typing import Union, Literal
 
 import yaml
 
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 class YoloExporterStrategy:
     @abstractmethod
-    def get_yolo_yaml(self, project: AnnotationProject, data_dir: Path) -> str:
+    def get_yolo_yaml(self, project: AnnotationProject, data_dir: Path, image_dir_name: str) -> str:
         """Gets the contents of the YOLO metadata yaml file"""
         ...
 
@@ -34,40 +34,54 @@ class YoloExporterStrategy:
         """Converts annotations for a single file into a yolo annotation and returns the content"""
         ...
 
-    def determine_test_and_val_folders(self, data_dir: Path) -> tuple[str, str]:
+    def generate_generic_yaml_content(self, project: AnnotationProject, data_dir: Path, image_dir_name: str) -> dict:
+        train, val = self.determine_test_and_val_folders(data_dir, image_dir_name)
+        yaml_structure = {
+            "path": str(data_dir.absolute()),
+            "names": {cat.id: cat.name for cat in project.categories.categories},
+            "nc": len(project.categories),
+            "train": train,
+            "val": val,
+        }
+        return yaml_structure
+
+    def determine_test_and_val_folders(self, data_dir: Path, image_dir_name: str) -> tuple[str, str]:
         """
         Tries to find test and val folder.
         Current logic:
-        1) Look at the dirs in the data_dir.
-        If there's 0/1/more than 2 dirs - make the data dir both the test and val dir
-        If there are two dirs and one contains train/one contains val, the other gets assigned accordingly
+        1) Drill down in data_dir until an image directory is found
+        2) Then look at the subfolders of the image dir
+            If there's 0/1/more than 2 dirs - make the data dir both the test and val dir
+            If there are two dirs and one contains train/one contains val, the other gets assigned accordingly
 
         """
-        subdirs = [data_dir / p for p in os.listdir(data_dir)]
+        img_dir = None
+        for root, dirs, files in os.walk(data_dir):
+            if image_dir_name in dirs:
+                img_dir = Path(root) / image_dir_name
+        if img_dir is None:
+            raise RuntimeError(f'Could not find the image dir named "{image_dir_name}" in the data directory')
+        subdirs = [img_dir / p for p in os.listdir(img_dir)]
         subdirs = [p for p in subdirs if p.is_dir()]
+
+        img_dir_relative = img_dir.relative_to(data_dir)
+
         if len(subdirs) != 2:
-            return ".", "."
+            return str(img_dir_relative), str(img_dir_relative)
 
         p1 = subdirs[0]
         p2 = subdirs[1]
 
         if "train" in p1.name or "val" in p2.name:
-            return p1.name, p2.name
+            return str(img_dir_relative / p1.name), str(img_dir_relative / p2.name)
         elif "val" in p1.name or "train" in p1.name:
-            return p2.name, p1.name
-        return ".", "."
+            return str(img_dir_relative / p2.name), str(img_dir_relative / p1.name)
+        return str(img_dir_relative), str(img_dir_relative)
 
 
 class BBoxExporterStrategy(YoloExporterStrategy):
-    def get_yolo_yaml(self, project: AnnotationProject, data_dir: Path) -> str:
-        train, val = self.determine_test_and_val_folders(data_dir)
-        yaml_structure = {
-            "names": {cat.id: cat.name for cat in project.categories.categories},
-            "data": str(data_dir.absolute()),
-            "train": train,
-            "val": val,
-        }
-        return yaml.dump(yaml_structure)
+    def get_yolo_yaml(self, project: AnnotationProject, data_dir: Path, image_dir_name: str) -> str:
+        return yaml.dump(self.generate_generic_yaml_content(project, data_dir, image_dir_name))
 
     def convert_file(self, project: AnnotationProject, f: AnnotatedFile) -> str:
         wrong_annotation_counter = 0
@@ -87,15 +101,8 @@ class BBoxExporterStrategy(YoloExporterStrategy):
 
 
 class SegmentationExporterStrategy(YoloExporterStrategy):
-    def get_yolo_yaml(self, project: AnnotationProject, data_dir: Path) -> str:
-        train, val = self.determine_test_and_val_folders(data_dir)
-        yaml_structure = {
-            "names": {cat.id: cat.name for cat in project.categories.categories},
-            "data": str(data_dir.absolute()),
-            "train": train,
-            "val": val,
-        }
-        return yaml.dump(yaml_structure)
+    def get_yolo_yaml(self, project: AnnotationProject, data_dir: Path, image_dir_name: str) -> str:
+        return yaml.dump(self.generate_generic_yaml_content(project, data_dir, image_dir_name))
 
     def convert_file(self, project: AnnotationProject, f: AnnotatedFile) -> str:
         wrong_annotation_counter = 0
@@ -115,21 +122,15 @@ class SegmentationExporterStrategy(YoloExporterStrategy):
 
 
 class PoseExporterStrategy(YoloExporterStrategy):
-    def get_yolo_yaml(self, project: AnnotationProject, data_dir: Path) -> str:
-        train, val = self.determine_test_and_val_folders(data_dir)
-        yaml_structure: dict[str, Any] = {
-            "names": {cat.id: cat.name for cat in project.categories.categories},
-            "data": str(data_dir.absolute()),
-            "train": train,
-            "val": val,
-        }
+    def get_yolo_yaml(self, project: AnnotationProject, data_dir: Path, image_dir_name: str) -> str:
+        yaml_dict = self.generate_generic_yaml_content(project, data_dir, image_dir_name)
         if len(project.pose_config.pose_points) == 0:
             project.regenerate_pose_points()
 
         max_points = project.pose_config.bind_pose_points_to_max()
 
-        yaml_structure["kpt_shape"] = [max_points, 3]
-        return yaml.dump(yaml_structure)
+        yaml_dict["kpt_shape"] = [max_points, 3]
+        return yaml.dump(yaml_dict)
 
     def convert_file(self, project: AnnotationProject, f: AnnotatedFile):
         # For pose: validate that the amount of points is equal across all annotations, otherwise don't import
@@ -212,4 +213,4 @@ class YoloExporter:
             f.write(
                 f"# This YOLO dataset was autogenerated by DagsHub annotation converter on {dt_now.isoformat()}\n\n"
             )
-            f.write(self.strategy.get_yolo_yaml(project, self.data_dir))
+            f.write(self.strategy.get_yolo_yaml(project, self.data_dir, self.image_dir_name))

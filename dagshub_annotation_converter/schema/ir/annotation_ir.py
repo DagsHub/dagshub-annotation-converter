@@ -38,6 +38,9 @@ class Categories(BaseModel):
     def __iter__(self):
         return self.categories.__iter__()
 
+    def __len__(self):
+        return len(self.categories)
+
     def get(self, item: Union[int, str], default=None) -> Category:
         try:
             return self[item]
