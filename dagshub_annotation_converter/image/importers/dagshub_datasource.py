@@ -29,6 +29,7 @@ class DagshubDatasourceImporter:
         self,
         datasource_or_queryresult: Union["Datasource", "QueryResult"],
         annotation_fields: Optional[Union[str, List[str]]] = None,
+        keep_source_prefix=True,
     ):
         """
 
@@ -37,6 +38,8 @@ class DagshubDatasourceImporter:
         :param annotation_fields: List of names of fields to get annotations from.
             If ``None``, loads all annotation fields.
             Loading multiple fields concatenates the annotations together.
+        :param keep_source_prefix: Whether the annotation path should be the full path in the repo (True),
+            or just the path relative to the datasource path (False)
         """
         from dagshub.data_engine.model.datasource import Datasource
 
@@ -53,6 +56,8 @@ class DagshubDatasourceImporter:
         self.annotation_fields: List[str] = (
             annotation_fields if annotation_fields else self.datasource.annotation_fields
         )
+
+        self.keep_source_prefix = keep_source_prefix
 
         if len(self.annotation_fields) == 0:
             raise RuntimeError("Datasource doesn't have any annotation fields")
@@ -77,7 +82,8 @@ class DagshubDatasourceImporter:
         return project
 
     def parse_datapoint(self, project: AnnotationProject, dp: "Datapoint"):
-        ann_file = AnnotatedFile(file=dp.path)
+        file_path = dp.path_in_repo if self.keep_source_prefix else dp.path
+        ann_file = AnnotatedFile(file=file_path)
 
         for annotation_field in self.annotation_fields:
             if annotation_field not in dp.metadata or not isinstance(dp.metadata[annotation_field], bytes):
