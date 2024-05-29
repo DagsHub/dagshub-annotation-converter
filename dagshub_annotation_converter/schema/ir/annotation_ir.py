@@ -280,6 +280,12 @@ class YoloImportConfig(BaseModel):
     keypoint_shape: Literal[2, 3] = 2
 
 
+class YoloExportConfig(BaseModel):
+    keypoint_dim: Literal[2, 3] = 3  # Export with 3 dimensions by default
+    rewrite_yaml: bool = True
+    """Whether to rewrite the YAML file or not if it already exists"""
+
+
 class ImportConfig(BaseModel):
     yolo: YoloImportConfig = YoloImportConfig()
 
