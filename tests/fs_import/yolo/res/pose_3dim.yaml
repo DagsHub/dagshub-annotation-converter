@@ -1,0 +1,5 @@
+names:
+  0: dog
+  1: cat
+path: data
+kpt_shape: [4, 3]

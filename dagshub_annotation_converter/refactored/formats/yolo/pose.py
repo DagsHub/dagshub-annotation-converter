@@ -68,15 +68,15 @@ def import_pose_3dim(
 
 
 def import_pose_from_string(
-    context: YoloContext,
     annotation: str,
+    context: YoloContext,
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
     image: Optional[ImageType] = None,
 ) -> IRPoseAnnotation:
     if len(annotation.split("\n")) > 1:
         raise ValueError("Please pass one annotation at a time")
-    parts = annotation.split(" ")
+    parts = annotation.strip().split(" ")
     category = int(parts[0])
     middle_x = float(parts[1])
     middle_y = float(parts[2])

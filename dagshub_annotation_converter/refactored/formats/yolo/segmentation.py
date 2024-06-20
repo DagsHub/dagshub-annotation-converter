@@ -44,7 +44,7 @@ def import_segment_from_string(
 ) -> IRSegmentationAnnotation:
     if len(annotation.split("\n")) > 1:
         raise ValueError("Please pass one annotation at a time")
-    parts = annotation.split(" ")
+    parts = annotation.strip().split(" ")
     category = int(parts[0])
     points = [(float(parts[i]), float(parts[i + 1])) for i in range(1, len(parts), 2)]
     return import_segment(

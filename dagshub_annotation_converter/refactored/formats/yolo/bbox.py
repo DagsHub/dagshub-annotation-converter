@@ -47,7 +47,7 @@ def import_bbox_from_string(
 ) -> IRBBoxAnnotation:
     if len(annotation.split("\n")) > 1:
         raise ValueError("Please pass one annotation at a time")
-    parts = annotation.split(" ")
+    parts = annotation.strip().split(" ")
     category = int(parts[0])
     center_x = float(parts[1])
     center_y = float(parts[2])
