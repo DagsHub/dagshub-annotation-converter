@@ -45,11 +45,13 @@ path = "dagshub_annotation_converter/__init__.py"
 dependencies = [
   "coverage[toml]>=6.5",
   "pytest",
+  "devtools",
   "pandas-stubs",
   "types-pillow",
   "types-pyyaml",
   "types-lxml",
   "lxml-stubs",
+  "dagshub",
 ]
 
 [tool.hatch.envs.default.scripts]

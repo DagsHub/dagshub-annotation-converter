@@ -53,6 +53,7 @@ class IRPoseAnnotation(IRAnnotationBase):
         state: "NormalizationState",
         image_width: int,
         image_height: int,
+        filename: Optional[str] = None,
     ) -> "IRPoseAnnotation":
         point_xs = list(map(lambda p: p.x, points))
         point_ys = list(map(lambda p: p.y, points))
@@ -64,6 +65,7 @@ class IRPoseAnnotation(IRAnnotationBase):
 
         return IRPoseAnnotation(
             category=category,
+            filename=filename,
             top=min_y,
             left=min_x,
             width=max_x - min_x,

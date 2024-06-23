@@ -84,7 +84,4 @@ class LabelStudioTask(BaseModel):
 
 
 def parse_ls_task(task: Union[str, bytes]) -> LabelStudioTask:
-    try:
-        return LabelStudioTask.model_validate_json(task)
-    except Exception as ex:
-        print(ex)
+    return LabelStudioTask.model_validate_json(task)
