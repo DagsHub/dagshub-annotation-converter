@@ -2,8 +2,8 @@ from lxml.etree import ElementBase
 import lxml.etree
 
 from dagshub_annotation_converter.refactored.formats.cvat import (
-    parse_box,
     CVATContext,
+    parse_box,
     parse_polygon,
     parse_points,
     parse_skeleton,

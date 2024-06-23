@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--Just did a couple annotations with mandalorian in CVAT then exported it-->
+<annotations>
+  <version>1.1</version>
+  <meta>
+    <project>
+      <id>2</id>
+      <name>Testing project</name>
+      <bugtracker></bugtracker>
+      <created>2024-04-17 12:49:00.251758+00:00</created>
+      <updated>2024-04-17 12:51:18.597338+00:00</updated>
+      <tasks>
+        <task>
+          <id>3</id>
+          <name>My task</name>
+          <size>13</size>
+          <mode>annotation</mode>
+          <overlap>0</overlap>
+          <bugtracker></bugtracker>
+          <created>2024-04-17 12:49:53.691638+00:00</created>
+          <updated>2024-04-17 13:05:07.098810+00:00</updated>
+          <subset>default</subset>
+          <start_frame>0</start_frame>
+          <stop_frame>12</stop_frame>
+          <frame_filter></frame_filter>
+          <segments>
+            <segment>
+              <id>3</id>
+              <start>0</start>
+              <stop>12</stop>
+              <url>http://localhost:8081/api/jobs/3</url>
+            </segment>
+          </segments>
+          <owner>
+            <username>kirill</username>
+            <email>kirill@dagshub.com</email>
+          </owner>
+          <assignee></assignee>
+        </task>
+      </tasks>
+      <subsets>default</subsets>
+      <owner>
+        <username>kirill</username>
+        <email>kirill@dagshub.com</email>
+      </owner>
+      <assignee></assignee>
+      <labels>
+        <label>
+          <name>Baby Yoda</name>
+          <color>#bb2c9d</color>
+          <type>any</type>
+          <attributes>
+          </attributes>
+        </label>
+        <label>
+          <name>Ship</name>
+          <color>#474403</color>
+          <type>any</type>
+          <attributes>
+          </attributes>
+        </label>
+        <label>
+          <name>Yoda</name>
+          <color>#476073</color>
+          <type>skeleton</type>
+          <attributes>
+          </attributes>
+          <svg>&lt;circle r="0.75" cx="38.12709045410156" cy="29.336671829223633" data-type="element node" data-element-id="1" data-node-id="1" data-label-name="1"&gt;&lt;/circle&gt;
+&lt;circle r="0.75" cx="66.05351257324219" cy="29.169448852539062" data-type="element node" data-element-id="2" data-node-id="2" data-label-name="2"&gt;&lt;/circle&gt;
+&lt;circle r="0.75" cx="29.598663330078125" cy="17.965435028076172" data-type="element node" data-element-id="3" data-node-id="3" data-label-name="3"&gt;&lt;/circle&gt;
+&lt;circle r="0.75" cx="72.07357788085938" cy="15.624298095703125" data-type="element node" data-element-id="4" data-node-id="4" data-label-name="4"&gt;&lt;/circle&gt;
+&lt;circle r="0.75" cx="52.006690979003906" cy="37.6978759765625" data-type="element node" data-element-id="5" data-node-id="5" data-label-name="5"&gt;&lt;/circle&gt;
+&lt;circle r="0.75" cx="44.481605529785156" cy="45.8918571472168" data-type="element node" data-element-id="6" data-node-id="6" data-label-name="6"&gt;&lt;/circle&gt;
+&lt;circle r="0.75" cx="64.7157211303711" cy="44.2196159362793" data-type="element node" data-element-id="7" data-node-id="7" data-label-name="7"&gt;&lt;/circle&gt;</svg>
+        </label>
+        <label>
+          <name>1</name>
+          <color>#d12345</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+          <parent>Yoda</parent>
+        </label>
+        <label>
+          <name>2</name>
+          <color>#350dea</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+          <parent>Yoda</parent>
+        </label>
+        <label>
+          <name>3</name>
+          <color>#479ffe</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+          <parent>Yoda</parent>
+        </label>
+        <label>
+          <name>4</name>
+          <color>#4a649f</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+          <parent>Yoda</parent>
+        </label>
+        <label>
+          <name>5</name>
+          <color>#478144</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+          <parent>Yoda</parent>
+        </label>
+        <label>
+          <name>6</name>
+          <color>#57236b</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+          <parent>Yoda</parent>
+        </label>
+        <label>
+          <name>7</name>
+          <color>#1cdda5</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+          <parent>Yoda</parent>
+        </label>
+        <label>
+          <name>Robot</name>
+          <color>#7b7a4a</color>
+          <type>any</type>
+          <attributes>
+          </attributes>
+        </label>
+        <label>
+          <name>Person</name>
+          <color>#c06060</color>
+          <type>any</type>
+          <attributes>
+          </attributes>
+        </label>
+      </labels>
+    </project>
+    <dumped>2024-04-17 13:05:26.256880+00:00</dumped>
+  </meta>
+  <image id="1" name="001.png" subset="default" task_id="3" width="1920" height="1200">
+    <box label="Baby Yoda" source="manual" occluded="0" xtl="748.06" ytl="379.10" xbr="1151.04" ybr="952.24" z_order="0">
+    </box>
+  </image>
+  <image id="2" name="002.png" subset="default" task_id="3" width="1920" height="1200">
+    <polygon label="Ship" source="manual" occluded="0" points="874.39,919.17;669.02,827.23;645.14,845.14;0.00,562.37;0.00,475.08;863.64,821.26;899.46,858.27;893.49,894.09" z_order="-1">
+    </polygon>
+    <box label="Person" source="manual" occluded="0" xtl="768.95" ytl="464.68" xbr="1060.50" ybr="904.48" z_order="0">
+    </box>
+    <polygon label="Robot" source="manual" occluded="0" points="1260.50,559.20;1290.35,552.24;1327.16,527.36;1367.96,530.35;1410.75,554.23;1378.91,568.16;1373.93,583.08;1397.81,605.97;1427.66,630.85;1450.55,679.60;1465.47,709.45;1458.51,739.30;1438.61,776.12;1424.68,804.97;1445.57,835.82;1482.39,879.60;1502.29,918.41;1474.43,913.43;1471.44,892.54;1430.65,850.75;1438.61,898.51;1405.77,886.57;1407.76,859.70;1390.85,830.85;1387.86,804.97;1401.79,783.08;1416.72,737.31;1389.85,746.27;1371.94,760.20;1358.01,745.27;1381.89,724.38;1408.76,712.44;1401.79,693.53;1383.88,689.55;1353.03,708.46;1326.17,717.41;1330.15,689.55;1363.98,679.60;1373.93,674.63;1371.94,627.86;1373.93,611.94;1363.98,597.01;1349.05,587.06;1315.22,595.02;1297.31,584.08;1284.38,582.09" z_order="0">
+    </polygon>
+    <polygon label="Robot" source="manual" occluded="0" points="1561.99,525.37;1556.02,555.22;1569.95,565.17;1600.80,563.18;1633.63,561.19;1649.55,575.12;1661.49,597.01;1653.53,612.93;1649.55,640.80;1656.52,678.61;1631.64,715.42;1607.76,738.31;1623.68,751.24;1635.62,731.34;1665.47,709.45;1661.49,739.30;1643.58,772.14;1633.63,800.99;1656.52,887.56;1632.64,899.50;1619.70,911.44;1679.40,920.40;1688.36,918.41;1670.45,886.57;1672.44,855.72;1664.48,824.88;1670.45,796.02;1675.42,777.11;1696.32,803.98;1705.27,839.80;1724.18,876.62;1733.13,897.51;1705.27,910.45;1699.30,921.39;1712.24,924.38;1752.04,924.38;1761.99,920.40;1747.06,892.54;1737.11,858.71;1730.94,834.63;1722.69,818.31;1724.28,794.33;1720.30,760.00;1724.18,734.73;1715.02,682.49;1702.59,638.81;1675.22,602.29;1667.56,586.96;1661.79,566.27;1681.89,553.83;1692.04,548.06;1674.23,526.47;1652.14,507.76;1630.05,503.98;1605.57,513.03;1596.02,523.08;1590.75,529.85" z_order="0">
+    </polygon>
+    <box label="Baby Yoda" source="manual" occluded="0" xtl="676.42" ytl="662.69" xbr="763.98" ybr="807.96" z_order="0">
+    </box>
+    <polygon label="Robot" source="manual" occluded="0" points="1249.55,876.62;1289.35,867.66;1285.37,808.95;1337.11,855.72;1341.09,843.78;1306.27,796.02;1292.34,798.01;1280.40,766.17;1311.24,729.35;1332.14,712.44;1322.19,680.60;1296.32,617.91;1286.37,607.96;1273.43,554.23;1252.54,539.30;1225.67,542.29;1213.73,551.24;1193.83,559.20;1186.87,567.16;1193.83,591.04;1208.76,592.04;1224.68,588.06;1234.63,598.01;1254.53,587.06;1274.43,612.93;1263.48,627.86;1262.49,642.79;1229.65,621.89;1217.71,615.92;1206.77,628.86;1222.69,640.80;1209.75,651.74;1233.63,660.70;1264.48,670.65;1275.42,686.57;1284.38,699.50;1284.38,711.44;1278.41,731.34;1257.51,755.22;1252.54,768.16;1259.50,790.05;1263.48,819.90;1273.43,835.82;1276.42,848.76;1240.60,860.70" z_order="0">
+    </polygon>
+  </image>
+  <image id="3" name="003.png" subset="default" task_id="3" width="1920" height="1200">
+    <box label="Person" source="manual" occluded="0" xtl="872.64" ytl="218.01" xbr="1629.85" ybr="996.12" z_order="0">
+    </box>
+    <points label="Baby Yoda" source="manual" occluded="0" points="697.51,665.77;674.63,658.81;672.64,761.29" z_order="0">
+    </points>
+  </image>
+  <image id="4" name="004.png" subset="default" task_id="3" width="1920" height="1200">
+    <skeleton label="Yoda" source="manual" z_order="0">
+      <points label="4" source="manual" outside="0" occluded="0" points="1249.72,310.54">
+      </points>
+      <points label="2" source="manual" outside="0" occluded="0" points="969.80,406.69">
+      </points>
+      <points label="1" source="manual" outside="0" occluded="0" points="797.51,449.77">
+      </points>
+      <points label="7" source="manual" outside="0" occluded="0" points="966.08,497.59">
+      </points>
+      <points label="6" source="manual" outside="0" occluded="0" points="846.27,520.51">
+      </points>
+      <points label="5" source="manual" outside="0" occluded="0" points="908.36,455.94">
+      </points>
+      <points label="3" source="manual" outside="0" occluded="0" points="349.30,450.10">
+      </points>
+    </skeleton>
+  </image>
+</annotations>
