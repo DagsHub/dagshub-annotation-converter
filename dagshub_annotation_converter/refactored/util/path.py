@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 
 def get_extension(path: Path) -> str:
@@ -8,16 +9,16 @@ def get_extension(path: Path) -> str:
     return ext
 
 
-def yolo_img_path_to_label_path(
-    img_path: Path, image_dir_name: str, label_dir_name: str, label_extension: str = ".txt"
-) -> Path:
-    new_parts = list(img_path.parts)
+def replace_folder(in_path: Path, to_replace: str, replace_with: str, label_extension: Optional[str] = ".txt") -> Path:
+    """Swaps LAST occurrence of to_replace with replace_with in the path."""
+    new_parts = list(in_path.parts)
 
-    # Replace last occurrence of image_dir_name to label_dir_name
-    for i, part in enumerate(reversed(img_path.parts)):
-        if part == image_dir_name:
-            new_parts[len(new_parts) - i - 1] = label_dir_name
+    # Replace last occurrence
+    for i, part in enumerate(reversed(in_path.parts)):
+        if part == to_replace:
+            new_parts[len(new_parts) - i - 1] = replace_with
 
-    # Replace the extension
-    new_parts[-1] = new_parts[-1].replace(get_extension(img_path), label_extension)
+    if label_extension is not None:
+        # Replace the extension
+        new_parts[-1] = new_parts[-1].replace(get_extension(in_path), label_extension)
     return Path(*new_parts)

@@ -5,6 +5,8 @@ from typing import Union, Sequence, List, Dict, Optional
 
 import PIL.Image
 
+from dagshub_annotation_converter.refactored.converters.common import group_annotations_by_filename
+from dagshub_annotation_converter.refactored.formats.yolo import allowed_annotation_types, export_lookup
 from dagshub_annotation_converter.refactored.formats.yolo.bbox import import_bbox_from_string
 from dagshub_annotation_converter.refactored.formats.yolo.context import (
     YoloContext,
@@ -12,9 +14,9 @@ from dagshub_annotation_converter.refactored.formats.yolo.context import (
     YoloConverterFunction,
 )
 from dagshub_annotation_converter.refactored.formats.yolo.pose import import_pose_from_string
-from dagshub_annotation_converter.refactored.formats.yolo.segmentation import import_segment_from_string
+from dagshub_annotation_converter.refactored.formats.yolo.segmentation import import_segmentation_from_string
 from dagshub_annotation_converter.refactored.ir.image import IRAnnotationBase
-from dagshub_annotation_converter.refactored.util import is_image, yolo_img_path_to_label_path
+from dagshub_annotation_converter.refactored.util import is_image, replace_folder
 
 logger = logging.getLogger(__name__)
 
@@ -37,9 +39,7 @@ def load_yolo_from_fs_with_context(
             if not is_image(img):
                 logger.debug(f"Skipping {img} because it's not an image")
                 continue
-            annotation = yolo_img_path_to_label_path(
-                img, context.image_dir_name, context.label_dir_name, context.label_extension
-            )
+            annotation = replace_folder(img, context.image_dir_name, context.label_dir_name, context.label_extension)
             if not annotation.exists():
                 logger.warning(f"Couldn't find annotation file [{annotation}] for image file [{img}]")
                 continue
@@ -58,7 +58,7 @@ def parse_annotation(
 
     convert_funcs: Dict[str, YoloConverterFunction] = {
         "bbox": import_bbox_from_string,
-        "segmentation": import_segment_from_string,
+        "segmentation": import_segmentation_from_string,
         "pose": import_pose_from_string,
     }
 
@@ -82,7 +82,7 @@ def load_yolo_from_fs(
     image_dir_name: str = "images",
     label_dir_name: str = "labels",
 ) -> tuple[dict[str, Sequence[IRAnnotationBase]], YoloContext]:
-    context = YoloContext.from_yaml_file(meta_file)
+    context = YoloContext.from_yaml_file(meta_file, annotation_type=annotation_type)
     context.image_dir_name = image_dir_name
     context.label_dir_name = label_dir_name
     context.annotation_type = annotation_type
@@ -91,3 +91,63 @@ def load_yolo_from_fs(
         context.path = Path(path)
 
     return load_yolo_from_fs_with_context(context), context
+
+
+# ======== Annotation Export ======== #
+
+
+def annotations_to_string(annotations: Sequence[IRAnnotationBase], context: YoloContext) -> str:
+    """
+    Serializes multiple YOLO annotations into the contents of the annotations file.
+    Also makes sure that only annotations of the correct type for context.annotation_type are serialized.
+
+    :param annotations: Annotations to serialize (should be single file)
+    :param context: Exporting context
+    :return: String of the content of the file
+    """
+    filtered_annotations = [
+        ann for ann in annotations if isinstance(ann, allowed_annotation_types[context.annotation_type])
+    ]
+
+    if len(filtered_annotations) != len(annotations):
+        logger.warning(
+            f"{annotations[0].filename} has {len(annotations) - len(filtered_annotations)} "
+            f"annotations of the wrong type that won't be exported"
+        )
+
+    export_fn = export_lookup[context.annotation_type]
+
+    return "\n".join([export_fn(ann, context) for ann in filtered_annotations])
+
+
+def export_to_fs(context: YoloContext, annotations: list[IRAnnotationBase], meta_file="annotations.yaml"):
+    """
+    Exports annotations to YOLO format.
+
+    This function exports them in a way that allows you to train with YOLO right away,
+    as long as the images have already been copied to the data folder.
+
+    :param context: Context for exporting. Set the ``path`` attribute to specify the directory,
+        otherwise exports a ``data`` folder in the current working directory.
+    :param annotations: Annotations to export
+    :param meta_file: Name of the YAML file of the YOLO dataset definition.
+        This file will be written to the parent directory of the data path.
+    :return: Path to the directory with the exported data
+    """
+    if context.path is None:
+        print(f"`YoloContext.path` was not set. Exporting to {os.path.join(os.getcwd(), 'data')}")
+        context.path = Path.cwd() / "data"
+
+    grouped_annotations = group_annotations_by_filename(annotations)
+
+    # TODO: test/val splitting
+
+    for filename, anns in grouped_annotations.items():
+        annotation_filename = replace_folder(
+            Path(filename), context.image_dir_name, context.label_dir_name, context.label_extension
+        )
+        annotation_filename.parent.mkdir(parents=True, exist_ok=True)
+        with open(annotation_filename, "w") as f:
+            f.write(annotations_to_string(anns, context))
+
+    # TODO: write out the .yaml file

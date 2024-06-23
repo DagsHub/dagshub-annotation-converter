@@ -36,4 +36,4 @@ def test_bbox_export(yolo_context):
         state=NormalizationState.NORMALIZED,
     )
 
-    assert expected == export_bbox(annotation)
+    assert expected == export_bbox(annotation, yolo_context)

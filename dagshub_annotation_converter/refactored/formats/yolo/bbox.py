@@ -69,6 +69,7 @@ def import_bbox_from_string(
 
 def export_bbox(
     annotation: IRBBoxAnnotation,
+    context: YoloContext,
 ) -> str:
     center_x = annotation.left + annotation.width / 2
     center_y = annotation.top + annotation.height / 2

@@ -13,7 +13,7 @@ from dagshub_annotation_converter.refactored.ir.image.annotations.segmentation i
 )
 
 
-def import_segment(
+def import_segmentation(
     category: Union[int, str],
     points: Sequence[Tuple[float, float]],
     context: YoloContext,
@@ -35,7 +35,7 @@ def import_segment(
     )
 
 
-def import_segment_from_string(
+def import_segmentation_from_string(
     annotation: str,
     context: YoloContext,
     image_width: Optional[int] = None,
@@ -47,7 +47,7 @@ def import_segment_from_string(
     parts = annotation.strip().split(" ")
     category = int(parts[0])
     points = [(float(parts[i]), float(parts[i + 1])) for i in range(1, len(parts), 2)]
-    return import_segment(
+    return import_segmentation(
         category=category,
         points=points,
         context=context,
@@ -57,7 +57,7 @@ def import_segment_from_string(
     )
 
 
-def export_segment(annotation: IRSegmentationAnnotation) -> str:
+def export_segmentation(annotation: IRSegmentationAnnotation, context: YoloContext) -> str:
     return " ".join(
         [
             str(annotation.category.id),

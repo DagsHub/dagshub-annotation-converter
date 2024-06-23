@@ -18,7 +18,7 @@ def test_cvat_import():
     expected_files = ["001.png", "002.png", "003.png", "004.png"]
     assert list(annotations.keys()) == list(expected_files)
 
-    # Check only the annotation types, but not the annotations themselves
+    # Check only the annotation types, but not the annotations themselves (otherwise the parsing tests would fail)
     expected_annotations = [
         [IRBBoxAnnotation],
         [

@@ -1,3 +1,4 @@
+import os.path
 from pathlib import Path
 from typing import Dict, Union, Optional, Literal, Callable
 
@@ -18,26 +19,32 @@ YoloAnnotationTypes = Literal["bbox", "segmentation", "pose"]
 
 
 class YoloContext(BaseModel):
+    annotation_type: YoloAnnotationTypes
+    """Type of annotations associated with this Yolo Context"""
     categories: Categories = Categories()
     """List of categories"""
     label_dir_name: str = "labels"
     """Name of the directory containing label files"""
     image_dir_name: str = "image"
     """Name of the directory containing image files"""
-    annotation_type: Optional[YoloAnnotationTypes] = None
-    """Type of annotations"""
     keypoint_dim: Literal[2, 3] = 3
-    """2 - x, y; 3 - x, y, visibility"""
+    """[For pose annotations] 
+    Dimension of the annotation: 2 - x, y; 3 - x, y, visibility"""
     keypoints_in_annotation: Optional[int] = None
-    """Number of keypoints in each annotation"""
+    """[For pose annotations]
+    Number of keypoints in each annotation"""
     label_extension: str = ".txt"
     """Extension of the annotation files"""
     path: Optional[Path] = None
-    """Path to the data"""
+    """Base path to the data"""
+    test_path: Optional[Path] = None
+    """Path to the test data, relative to the base path"""
+    val_path: Optional[Path] = None
+    """Path to the validation data, relative to the base path"""
 
     @staticmethod
-    def from_yaml_file(file_path: Union[str, Path]) -> "YoloContext":
-        res = YoloContext()
+    def from_yaml_file(file_path: Union[str, Path], annotation_type: YoloAnnotationTypes) -> "YoloContext":
+        res = YoloContext(annotation_type=annotation_type)
         file_path = Path(file_path)
         with open(file_path) as f:
             meta_dict = yaml.safe_load(f)
@@ -48,7 +55,10 @@ class YoloContext(BaseModel):
             res.keypoint_dim = meta_dict["kpt_shape"][1]
 
         if "path" in meta_dict:
-            res.path = file_path.parent / meta_dict["path"]
+            if os.path.isabs(meta_dict["path"]):
+                res.path = Path(meta_dict["path"])
+            else:
+                res.path = file_path.parent / meta_dict["path"]
 
         return res
 

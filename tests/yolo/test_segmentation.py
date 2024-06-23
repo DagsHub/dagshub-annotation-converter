@@ -1,4 +1,4 @@
-from dagshub_annotation_converter.refactored.formats.yolo.segmentation import import_segment_from_string
+from dagshub_annotation_converter.refactored.formats.yolo.segmentation import import_segmentation_from_string
 from dagshub_annotation_converter.refactored.ir.image import NormalizationState
 from dagshub_annotation_converter.refactored.ir.image.annotations.segmentation import (
     IRSegmentationAnnotation,
@@ -20,7 +20,7 @@ def test_segmentation_import(yolo_context):
         state=NormalizationState.NORMALIZED,
     )
 
-    actual = import_segment_from_string(
+    actual = import_segmentation_from_string(
         context=yolo_context, annotation="0 0.5 0.5 0.75 0.75 0.5 0.75", image_width=100, image_height=200
     )
 
