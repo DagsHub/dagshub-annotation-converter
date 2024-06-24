@@ -25,7 +25,7 @@ class YoloContext(BaseModel):
     """List of categories"""
     label_dir_name: str = "labels"
     """Name of the directory containing label files"""
-    image_dir_name: str = "image"
+    image_dir_name: str = "images"
     """Name of the directory containing image files"""
     keypoint_dim: Literal[2, 3] = 3
     """[For pose annotations] 
@@ -37,8 +37,8 @@ class YoloContext(BaseModel):
     """Extension of the annotation files"""
     path: Optional[Path] = None
     """Base path to the data"""
-    test_path: Optional[Path] = None
-    """Path to the test data, relative to the base path"""
+    train_path: Optional[Path] = None
+    """Path to the train data, relative to the base path"""
     val_path: Optional[Path] = None
     """Path to the validation data, relative to the base path"""
 
@@ -68,3 +68,35 @@ class YoloContext(BaseModel):
         for cat_id, cat_name in yolo_meta["names"].items():
             categories.add(cat_name, cat_id)
         return categories
+
+    def get_yaml_content(self, path_override: Optional[Path] = None) -> str:
+        path: Optional[Path]
+        if path_override is not None:
+            path = path_override
+        else:
+            path = self.path
+        if path is None:
+            raise ValueError(
+                "Output path is not set, either set it on the context, or provide `path_override` to get_yaml_content"
+            )
+
+        content = {
+            "path": str(path.absolute()),
+            "names": {cat.id: cat.name for cat in self.categories.categories},
+            "nc": len(self.categories),
+        }
+
+        if self.train_path is not None:
+            content["train"] = str(self.train_path)
+        if self.val_path is not None:
+            content["val"] = str(self.val_path)
+
+        if self.annotation_type == "pose":
+            if self.keypoints_in_annotation is None:
+                raise ValueError(
+                    "Please provide the number of keypoints in the annotation "
+                    "by setting context.keypoint_in_annotations"
+                )
+            content["kpt_shape"] = [self.keypoints_in_annotation, self.keypoint_dim]
+
+        return yaml.dump(content)

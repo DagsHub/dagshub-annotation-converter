@@ -96,7 +96,7 @@ def load_yolo_from_fs(
 # ======== Annotation Export ======== #
 
 
-def annotations_to_string(annotations: Sequence[IRAnnotationBase], context: YoloContext) -> str:
+def annotations_to_string(annotations: Sequence[IRAnnotationBase], context: YoloContext) -> Optional[str]:
     """
     Serializes multiple YOLO annotations into the contents of the annotations file.
     Also makes sure that only annotations of the correct type for context.annotation_type are serialized.
@@ -115,12 +115,15 @@ def annotations_to_string(annotations: Sequence[IRAnnotationBase], context: Yolo
             f"annotations of the wrong type that won't be exported"
         )
 
+    if len(filtered_annotations) == 0:
+        return None
+
     export_fn = export_lookup[context.annotation_type]
 
     return "\n".join([export_fn(ann, context) for ann in filtered_annotations])
 
 
-def export_to_fs(context: YoloContext, annotations: list[IRAnnotationBase], meta_file="annotations.yaml"):
+def export_to_fs(context: YoloContext, annotations: list[IRAnnotationBase], meta_file="annotations.yaml") -> Path:
     """
     Exports annotations to YOLO format.
 
@@ -132,7 +135,7 @@ def export_to_fs(context: YoloContext, annotations: list[IRAnnotationBase], meta
     :param annotations: Annotations to export
     :param meta_file: Name of the YAML file of the YOLO dataset definition.
         This file will be written to the parent directory of the data path.
-    :return: Path to the directory with the exported data
+    :return: Path to the YAML file with the exported data
     """
     if context.path is None:
         print(f"`YoloContext.path` was not set. Exporting to {os.path.join(os.getcwd(), 'data')}")
@@ -140,14 +143,21 @@ def export_to_fs(context: YoloContext, annotations: list[IRAnnotationBase], meta
 
     grouped_annotations = group_annotations_by_filename(annotations)
 
-    # TODO: test/val splitting
-
     for filename, anns in grouped_annotations.items():
-        annotation_filename = replace_folder(
+        annotation_filename = context.path / replace_folder(
             Path(filename), context.image_dir_name, context.label_dir_name, context.label_extension
         )
         annotation_filename.parent.mkdir(parents=True, exist_ok=True)
-        with open(annotation_filename, "w") as f:
-            f.write(annotations_to_string(anns, context))
+        annotation_content = annotations_to_string(anns, context)
+        if annotation_content is not None:
+            with open(annotation_filename, "w") as f:
+                f.write(annotation_content)
 
-    # TODO: write out the .yaml file
+    # TODO: test/val splitting
+    yaml_file_path = context.path.parent / meta_file
+    with open(yaml_file_path, "w") as yaml_f:
+        yaml_f.write(context.get_yaml_content())
+
+    logger.warning(f"Saved annotations to {context.path}\nand .YAML file at {yaml_file_path}")
+
+    return yaml_file_path
