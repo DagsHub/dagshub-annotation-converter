@@ -37,9 +37,9 @@ class YoloContext(BaseModel):
     """Extension of the annotation files"""
     path: Optional[Path] = None
     """Base path to the data"""
-    train_path: Optional[Path] = None
+    train_path: Optional[Path] = Path(".")
     """Path to the train data, relative to the base path"""
-    val_path: Optional[Path] = None
+    val_path: Optional[Path] = Path(".")
     """Path to the validation data, relative to the base path"""
 
     @staticmethod
