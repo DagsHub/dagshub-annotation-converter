@@ -60,6 +60,11 @@ class YoloContext(BaseModel):
             else:
                 res.path = file_path.parent / meta_dict["path"]
 
+        if "train" in meta_dict:
+            res.train_path = Path(meta_dict["train"])
+        if "val" in meta_dict:
+            res.val_path = Path(meta_dict["val"])
+
         return res
 
     @staticmethod
