@@ -1,6 +1,6 @@
 import pytest
 
-from dagshub_annotation_converter.refactored.ir.image import Categories
+from dagshub_annotation_converter.ir.image import Categories
 
 
 @pytest.fixture

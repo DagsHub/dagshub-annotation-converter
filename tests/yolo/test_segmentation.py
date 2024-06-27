@@ -1,6 +1,6 @@
-from dagshub_annotation_converter.refactored.formats.yolo.segmentation import import_segmentation_from_string
-from dagshub_annotation_converter.refactored.ir.image import NormalizationState
-from dagshub_annotation_converter.refactored.ir.image.annotations.segmentation import (
+from dagshub_annotation_converter.formats.yolo.segmentation import import_segmentation_from_string
+from dagshub_annotation_converter.ir.image import NormalizationState
+from dagshub_annotation_converter.ir.image.annotations.segmentation import (
     IRSegmentationAnnotation,
     IRSegmentationPoint,
 )

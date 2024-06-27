@@ -2,9 +2,9 @@ from typing import Dict
 
 import pytest
 
-from dagshub_annotation_converter.refactored.formats.label_studio.rectanglelabels import RectangleLabelsAnnotation
-from dagshub_annotation_converter.refactored.formats.label_studio.task import parse_ls_task, LabelStudioTask
-from dagshub_annotation_converter.refactored.ir.image import IRBBoxAnnotation, NormalizationState
+from dagshub_annotation_converter.formats.label_studio.rectanglelabels import RectangleLabelsAnnotation
+from dagshub_annotation_converter.formats.label_studio.task import parse_ls_task, LabelStudioTask
+from dagshub_annotation_converter.ir.image import IRBBoxAnnotation, NormalizationState
 from tests.label_studio.common import generate_task, generate_annotation
 
 

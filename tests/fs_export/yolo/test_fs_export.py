@@ -1,6 +1,6 @@
-from dagshub_annotation_converter.refactored.converters.yolo import export_to_fs
-from dagshub_annotation_converter.refactored.formats.yolo import YoloContext
-from dagshub_annotation_converter.refactored.ir.image import (
+from dagshub_annotation_converter.converters.yolo import export_to_fs
+from dagshub_annotation_converter.formats.yolo import YoloContext
+from dagshub_annotation_converter.ir.image import (
     NormalizationState,
     IRBBoxAnnotation,
     IRSegmentationAnnotation,

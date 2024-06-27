@@ -1,8 +1,8 @@
 import pytest
 
-from dagshub_annotation_converter.refactored.formats.label_studio.keypointlabels import KeyPointLabelsAnnotation
-from dagshub_annotation_converter.refactored.formats.label_studio.task import parse_ls_task, LabelStudioTask
-from dagshub_annotation_converter.refactored.ir.image import IRPoseAnnotation, NormalizationState
+from dagshub_annotation_converter.formats.label_studio.keypointlabels import KeyPointLabelsAnnotation
+from dagshub_annotation_converter.formats.label_studio.task import parse_ls_task, LabelStudioTask
+from dagshub_annotation_converter.ir.image import IRPoseAnnotation, NormalizationState
 from tests.label_studio.common import generate_annotation, generate_task
 
 

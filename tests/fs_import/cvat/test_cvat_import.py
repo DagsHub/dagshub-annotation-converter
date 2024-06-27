@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from dagshub_annotation_converter.refactored.converters.cvat import parse_cvat_from_xml_file
-from dagshub_annotation_converter.refactored.ir.image import (
+from dagshub_annotation_converter.converters.cvat import parse_cvat_from_xml_file
+from dagshub_annotation_converter.ir.image import (
     IRBBoxAnnotation,
     IRSegmentationAnnotation,
     IRPoseAnnotation,

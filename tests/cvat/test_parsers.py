@@ -1,14 +1,14 @@
 from lxml.etree import ElementBase
 import lxml.etree
 
-from dagshub_annotation_converter.refactored.formats.cvat import (
+from dagshub_annotation_converter.formats.cvat import (
     CVATContext,
     parse_box,
     parse_polygon,
     parse_points,
     parse_skeleton,
 )
-from dagshub_annotation_converter.refactored.ir.image import (
+from dagshub_annotation_converter.ir.image import (
     NormalizationState,
     IRBBoxAnnotation,
     IRSegmentationAnnotation,

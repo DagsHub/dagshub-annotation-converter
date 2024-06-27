@@ -1,5 +1,5 @@
 import pytest
-from dagshub_annotation_converter.refactored.formats.yolo.context import YoloContext
+from dagshub_annotation_converter.formats.yolo.context import YoloContext
 
 
 @pytest.fixture

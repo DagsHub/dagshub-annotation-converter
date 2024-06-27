@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from dagshub_annotation_converter.refactored.converters.yolo import load_yolo_from_fs
-from dagshub_annotation_converter.refactored.ir.image import (
+from dagshub_annotation_converter.converters.yolo import load_yolo_from_fs
+from dagshub_annotation_converter.ir.image import (
     IRBBoxAnnotation,
     NormalizationState,
     IRSegmentationAnnotation,

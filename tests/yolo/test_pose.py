@@ -1,6 +1,6 @@
-from dagshub_annotation_converter.refactored.formats.yolo.pose import import_pose_from_string, export_pose
-from dagshub_annotation_converter.refactored.ir.image import NormalizationState
-from dagshub_annotation_converter.refactored.ir.image.annotations.pose import IRPosePoint, IRPoseAnnotation
+from dagshub_annotation_converter.formats.yolo.pose import import_pose_from_string, export_pose
+from dagshub_annotation_converter.ir.image import NormalizationState
+from dagshub_annotation_converter.ir.image.annotations.pose import IRPosePoint, IRPoseAnnotation
 
 
 def test_pose_3dim(yolo_context):

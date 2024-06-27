@@ -1,8 +1,8 @@
 import pytest
 
-from dagshub_annotation_converter.refactored.formats.label_studio.polygonlabels import PolygonLabelsAnnotation
-from dagshub_annotation_converter.refactored.formats.label_studio.task import parse_ls_task, LabelStudioTask
-from dagshub_annotation_converter.refactored.ir.image import (
+from dagshub_annotation_converter.formats.label_studio.polygonlabels import PolygonLabelsAnnotation
+from dagshub_annotation_converter.formats.label_studio.task import parse_ls_task, LabelStudioTask
+from dagshub_annotation_converter.ir.image import (
     IRSegmentationAnnotation,
     NormalizationState,
     IRSegmentationPoint,
