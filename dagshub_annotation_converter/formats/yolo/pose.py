@@ -2,9 +2,9 @@ from typing import Union, Tuple, Optional, Sequence
 
 from dagshub_annotation_converter.formats.common import (
     ImageType,
-    determine_category,
     determine_image_dimensions,
 )
+from dagshub_annotation_converter.formats.yolo.categories import determine_category
 from dagshub_annotation_converter.formats.yolo.context import YoloContext
 from dagshub_annotation_converter.ir.image import NormalizationState
 from dagshub_annotation_converter.ir.image.annotations.pose import IRPoseAnnotation, IRPosePoint
@@ -55,7 +55,7 @@ def import_pose_3dim(
     parsed_category = determine_category(category, context.categories)
 
     return IRPoseAnnotation(
-        category=parsed_category,
+        category=parsed_category.name,
         image_width=image_width,
         image_height=image_height,
         state=NormalizationState.NORMALIZED,
@@ -110,9 +110,11 @@ def export_pose(annotation: IRPoseAnnotation, context: YoloContext) -> str:
     else:
         point_list = [f"{point.x} {point.y} {0 if point.visible == False else 1}" for point in annotation.points]
 
+    cat_id = context.categories[annotation.category].id
+
     return " ".join(
         [
-            str(annotation.category.id),
+            str(cat_id),
             str(annotation.left + annotation.width / 2),
             str(annotation.top + annotation.height / 2),
             str(annotation.width),

@@ -2,9 +2,9 @@ from typing import Union, Optional, Tuple, Sequence
 
 from dagshub_annotation_converter.formats.common import (
     ImageType,
-    determine_category,
     determine_image_dimensions,
 )
+from dagshub_annotation_converter.formats.yolo.categories import determine_category
 from dagshub_annotation_converter.formats.yolo.context import YoloContext
 from dagshub_annotation_converter.ir.image import NormalizationState
 from dagshub_annotation_converter.ir.image.annotations.segmentation import (
@@ -27,7 +27,7 @@ def import_segmentation(
     parsed_category = determine_category(category, context.categories)
 
     return IRSegmentationAnnotation(
-        category=parsed_category,
+        category=parsed_category.name,
         image_width=image_width,
         image_height=image_height,
         state=NormalizationState.NORMALIZED,
@@ -58,9 +58,10 @@ def import_segmentation_from_string(
 
 
 def export_segmentation(annotation: IRSegmentationAnnotation, context: YoloContext) -> str:
+    cat_id = context.categories[annotation.category].id
     return " ".join(
         [
-            str(annotation.category.id),
+            str(cat_id),
             *[f"{point.x} {point.y}" for point in annotation.points],
         ]
     )

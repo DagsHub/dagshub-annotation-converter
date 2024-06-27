@@ -4,12 +4,12 @@ from typing import Sequence
 
 from pydantic import BaseModel, Field
 
-from dagshub_annotation_converter.ir.image import Categories, IRAnnotationBase
+from dagshub_annotation_converter.ir.image import IRAnnotationBase
 
 
 class AnnotationResultABC(BaseModel):
     @abstractmethod
-    def to_ir_annotation(self, categories: Categories) -> Sequence[IRAnnotationBase]:
+    def to_ir_annotation(self) -> Sequence[IRAnnotationBase]:
         """
         Convert LabelStudio annotation to 0..n DAGsHub IR annotations.
 
@@ -29,7 +29,7 @@ class ImageAnnotationResultABC(AnnotationResultABC):
     from_name: str = "label"
 
     @abstractmethod
-    def to_ir_annotation(self, categories: Categories) -> Sequence[IRAnnotationBase]:
+    def to_ir_annotation(self) -> Sequence[IRAnnotationBase]:
         """
         Convert LabelStudio annotation to 0..n DAGsHub IR annotations.
 

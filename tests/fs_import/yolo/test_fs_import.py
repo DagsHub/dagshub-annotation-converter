@@ -34,7 +34,7 @@ def test_bbox(data_folder, img_path):
         img_path: [
             IRBBoxAnnotation(
                 filename=img_path,
-                category=ctx.categories[0],
+                category=ctx.categories[0].name,
                 image_width=640,
                 image_height=480,
                 state=NormalizationState.NORMALIZED,
@@ -45,7 +45,7 @@ def test_bbox(data_folder, img_path):
             ),
             IRBBoxAnnotation(
                 filename=img_path,
-                category=ctx.categories[1],
+                category=ctx.categories[1].name,
                 image_width=640,
                 image_height=480,
                 state=NormalizationState.NORMALIZED,
@@ -79,7 +79,7 @@ def test_segmentation(data_folder, img_path):
         img_path: [
             IRSegmentationAnnotation(
                 filename=img_path,
-                category=ctx.categories[0],
+                category=ctx.categories[0].name,
                 image_width=640,
                 image_height=480,
                 state=NormalizationState.NORMALIZED,
@@ -87,7 +87,7 @@ def test_segmentation(data_folder, img_path):
             ),
             IRSegmentationAnnotation(
                 filename=img_path,
-                category=ctx.categories[1],
+                category=ctx.categories[1].name,
                 image_width=640,
                 image_height=480,
                 state=NormalizationState.NORMALIZED,
@@ -95,7 +95,7 @@ def test_segmentation(data_folder, img_path):
             ),
             IRSegmentationAnnotation(
                 filename=img_path,
-                category=ctx.categories[0],
+                category=ctx.categories[0].name,
                 image_width=640,
                 image_height=480,
                 state=NormalizationState.NORMALIZED,
@@ -123,7 +123,7 @@ def generate_expected(img_path, ctx, to_keypoints_fn) -> dict:
         img_path: [
             IRPoseAnnotation(
                 filename=img_path,
-                category=ctx.categories[0],
+                category=ctx.categories[0].name,
                 image_width=640,
                 image_height=480,
                 state=NormalizationState.NORMALIZED,
@@ -135,7 +135,7 @@ def generate_expected(img_path, ctx, to_keypoints_fn) -> dict:
             ),
             IRPoseAnnotation(
                 filename=img_path,
-                category=ctx.categories[1],
+                category=ctx.categories[1].name,
                 image_width=640,
                 image_height=480,
                 state=NormalizationState.NORMALIZED,

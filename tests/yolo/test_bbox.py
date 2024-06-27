@@ -5,7 +5,7 @@ from dagshub_annotation_converter.ir.image.annotations.bbox import IRBBoxAnnotat
 
 def test_bbox_import(yolo_context):
     expected = IRBBoxAnnotation(
-        category=yolo_context.categories[0],
+        category=yolo_context.categories[0].name,
         top=0.5,
         left=0.5,
         width=0.5,
@@ -26,7 +26,7 @@ def test_bbox_export(yolo_context):
     expected = "0 0.75 0.75 0.5 0.5"
 
     annotation = IRBBoxAnnotation(
-        category=yolo_context.categories[0],
+        category=yolo_context.categories[0].name,
         top=0.5,
         left=0.5,
         width=0.5,

@@ -4,7 +4,7 @@ from typing import Optional
 from pydantic import BaseModel
 from typing_extensions import Self
 
-from dagshub_annotation_converter.ir.image import Category, NormalizationState
+from dagshub_annotation_converter.ir.image import NormalizationState
 
 
 class IRAnnotationBase(BaseModel):
@@ -14,7 +14,7 @@ class IRAnnotationBase(BaseModel):
 
     filename: Optional[str] = None
 
-    category: Category
+    category: str
     image_width: int
     image_height: int
     state: NormalizationState

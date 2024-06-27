@@ -1,11 +1,11 @@
 from lxml.etree import ElementBase
 
-from dagshub_annotation_converter.formats.cvat.context import CVATContext, parse_image_tag
+from dagshub_annotation_converter.formats.cvat.context import parse_image_tag
 from dagshub_annotation_converter.ir.image import IRSegmentationAnnotation, NormalizationState
 
 
-def parse_polygon(context: CVATContext, elem: ElementBase, containing_image: ElementBase) -> IRSegmentationAnnotation:
-    category = context.categories.get_or_create(str(elem.attrib["label"]))
+def parse_polygon(elem: ElementBase, containing_image: ElementBase) -> IRSegmentationAnnotation:
+    category = str(elem.attrib["label"])
 
     image_info = parse_image_tag(containing_image)
 

@@ -7,11 +7,11 @@ from tests.label_studio.common import generate_annotation, generate_task
 
 
 @pytest.fixture
-def keypoint_annotation(categories) -> dict:
+def keypoint_annotation() -> dict:
     annotation = {
         "x": 50,
         "y": 50,
-        "keypointlabels": [categories[0].name],
+        "keypointlabels": ["cat"],
     }
     return generate_annotation(annotation, "keypointlabels", "deadbeef")
 
@@ -37,8 +37,8 @@ def test_keypoint_parsing(parsed_keypoint_task):
     assert ann.value.y == 50
 
 
-def test_keypoint_ir(parsed_keypoint_task, categories):
-    actual = parsed_keypoint_task.annotations[0].result[0].to_ir_annotation(categories)
+def test_keypoint_ir(parsed_keypoint_task):
+    actual = parsed_keypoint_task.annotations[0].result[0].to_ir_annotation()
 
     assert len(actual) == 1
     ann = actual[0]

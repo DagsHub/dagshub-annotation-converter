@@ -6,10 +6,9 @@ from .box import parse_box
 from .polygon import parse_polygon
 from .points import parse_points
 from .skeleton import parse_skeleton
-from .context import CVATContext
 from dagshub_annotation_converter.ir.image import IRAnnotationBase
 
-CVATParserFunction = Callable[[CVATContext, ElementBase, ElementBase], IRAnnotationBase]
+CVATParserFunction = Callable[[ElementBase, ElementBase], IRAnnotationBase]
 
 annotation_parsers: dict[str, CVATParserFunction] = {
     "box": parse_box,

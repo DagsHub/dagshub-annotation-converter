@@ -1,13 +1,13 @@
 from lxml.etree import ElementBase
 
-from dagshub_annotation_converter.formats.cvat.context import parse_image_tag, CVATContext
+from dagshub_annotation_converter.formats.cvat.context import parse_image_tag
 from dagshub_annotation_converter.ir.image import IRPoseAnnotation, IRPosePoint, NormalizationState
 
 
-def parse_points(context: CVATContext, elem: ElementBase, containing_image: ElementBase) -> IRPoseAnnotation:
+def parse_points(elem: ElementBase, containing_image: ElementBase) -> IRPoseAnnotation:
     points: list[IRPosePoint] = []
 
-    category = context.categories.get_or_create(str(elem.attrib["label"]))
+    category = str(elem.attrib["label"])
 
     image_info = parse_image_tag(containing_image)
 

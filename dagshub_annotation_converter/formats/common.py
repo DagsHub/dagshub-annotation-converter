@@ -3,16 +3,7 @@ from typing import Union, Optional, Tuple
 
 import PIL.Image
 
-from dagshub_annotation_converter.ir.image import Categories, Category
-
 ImageType = Union[str, Path, PIL.Image.Image]
-
-
-def determine_category(category: Union[int, str], categories: Categories) -> Category:
-    res = categories.get(category)
-    if res is None:
-        raise ValueError(f"Unknown category {category}. Imported categories from the .yaml: {categories}")
-    return res
 
 
 def determine_image_dimensions(

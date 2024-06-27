@@ -20,10 +20,10 @@ def segmentation_points() -> list[list[int]]:
 
 
 @pytest.fixture
-def segmentation_annotation(categories, segmentation_points) -> dict:
+def segmentation_annotation(segmentation_points) -> dict:
     annotation = {
         "points": segmentation_points,
-        "polygonlabels": [categories[0].name],
+        "polygonlabels": ["dog"],
         "closed": True,
     }
     return generate_annotation(annotation, "polygonlabels", "deadbeef")
@@ -49,8 +49,8 @@ def test_segmentation_parsing(parsed_segmentation_task, segmentation_points):
     assert ann.value.points == segmentation_points
 
 
-def test_segmentation_ir(parsed_segmentation_task, segmentation_points, categories):
-    actual = parsed_segmentation_task.annotations[0].result[0].to_ir_annotation(categories)
+def test_segmentation_ir(parsed_segmentation_task, segmentation_points):
+    actual = parsed_segmentation_task.annotations[0].result[0].to_ir_annotation()
 
     assert len(actual) == 1
     ann = actual[0]

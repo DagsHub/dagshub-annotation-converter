@@ -2,7 +2,7 @@ from pydantic import BaseModel
 
 
 from dagshub_annotation_converter.formats.label_studio.base import ImageAnnotationResultABC
-from dagshub_annotation_converter.ir.image import Categories, IRSegmentationAnnotation, NormalizationState
+from dagshub_annotation_converter.ir.image import IRSegmentationAnnotation, NormalizationState
 
 
 class PolygonLabelsAnnotationValue(BaseModel):
@@ -15,10 +15,9 @@ class PolygonLabelsAnnotation(ImageAnnotationResultABC):
     value: PolygonLabelsAnnotationValue
     type: str = "polygonlabels"
 
-    def to_ir_annotation(self, categories: Categories) -> list[IRSegmentationAnnotation]:
-        category = categories.get_or_create(self.value.polygonlabels[0])
+    def to_ir_annotation(self) -> list[IRSegmentationAnnotation]:
         res = IRSegmentationAnnotation(
-            category=category,
+            category=self.value.polygonlabels[0],
             state=NormalizationState.NORMALIZED,
             image_width=self.original_width,
             image_height=self.original_height,

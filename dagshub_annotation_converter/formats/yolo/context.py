@@ -5,10 +5,9 @@ from typing import Dict, Union, Optional, Literal, Callable
 import yaml
 from pydantic import BaseModel
 
-from dagshub_annotation_converter.ir.image import Categories
-
 
 from dagshub_annotation_converter.formats.common import ImageType
+from dagshub_annotation_converter.formats.yolo.categories import Categories
 from dagshub_annotation_converter.ir.image import IRAnnotationBase
 
 YoloConverterFunction = Callable[

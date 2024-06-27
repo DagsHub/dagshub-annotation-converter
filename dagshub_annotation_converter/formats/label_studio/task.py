@@ -1,4 +1,5 @@
 import datetime
+import logging
 import random
 from typing import Any, Sequence, Annotated, Type, Optional, Union
 
@@ -8,13 +9,21 @@ from dagshub_annotation_converter.formats.label_studio.base import AnnotationRes
 from dagshub_annotation_converter.formats.label_studio.keypointlabels import KeyPointLabelsAnnotation
 from dagshub_annotation_converter.formats.label_studio.polygonlabels import PolygonLabelsAnnotation
 from dagshub_annotation_converter.formats.label_studio.rectanglelabels import RectangleLabelsAnnotation
-from dagshub_annotation_converter.ir.image import IRAnnotationBase, Categories
+from dagshub_annotation_converter.ir.image import (
+    IRAnnotationBase,
+    IRPoseAnnotation,
+    IRBBoxAnnotation,
+    IRPosePoint,
+    NormalizationState,
+)
 
 task_lookup: dict[str, Type[AnnotationResultABC]] = {
     "polygonlabels": PolygonLabelsAnnotation,
     "rectanglelabels": RectangleLabelsAnnotation,
     "keypointlabels": KeyPointLabelsAnnotation,
 }
+
+logger = logging.getLogger(__name__)
 
 
 def ls_annotation_validator(v: Any) -> list[AnnotationResultABC]:
@@ -83,16 +92,93 @@ class LabelStudioTask(BaseModel):
         self.data[PoseBBoxLookupKey].append(bbox.id)
         self.data[PosePointsLookupKey].append([point.id for point in keypoints])
 
-    def to_ir_annotations(self, categories: Categories, filename: Optional[str] = None) -> Sequence[IRAnnotationBase]:
+    def to_ir_annotations(self, filename: Optional[str] = None) -> Sequence[IRAnnotationBase]:
         res: list[IRAnnotationBase] = []
         for anns in self.annotations:
             for ann in anns.result:
-                to_add = ann.to_ir_annotation(categories)
+                to_add = ann.to_ir_annotation()
                 if filename is not None:
                     for a in to_add:
                         a.filename = filename
                 res.extend(to_add)
         return res
+
+    def _reimport_poses(self, annotations: list[IRAnnotationBase]) -> Sequence[IRAnnotationBase]:
+        if PosePointsLookupKey not in self.data or PoseBBoxLookupKey not in self.data:
+            return annotations
+
+        # Build a dictionary of all annotation indexes in the task by id
+        # Keep the indexes instead of annotations, so we can pop them for convenience
+        annotation_lookup = {ann.imported_id: ann for ann in annotations if ann.imported_id is not None}
+        pose_bboxes: list[str] = self.data[PoseBBoxLookupKey]
+        pose_points: list[list[str]] = self.data[PosePointsLookupKey]
+
+        annotations_to_remove: set[str] = set()
+        poses: list[IRPoseAnnotation] = []
+
+        for bbox_id, point_ids in zip(pose_bboxes, pose_points):
+            # Fetch the bbox of the pose
+            maybe_bbox = annotation_lookup.get(bbox_id)
+            bbox: Optional[IRBBoxAnnotation] = None
+            category: Optional[str] = None
+            if maybe_bbox is None:
+                logger.warning(
+                    f"Bounding box of pose with annotation ID {bbox_id} "
+                    f"does not exist in the task but exists in metadata"
+                )
+            elif not isinstance(maybe_bbox, IRBBoxAnnotation):
+                logger.warning(f"Bounding box of pose with annotation ID {bbox_id} is not a bounding box annotation")
+            else:
+                bbox = maybe_bbox
+                category = bbox.category
+                annotations_to_remove.add(bbox_id)
+            # Fetch the points
+            points: list[IRPosePoint] = []
+            for point_id in point_ids:
+                maybe_point = annotation_lookup.get(point_id)
+                if maybe_point is None:
+                    logger.warning(
+                        f"Point of pose with annotation ID {bbox_id} "
+                        f"does not exist in the task but exists in metadata"
+                    )
+                    continue
+                elif not isinstance(maybe_point, IRPoseAnnotation):
+                    logger.warning(f"Point of pose with annotation ID {point_id} is not a point annotation")
+                    continue
+                else:
+                    if category is None:
+                        category = maybe_point.category
+                    points.extend(maybe_point.points)
+                    annotations_to_remove.add(point_id)
+
+            if len(points) == 0:
+                logger.warning(f"No points found for the pose on LS Task {self.id}")
+                return annotations
+
+            assert category is not None
+            sum_annotation = IRPoseAnnotation.from_points(
+                category=category,
+                points=points,
+                state=NormalizationState.NORMALIZED,
+                image_width=points[0].image_width,
+                image_height=points[0].image_height,
+            )
+            if bbox is not None:
+                sum_annotation.width = bbox.width
+                sum_annotation.height = bbox.height
+                sum_annotation.top = bbox.top
+                sum_annotation.left = bbox.left
+
+            poses.append(sum_annotation)
+
+        logger.debug(f"Consolidated {len(poses)} pose annotations for LS Task {self.id}")
+
+        if len(poses) == 0:
+            return annotations
+
+        annotations = list(filter(lambda ann: ann.imported_id not in annotations_to_remove, annotations))
+        annotations.extend(poses)
+        return annotations
 
 
 def parse_ls_task(task: Union[str, bytes]) -> LabelStudioTask:

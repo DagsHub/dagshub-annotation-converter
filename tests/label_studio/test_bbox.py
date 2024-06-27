@@ -9,13 +9,13 @@ from tests.label_studio.common import generate_task, generate_annotation
 
 
 @pytest.fixture
-def bbox_annotation(categories) -> Dict:
+def bbox_annotation() -> Dict:
     annotation = {
         "x": 25,
         "y": 25,
         "width": 50,
         "height": 50,
-        "rectanglelabels": [categories[0].name],
+        "rectanglelabels": ["dog"],
     }
     return generate_annotation(annotation, "rectanglelabels", "deadbeef")
 
@@ -43,8 +43,8 @@ def test_bbox_parsing(parsed_bbox_task):
     assert ann.value.height == 50
 
 
-def test_bbox_ir(parsed_bbox_task, categories):
-    actual = parsed_bbox_task.annotations[0].result[0].to_ir_annotation(categories)
+def test_bbox_ir(parsed_bbox_task):
+    actual = parsed_bbox_task.annotations[0].result[0].to_ir_annotation()
 
     assert len(actual) == 1
     ann = actual[0]

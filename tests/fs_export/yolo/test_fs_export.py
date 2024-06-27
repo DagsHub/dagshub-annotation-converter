@@ -12,10 +12,12 @@ from dagshub_annotation_converter.ir.image import (
 
 def test_bbox_export(tmp_path):
     ctx = YoloContext(annotation_type="bbox", path=tmp_path / "data")
+    ctx.categories.add(name="cat")
+    ctx.categories.add(name="dog")
     annotations = [
         IRBBoxAnnotation(
             filename="images/cats/1.jpg",
-            category=ctx.categories.get_or_create("cat"),
+            category="cat",
             top=0.0,
             left=0.0,
             width=0.5,
@@ -26,7 +28,7 @@ def test_bbox_export(tmp_path):
         ),
         IRBBoxAnnotation(
             filename="images/dogs/2.jpg",
-            category=ctx.categories.get_or_create("dog"),
+            category="dog",
             top=0.5,
             left=0.5,
             width=0.5,
@@ -48,10 +50,12 @@ def test_bbox_export(tmp_path):
 
 def test_segmentation_export(tmp_path):
     ctx = YoloContext(annotation_type="segmentation", path=tmp_path / "data")
+    ctx.categories.add(name="cat")
+    ctx.categories.add(name="dog")
     annotations = [
         IRSegmentationAnnotation(
             filename="images/cats/1.jpg",
-            category=ctx.categories.get_or_create("cat"),
+            category="cat",
             points=[IRSegmentationPoint(x=0.0, y=0.5), IRSegmentationPoint(x=0.5, y=0.5)],
             image_width=100,
             image_height=200,
@@ -59,7 +63,7 @@ def test_segmentation_export(tmp_path):
         ),
         IRSegmentationAnnotation(
             filename="images/dogs/2.jpg",
-            category=ctx.categories.get_or_create("dog"),
+            category="dog",
             points=[IRSegmentationPoint(x=0.0, y=0.5), IRSegmentationPoint(x=0.5, y=0.5)],
             image_width=100,
             image_height=200,
@@ -78,11 +82,13 @@ def test_segmentation_export(tmp_path):
 
 def test_pose_export(tmp_path):
     ctx = YoloContext(annotation_type="pose", path=tmp_path / "data")
+    ctx.categories.add(name="cat")
+    ctx.categories.add(name="dog")
     ctx.keypoints_in_annotation = 2
     annotations = [
         IRPoseAnnotation.from_points(
             filename="images/cats/1.jpg",
-            category=ctx.categories.get_or_create("cat"),
+            category="cat",
             points=[IRPosePoint(x=0.0, y=0.5), IRPosePoint(x=0.5, y=0.5)],
             image_width=100,
             image_height=200,
@@ -90,7 +96,7 @@ def test_pose_export(tmp_path):
         ),
         IRPoseAnnotation.from_points(
             filename="images/dogs/2.jpg",
-            category=ctx.categories.get_or_create("dog"),
+            category="dog",
             points=[IRPosePoint(x=0.0, y=0.5), IRPosePoint(x=0.5, y=0.5)],
             image_width=100,
             image_height=200,
@@ -109,10 +115,12 @@ def test_pose_export(tmp_path):
 
 def test_not_exporting_wrong_annotations(tmp_path):
     ctx = YoloContext(annotation_type="bbox", path=tmp_path / "data")
+    ctx.categories.add(name="cat")
+    ctx.categories.add(name="dog")
     annotations = [
         IRBBoxAnnotation(
             filename="images/cats/1.jpg",
-            category=ctx.categories.get_or_create("cat"),
+            category="cat",
             top=0.0,
             left=0.0,
             width=0.5,
@@ -123,7 +131,7 @@ def test_not_exporting_wrong_annotations(tmp_path):
         ),
         IRSegmentationAnnotation(
             filename="images/dogs/2.jpg",
-            category=ctx.categories.get_or_create("dog"),
+            category="dog",
             points=[IRSegmentationPoint(x=0.0, y=0.5), IRSegmentationPoint(x=0.5, y=0.5)],
             image_width=100,
             image_height=200,

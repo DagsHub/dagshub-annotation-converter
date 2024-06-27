@@ -2,7 +2,6 @@ from lxml.etree import ElementBase
 import lxml.etree
 
 from dagshub_annotation_converter.formats.cvat import (
-    CVATContext,
     parse_box,
     parse_polygon,
     parse_points,
@@ -34,13 +33,11 @@ def test_box():
     """
     image, annotation = to_xml(data)
 
-    ctx = CVATContext()
-
-    actual = parse_box(ctx, annotation, image)
+    actual = parse_box(annotation, image)
 
     expected = IRBBoxAnnotation(
         filename="000.png",
-        category=ctx.categories["Person"],
+        category="Person",
         image_width=1920,
         image_height=1200,
         state=NormalizationState.DENORMALIZED,
@@ -63,9 +60,7 @@ def test_segmentation():
 
     image, annotation = to_xml(data)
 
-    ctx = CVATContext()
-
-    actual = parse_polygon(ctx, annotation, image)
+    actual = parse_polygon(annotation, image)
 
     expected_points = []
     points = (
@@ -78,7 +73,7 @@ def test_segmentation():
 
     expected = IRSegmentationAnnotation(
         filename="000.png",
-        category=ctx.categories["Ship"],
+        category="Ship",
         image_width=1920,
         image_height=1200,
         state=NormalizationState.DENORMALIZED,
@@ -97,9 +92,7 @@ def test_points():
 
     image, annotation = to_xml(data)
 
-    ctx = CVATContext()
-
-    actual = parse_points(ctx, annotation, image)
+    actual = parse_points(annotation, image)
 
     expected_points = [
         IRPosePoint(x=697.51, y=665.77),
@@ -109,7 +102,7 @@ def test_points():
 
     expected = IRPoseAnnotation.from_points(
         filename="000.png",
-        category=ctx.categories["Baby Yoda"],
+        category="Baby Yoda",
         image_width=1920,
         image_height=1200,
         state=NormalizationState.DENORMALIZED,
@@ -141,9 +134,7 @@ def test_skeleton():
 
     image, annotation = to_xml(data)
 
-    ctx = CVATContext()
-
-    actual = parse_skeleton(ctx, annotation, image)
+    actual = parse_skeleton(annotation, image)
 
     # NOTE: order is important here!
     expected_points = [
@@ -158,7 +149,7 @@ def test_skeleton():
 
     expected = IRPoseAnnotation.from_points(
         filename="000.png",
-        category=ctx.categories["Yoda"],
+        category="Yoda",
         image_width=1920,
         image_height=1200,
         state=NormalizationState.DENORMALIZED,

@@ -2,10 +2,10 @@ from typing import Optional, Union
 
 
 from dagshub_annotation_converter.formats.common import (
-    determine_category,
     ImageType,
     determine_image_dimensions,
 )
+from dagshub_annotation_converter.formats.yolo.categories import determine_category
 from dagshub_annotation_converter.formats.yolo.context import YoloContext
 from dagshub_annotation_converter.ir.image import NormalizationState
 from dagshub_annotation_converter.ir.image.annotations.bbox import IRBBoxAnnotation
@@ -27,7 +27,7 @@ def import_bbox(
     )
     parsed_category = determine_category(category, context.categories)
     return IRBBoxAnnotation(
-        category=parsed_category,
+        category=parsed_category.name,
         top=center_y - height / 2,
         left=center_x - width / 2,
         width=width,
@@ -73,4 +73,5 @@ def export_bbox(
 ) -> str:
     center_x = annotation.left + annotation.width / 2
     center_y = annotation.top + annotation.height / 2
-    return f"{annotation.category.id} {center_x} {center_y} {annotation.width} {annotation.height}"
+    cat_id = context.categories[annotation.category].id
+    return f"{cat_id} {center_x} {center_y} {annotation.width} {annotation.height}"

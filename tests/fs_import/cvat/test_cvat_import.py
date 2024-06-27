@@ -10,10 +10,7 @@ from dagshub_annotation_converter.ir.image import (
 
 def test_cvat_import():
     annotation_file = Path(__file__).parent / "annotations.xml"
-    ctx, annotations = parse_cvat_from_xml_file(annotation_file)
-
-    category_names = ["Baby Yoda", "Ship", "Person", "Robot", "Yoda"]
-    assert [cat.name for cat in ctx.categories.categories] == category_names
+    annotations = parse_cvat_from_xml_file(annotation_file)
 
     expected_files = ["001.png", "002.png", "003.png", "004.png"]
     assert list(annotations.keys()) == list(expected_files)

@@ -1,13 +1,6 @@
 from lxml.etree import ElementBase
 from pydantic import BaseModel
 
-from dagshub_annotation_converter.ir.image import Categories
-
-
-class CVATContext(BaseModel):
-    categories: Categories = Categories()
-    """List of categories"""
-
 
 class CVATImageInfo(BaseModel):
     name: str

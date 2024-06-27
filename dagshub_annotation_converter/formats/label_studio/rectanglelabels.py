@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 from dagshub_annotation_converter.formats.label_studio.base import ImageAnnotationResultABC
-from dagshub_annotation_converter.ir.image import Categories, IRBBoxAnnotation, NormalizationState
+from dagshub_annotation_converter.ir.image import IRBBoxAnnotation, NormalizationState
 
 
 class RectangleLabelsAnnotationValue(BaseModel):
@@ -16,9 +16,9 @@ class RectangleLabelsAnnotation(ImageAnnotationResultABC):
     value: RectangleLabelsAnnotationValue
     type: str = "rectanglelabels"
 
-    def to_ir_annotation(self, categories: Categories) -> list[IRBBoxAnnotation]:
+    def to_ir_annotation(self) -> list[IRBBoxAnnotation]:
         res = IRBBoxAnnotation(
-            category=categories.get_or_create(self.value.rectanglelabels[0]),
+            category=self.value.rectanglelabels[0],
             state=NormalizationState.NORMALIZED,
             top=self.value.y / 100,
             left=self.value.x / 100,

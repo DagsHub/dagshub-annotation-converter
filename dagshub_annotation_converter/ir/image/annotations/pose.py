@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
 
 if TYPE_CHECKING:
-    from dagshub_annotation_converter.ir.image import Category, NormalizationState
+    from dagshub_annotation_converter.ir.image import NormalizationState
 
 
 class IRPosePoint(BaseModel):
@@ -48,7 +48,7 @@ class IRPoseAnnotation(IRAnnotationBase):
 
     @staticmethod
     def from_points(
-        category: "Category",
+        category: str,
         points: List[IRPosePoint],
         state: "NormalizationState",
         image_width: int,

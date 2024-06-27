@@ -13,7 +13,7 @@ def test_segmentation_import(yolo_context):
         IRSegmentationPoint(x=0.5, y=0.75),
     ]
     expected = IRSegmentationAnnotation(
-        category=yolo_context.categories[0],
+        category=yolo_context.categories[0].name,
         points=points,
         image_width=100,
         image_height=200,
