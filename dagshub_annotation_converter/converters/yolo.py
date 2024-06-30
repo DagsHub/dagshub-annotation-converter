@@ -40,6 +40,9 @@ def load_yolo_from_fs_with_context(
                 logger.debug(f"Skipping {img} because it's not an image")
                 continue
             annotation = replace_folder(img, context.image_dir_name, context.label_dir_name, context.label_extension)
+            if annotation is None:
+                logger.warning(f"Couldn't generate annotation file path for image file [{img}]")
+                continue
             if not annotation.exists():
                 logger.warning(f"Couldn't find annotation file [{annotation}] for image file [{img}]")
                 continue
@@ -144,9 +147,13 @@ def export_to_fs(context: YoloContext, annotations: list[IRAnnotationBase], meta
     grouped_annotations = group_annotations_by_filename(annotations)
 
     for filename, anns in grouped_annotations.items():
-        annotation_filename = context.path / replace_folder(
+        annotation_filepath = replace_folder(
             Path(filename), context.image_dir_name, context.label_dir_name, context.label_extension
         )
+        if annotation_filepath is None:
+            logger.warning(f"Couldn't generate annotation file path for image file [{filename}]")
+            continue
+        annotation_filename = context.path / annotation_filepath
         annotation_filename.parent.mkdir(parents=True, exist_ok=True)
         annotation_content = annotations_to_string(anns, context)
         if annotation_content is not None:

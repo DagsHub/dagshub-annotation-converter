@@ -2,14 +2,17 @@ from pathlib import Path
 from typing import Optional
 
 
-def get_extension(path: Path) -> str:
+def get_extension(path: Path) -> Optional[str]:
     name = path.name
     ext_dot_index = name.rfind(".")
-    ext = name[ext_dot_index:]
-    return ext
+    if ext_dot_index == -1:
+        return None
+    return name[ext_dot_index:]
 
 
-def replace_folder(in_path: Path, to_replace: str, replace_with: str, label_extension: Optional[str] = ".txt") -> Path:
+def replace_folder(
+    in_path: Path, to_replace: str, replace_with: str, label_extension: Optional[str] = ".txt"
+) -> Optional[Path]:
     """Swaps LAST occurrence of to_replace with replace_with in the path."""
     new_parts = list(in_path.parts)
 
@@ -20,5 +23,8 @@ def replace_folder(in_path: Path, to_replace: str, replace_with: str, label_exte
 
     if label_extension is not None:
         # Replace the extension
-        new_parts[-1] = new_parts[-1].replace(get_extension(in_path), label_extension)
+        ext = get_extension(in_path)
+        if ext is None:
+            return None
+        new_parts[-1] = new_parts[-1].replace(ext, label_extension)
     return Path(*new_parts)
