@@ -55,3 +55,30 @@ def test_bbox_ir(parsed_bbox_task):
     assert ann.width == 0.5
     assert ann.height == 0.5
     assert ann.state == NormalizationState.NORMALIZED
+
+
+def test_ir_bbox_addition():
+    task = LabelStudioTask()
+    bbox = IRBBoxAnnotation(
+        category="dog",
+        state=NormalizationState.NORMALIZED,
+        top=0.25,
+        left=0.25,
+        width=0.5,
+        height=0.5,
+        image_width=100,
+        image_height=100,
+    )
+    task.add_ir_annotation(bbox)
+
+    assert len(task.annotations) == 1
+    assert len(task.annotations[0].result) == 1
+
+    ann = task.annotations[0].result[0]
+    assert isinstance(ann, RectangleLabelsAnnotation)
+    assert ann.value.x == 25
+    assert ann.value.y == 25
+    assert ann.value.width == 50
+    assert ann.value.height == 50
+    assert ann.original_width == 100
+    assert ann.original_height == 100

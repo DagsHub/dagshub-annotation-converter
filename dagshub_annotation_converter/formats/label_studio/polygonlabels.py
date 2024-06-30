@@ -1,8 +1,10 @@
+from typing import Sequence
+
 from pydantic import BaseModel
 
 
 from dagshub_annotation_converter.formats.label_studio.base import ImageAnnotationResultABC
-from dagshub_annotation_converter.ir.image import IRSegmentationAnnotation, NormalizationState
+from dagshub_annotation_converter.ir.image import IRSegmentationAnnotation, NormalizationState, IRAnnotationBase
 
 
 class PolygonLabelsAnnotationValue(BaseModel):
@@ -26,3 +28,20 @@ class PolygonLabelsAnnotation(ImageAnnotationResultABC):
             res.add_point(p[0] / 100, p[1] / 100)
         res.imported_id = self.id
         return [res]
+
+    @staticmethod
+    def from_ir_annotation(ir_annotation: IRAnnotationBase) -> Sequence["ImageAnnotationResultABC"]:
+        assert isinstance(ir_annotation, IRSegmentationAnnotation)
+
+        ir_annotation = ir_annotation.normalized()
+
+        return [
+            PolygonLabelsAnnotation(
+                original_width=ir_annotation.image_width,
+                original_height=ir_annotation.image_height,
+                value=PolygonLabelsAnnotationValue(
+                    points=[[p.x * 100, p.y * 100] for p in ir_annotation.points],
+                    polygonlabels=[ir_annotation.category],
+                ),
+            )
+        ]

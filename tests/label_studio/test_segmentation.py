@@ -60,3 +60,29 @@ def test_segmentation_ir(parsed_segmentation_task, segmentation_points):
 
     assert ann.points == converted_points
     assert ann.state == NormalizationState.NORMALIZED
+
+
+def test_ir_segmentation_addition():
+    task = LabelStudioTask()
+
+    task.add_ir_annotation(
+        IRSegmentationAnnotation(
+            image_height=100,
+            image_width=100,
+            category="dog",
+            state=NormalizationState.NORMALIZED,
+            points=[
+                IRSegmentationPoint(x=0.5, y=0.5),
+                IRSegmentationPoint(x=0.75, y=0.75),
+                IRSegmentationPoint(x=0.75, y=0.5),
+            ],
+        )
+    )
+
+    assert len(task.annotations) == 1
+    assert len(task.annotations[0].result) == 1
+
+    ann = task.annotations[0].result[0]
+    assert isinstance(ann, PolygonLabelsAnnotation)
+    assert ann.value.points == [[50, 50], [75, 75], [75, 50]]
+    assert ann.value.polygonlabels == ["dog"]
