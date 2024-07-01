@@ -1,6 +1,6 @@
 from dagshub_annotation_converter.formats.yolo.pose import import_pose_from_string, export_pose
 from dagshub_annotation_converter.ir.image import CoordinateStyle
-from dagshub_annotation_converter.ir.image.annotations.pose import IRPosePoint, IRPoseAnnotation
+from dagshub_annotation_converter.ir.image.annotations.pose import IRPosePoint, IRPoseImageAnnotation
 
 
 def test_pose_3dim(yolo_context):
@@ -9,7 +9,7 @@ def test_pose_3dim(yolo_context):
         IRPosePoint(x=0.75, y=0.75, visible=False),
         IRPosePoint(x=0.5, y=0.75, visible=True),
     ]
-    expected = IRPoseAnnotation(
+    expected = IRPoseImageAnnotation(
         category=yolo_context.categories[0].name,
         top=0.5,
         left=0.5,
@@ -39,7 +39,7 @@ def test_pose_2dim(yolo_context):
         IRPosePoint(x=0.75, y=0.75),
         IRPosePoint(x=0.5, y=0.75),
     ]
-    expected = IRPoseAnnotation(
+    expected = IRPoseImageAnnotation(
         category=yolo_context.categories[0].name,
         top=0.5,
         left=0.5,
@@ -67,7 +67,7 @@ def test_export_pose_3dim(yolo_context):
         IRPosePoint(x=0.75, y=0.75, visible=False),
         IRPosePoint(x=0.5, y=0.75, visible=True),
     ]
-    annotation = IRPoseAnnotation(
+    annotation = IRPoseImageAnnotation(
         category=yolo_context.categories[0].name,
         top=0.5,
         left=0.5,
@@ -91,7 +91,7 @@ def test_export_pose_2dim(yolo_context):
         IRPosePoint(x=0.75, y=0.75, visible=False),
         IRPosePoint(x=0.5, y=0.75, visible=True),
     ]
-    annotation = IRPoseAnnotation(
+    annotation = IRPoseImageAnnotation(
         category=yolo_context.categories[0].name,
         top=0.5,
         left=0.5,

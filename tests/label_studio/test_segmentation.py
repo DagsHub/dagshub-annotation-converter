@@ -3,7 +3,7 @@ import pytest
 from dagshub_annotation_converter.formats.label_studio.polygonlabels import PolygonLabelsAnnotation
 from dagshub_annotation_converter.formats.label_studio.task import parse_ls_task, LabelStudioTask
 from dagshub_annotation_converter.ir.image import (
-    IRSegmentationAnnotation,
+    IRSegmentationImageAnnotation,
     CoordinateStyle,
     IRSegmentationPoint,
 )
@@ -54,7 +54,7 @@ def test_segmentation_ir(parsed_segmentation_task, segmentation_points):
 
     assert len(actual) == 1
     ann = actual[0]
-    assert isinstance(ann, IRSegmentationAnnotation)
+    assert isinstance(ann, IRSegmentationImageAnnotation)
 
     converted_points = [IRSegmentationPoint(x=x / 100, y=y / 100) for x, y in segmentation_points]
 
@@ -66,7 +66,7 @@ def test_ir_segmentation_addition():
     task = LabelStudioTask()
 
     task.add_ir_annotation(
-        IRSegmentationAnnotation(
+        IRSegmentationImageAnnotation(
             image_height=100,
             image_width=100,
             category="dog",

@@ -7,7 +7,7 @@ from typing_extensions import Self
 from dagshub_annotation_converter.ir.image import CoordinateStyle
 
 
-class IRAnnotationBase(BaseModel):
+class IRImageAnnotationBase(BaseModel):
     """
     Common class for all intermediary annotations
     """

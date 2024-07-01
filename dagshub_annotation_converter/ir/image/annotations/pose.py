@@ -2,7 +2,7 @@ from typing import List, Optional, TYPE_CHECKING
 
 from pydantic import BaseModel
 
-from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
+from dagshub_annotation_converter.ir.image.annotations.base import IRImageAnnotationBase
 
 if TYPE_CHECKING:
     from dagshub_annotation_converter.ir.image import CoordinateStyle
@@ -14,7 +14,7 @@ class IRPosePoint(BaseModel):
     visible: Optional[bool] = None
 
 
-class IRPoseAnnotation(IRAnnotationBase):
+class IRPoseImageAnnotation(IRImageAnnotationBase):
     # Parameters of the bounding box
     top: float
     left: float
@@ -54,7 +54,7 @@ class IRPoseAnnotation(IRAnnotationBase):
         image_width: int,
         image_height: int,
         filename: Optional[str] = None,
-    ) -> "IRPoseAnnotation":
+    ) -> "IRPoseImageAnnotation":
         point_xs = list(map(lambda p: p.x, points))
         point_ys = list(map(lambda p: p.y, points))
 
@@ -63,7 +63,7 @@ class IRPoseAnnotation(IRAnnotationBase):
         min_y = min(point_ys)
         max_y = max(point_ys)
 
-        return IRPoseAnnotation(
+        return IRPoseImageAnnotation(
             category=category,
             filename=filename,
             top=min_y,

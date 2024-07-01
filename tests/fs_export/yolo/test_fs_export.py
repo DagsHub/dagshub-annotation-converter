@@ -2,10 +2,10 @@ from dagshub_annotation_converter.converters.yolo import export_to_fs
 from dagshub_annotation_converter.formats.yolo import YoloContext
 from dagshub_annotation_converter.ir.image import (
     CoordinateStyle,
-    IRBBoxAnnotation,
-    IRSegmentationAnnotation,
+    IRBBoxImageAnnotation,
+    IRSegmentationImageAnnotation,
     IRSegmentationPoint,
-    IRPoseAnnotation,
+    IRPoseImageAnnotation,
     IRPosePoint,
 )
 
@@ -15,7 +15,7 @@ def test_bbox_export(tmp_path):
     ctx.categories.add(name="cat")
     ctx.categories.add(name="dog")
     annotations = [
-        IRBBoxAnnotation(
+        IRBBoxImageAnnotation(
             filename="images/cats/1.jpg",
             category="cat",
             top=0.0,
@@ -26,7 +26,7 @@ def test_bbox_export(tmp_path):
             image_height=200,
             state=CoordinateStyle.NORMALIZED,
         ),
-        IRBBoxAnnotation(
+        IRBBoxImageAnnotation(
             filename="images/dogs/2.jpg",
             category="dog",
             top=0.5,
@@ -53,7 +53,7 @@ def test_segmentation_export(tmp_path):
     ctx.categories.add(name="cat")
     ctx.categories.add(name="dog")
     annotations = [
-        IRSegmentationAnnotation(
+        IRSegmentationImageAnnotation(
             filename="images/cats/1.jpg",
             category="cat",
             points=[IRSegmentationPoint(x=0.0, y=0.5), IRSegmentationPoint(x=0.5, y=0.5)],
@@ -61,7 +61,7 @@ def test_segmentation_export(tmp_path):
             image_height=200,
             state=CoordinateStyle.NORMALIZED,
         ),
-        IRSegmentationAnnotation(
+        IRSegmentationImageAnnotation(
             filename="images/dogs/2.jpg",
             category="dog",
             points=[IRSegmentationPoint(x=0.0, y=0.5), IRSegmentationPoint(x=0.5, y=0.5)],
@@ -86,7 +86,7 @@ def test_pose_export(tmp_path):
     ctx.categories.add(name="dog")
     ctx.keypoints_in_annotation = 2
     annotations = [
-        IRPoseAnnotation.from_points(
+        IRPoseImageAnnotation.from_points(
             filename="images/cats/1.jpg",
             category="cat",
             points=[IRPosePoint(x=0.0, y=0.5), IRPosePoint(x=0.5, y=0.5)],
@@ -94,7 +94,7 @@ def test_pose_export(tmp_path):
             image_height=200,
             state=CoordinateStyle.NORMALIZED,
         ),
-        IRPoseAnnotation.from_points(
+        IRPoseImageAnnotation.from_points(
             filename="images/dogs/2.jpg",
             category="dog",
             points=[IRPosePoint(x=0.0, y=0.5), IRPosePoint(x=0.5, y=0.5)],
@@ -118,7 +118,7 @@ def test_not_exporting_wrong_annotations(tmp_path):
     ctx.categories.add(name="cat")
     ctx.categories.add(name="dog")
     annotations = [
-        IRBBoxAnnotation(
+        IRBBoxImageAnnotation(
             filename="images/cats/1.jpg",
             category="cat",
             top=0.0,
@@ -129,7 +129,7 @@ def test_not_exporting_wrong_annotations(tmp_path):
             image_height=200,
             state=CoordinateStyle.NORMALIZED,
         ),
-        IRSegmentationAnnotation(
+        IRSegmentationImageAnnotation(
             filename="images/dogs/2.jpg",
             category="dog",
             points=[IRSegmentationPoint(x=0.0, y=0.5), IRSegmentationPoint(x=0.5, y=0.5)],

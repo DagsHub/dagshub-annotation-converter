@@ -8,7 +8,7 @@ from dagshub_annotation_converter.formats.common import (
 from dagshub_annotation_converter.formats.yolo.categories import determine_category
 from dagshub_annotation_converter.formats.yolo.context import YoloContext
 from dagshub_annotation_converter.ir.image import CoordinateStyle
-from dagshub_annotation_converter.ir.image.annotations.bbox import IRBBoxAnnotation
+from dagshub_annotation_converter.ir.image.annotations.bbox import IRBBoxImageAnnotation
 
 
 def import_bbox(
@@ -21,12 +21,12 @@ def import_bbox(
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
     image: Optional[ImageType] = None,
-) -> IRBBoxAnnotation:
+) -> IRBBoxImageAnnotation:
     image_width, image_height = determine_image_dimensions(
         image_width=image_width, image_height=image_height, image=image
     )
     parsed_category = determine_category(category, context.categories)
-    return IRBBoxAnnotation(
+    return IRBBoxImageAnnotation(
         category=parsed_category.name,
         top=center_y - height / 2,
         left=center_x - width / 2,
@@ -44,7 +44,7 @@ def import_bbox_from_string(
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
     image: Optional[ImageType] = None,
-) -> IRBBoxAnnotation:
+) -> IRBBoxImageAnnotation:
     if len(annotation.split("\n")) > 1:
         raise ValueError("Please pass one annotation at a time")
     parts = annotation.strip().split(" ")
@@ -68,7 +68,7 @@ def import_bbox_from_string(
 
 
 def export_bbox(
-    annotation: IRBBoxAnnotation,
+    annotation: IRBBoxImageAnnotation,
     context: YoloContext,
 ) -> str:
     center_x = annotation.left + annotation.width / 2

@@ -1,5 +1,5 @@
 from .common import CoordinateStyle
-from .annotations.base import IRAnnotationBase
-from .annotations.pose import IRPoseAnnotation, IRPosePoint
-from .annotations.segmentation import IRSegmentationAnnotation, IRSegmentationPoint
-from .annotations.bbox import IRBBoxAnnotation
+from .annotations.base import IRImageAnnotationBase
+from .annotations.pose import IRPoseImageAnnotation, IRPosePoint
+from .annotations.segmentation import IRSegmentationImageAnnotation, IRSegmentationPoint
+from .annotations.bbox import IRBBoxImageAnnotation

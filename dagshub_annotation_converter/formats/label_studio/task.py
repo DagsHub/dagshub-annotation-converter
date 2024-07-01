@@ -10,12 +10,12 @@ from dagshub_annotation_converter.formats.label_studio.keypointlabels import Key
 from dagshub_annotation_converter.formats.label_studio.polygonlabels import PolygonLabelsAnnotation
 from dagshub_annotation_converter.formats.label_studio.rectanglelabels import RectangleLabelsAnnotation
 from dagshub_annotation_converter.ir.image import (
-    IRAnnotationBase,
-    IRPoseAnnotation,
-    IRBBoxAnnotation,
+    IRImageAnnotationBase,
+    IRPoseImageAnnotation,
+    IRBBoxImageAnnotation,
     CoordinateStyle,
     IRPosePoint,
-    IRSegmentationAnnotation,
+    IRSegmentationImageAnnotation,
 )
 
 task_lookup: dict[str, Type[AnnotationResultABC]] = {
@@ -24,10 +24,10 @@ task_lookup: dict[str, Type[AnnotationResultABC]] = {
     "keypointlabels": KeyPointLabelsAnnotation,
 }
 
-ir_annotation_lookup: dict[Type[IRAnnotationBase], Type[ImageAnnotationResultABC]] = {
-    IRPoseAnnotation: KeyPointLabelsAnnotation,
-    IRBBoxAnnotation: RectangleLabelsAnnotation,
-    IRSegmentationAnnotation: PolygonLabelsAnnotation,
+ir_annotation_lookup: dict[Type[IRImageAnnotationBase], Type[ImageAnnotationResultABC]] = {
+    IRPoseImageAnnotation: KeyPointLabelsAnnotation,
+    IRBBoxImageAnnotation: RectangleLabelsAnnotation,
+    IRSegmentationImageAnnotation: PolygonLabelsAnnotation,
 }
 
 logger = logging.getLogger(__name__)
@@ -99,8 +99,8 @@ class LabelStudioTask(BaseModel):
         self.data[PoseBBoxLookupKey].append(bbox.id)
         self.data[PosePointsLookupKey].append([point.id for point in keypoints])
 
-    def to_ir_annotations(self, filename: Optional[str] = None) -> Sequence[IRAnnotationBase]:
-        res: list[IRAnnotationBase] = []
+    def to_ir_annotations(self, filename: Optional[str] = None) -> Sequence[IRImageAnnotationBase]:
+        res: list[IRImageAnnotationBase] = []
         for anns in self.annotations:
             for ann in anns.result:
                 to_add = ann.to_ir_annotation()
@@ -111,7 +111,7 @@ class LabelStudioTask(BaseModel):
         res = self._reimport_poses(res)
         return res
 
-    def _reimport_poses(self, annotations: list[IRAnnotationBase]) -> list[IRAnnotationBase]:
+    def _reimport_poses(self, annotations: list[IRImageAnnotationBase]) -> list[IRImageAnnotationBase]:
         if PosePointsLookupKey not in self.data or PoseBBoxLookupKey not in self.data:
             return annotations
 
@@ -122,12 +122,12 @@ class LabelStudioTask(BaseModel):
         pose_points: list[list[str]] = self.data[PosePointsLookupKey]
 
         annotations_to_remove: set[str] = set()
-        poses: list[IRPoseAnnotation] = []
+        poses: list[IRPoseImageAnnotation] = []
 
         for bbox_id, point_ids in zip(pose_bboxes, pose_points):
             # Fetch the bbox of the pose
             maybe_bbox = annotation_lookup.get(bbox_id)
-            bbox: Optional[IRBBoxAnnotation] = None
+            bbox: Optional[IRBBoxImageAnnotation] = None
             category: Optional[str] = None
             image_width: Optional[int] = None
             image_height: Optional[int] = None
@@ -136,7 +136,7 @@ class LabelStudioTask(BaseModel):
                     f"Bounding box of pose with annotation ID {bbox_id} "
                     f"does not exist in the task but exists in metadata"
                 )
-            elif not isinstance(maybe_bbox, IRBBoxAnnotation):
+            elif not isinstance(maybe_bbox, IRBBoxImageAnnotation):
                 logger.warning(f"Bounding box of pose with annotation ID {bbox_id} is not a bounding box annotation")
             else:
                 bbox = maybe_bbox
@@ -154,7 +154,7 @@ class LabelStudioTask(BaseModel):
                         f"does not exist in the task but exists in metadata"
                     )
                     continue
-                elif not isinstance(maybe_point, IRPoseAnnotation):
+                elif not isinstance(maybe_point, IRPoseImageAnnotation):
                     logger.warning(f"Point of pose with annotation ID {point_id} is not a point annotation")
                     continue
                 else:
@@ -175,7 +175,7 @@ class LabelStudioTask(BaseModel):
             assert image_width is not None
             assert image_height is not None
 
-            sum_annotation = IRPoseAnnotation.from_points(
+            sum_annotation = IRPoseImageAnnotation.from_points(
                 category=category,
                 points=points,
                 state=CoordinateStyle.NORMALIZED,
@@ -199,7 +199,7 @@ class LabelStudioTask(BaseModel):
         annotations.extend(poses)
         return annotations
 
-    def add_ir_annotation(self, ann: IRAnnotationBase):
+    def add_ir_annotation(self, ann: IRImageAnnotationBase):
         ls_ann_type = ir_annotation_lookup.get(type(ann))
 
         if ls_ann_type is None:
@@ -209,12 +209,12 @@ class LabelStudioTask(BaseModel):
         self.add_annotations(ls_anns)
 
         # For pose: log additional metadata
-        if isinstance(ann, IRPoseAnnotation):
+        if isinstance(ann, IRPoseImageAnnotation):
             bbox = cast(RectangleLabelsAnnotation, ls_anns[0])
             keypoints = cast(list[KeyPointLabelsAnnotation], ls_anns[1:])
             self.log_pose_metadata(bbox, keypoints)
 
-    def add_ir_annotations(self, anns: Sequence[IRAnnotationBase]):
+    def add_ir_annotations(self, anns: Sequence[IRImageAnnotationBase]):
         for ann in anns:
             self.add_ir_annotation(ann)
 

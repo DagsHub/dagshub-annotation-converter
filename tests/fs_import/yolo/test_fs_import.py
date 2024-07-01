@@ -4,11 +4,11 @@ import pytest
 
 from dagshub_annotation_converter.converters.yolo import load_yolo_from_fs
 from dagshub_annotation_converter.ir.image import (
-    IRBBoxAnnotation,
+    IRBBoxImageAnnotation,
     CoordinateStyle,
-    IRSegmentationAnnotation,
+    IRSegmentationImageAnnotation,
     IRSegmentationPoint,
-    IRPoseAnnotation,
+    IRPoseImageAnnotation,
     IRPosePoint,
 )
 
@@ -32,7 +32,7 @@ def test_bbox(data_folder, img_path):
 
     expected = {
         img_path: [
-            IRBBoxAnnotation(
+            IRBBoxImageAnnotation(
                 filename=img_path,
                 category=ctx.categories[0].name,
                 image_width=640,
@@ -43,7 +43,7 @@ def test_bbox(data_folder, img_path):
                 width=0.5,
                 height=0.5,
             ),
-            IRBBoxAnnotation(
+            IRBBoxImageAnnotation(
                 filename=img_path,
                 category=ctx.categories[1].name,
                 image_width=640,
@@ -77,7 +77,7 @@ def test_segmentation(data_folder, img_path):
 
     expected = {
         img_path: [
-            IRSegmentationAnnotation(
+            IRSegmentationImageAnnotation(
                 filename=img_path,
                 category=ctx.categories[0].name,
                 image_width=640,
@@ -85,7 +85,7 @@ def test_segmentation(data_folder, img_path):
                 state=CoordinateStyle.NORMALIZED,
                 points=points[0],
             ),
-            IRSegmentationAnnotation(
+            IRSegmentationImageAnnotation(
                 filename=img_path,
                 category=ctx.categories[1].name,
                 image_width=640,
@@ -93,7 +93,7 @@ def test_segmentation(data_folder, img_path):
                 state=CoordinateStyle.NORMALIZED,
                 points=points[1],
             ),
-            IRSegmentationAnnotation(
+            IRSegmentationImageAnnotation(
                 filename=img_path,
                 category=ctx.categories[0].name,
                 image_width=640,
@@ -121,7 +121,7 @@ def generate_expected(img_path, ctx, to_keypoints_fn) -> dict:
 
     return {
         img_path: [
-            IRPoseAnnotation(
+            IRPoseImageAnnotation(
                 filename=img_path,
                 category=ctx.categories[0].name,
                 image_width=640,
@@ -133,7 +133,7 @@ def generate_expected(img_path, ctx, to_keypoints_fn) -> dict:
                 height=points[0][0][3],
                 points=points[0][1],
             ),
-            IRPoseAnnotation(
+            IRPoseImageAnnotation(
                 filename=img_path,
                 category=ctx.categories[1].name,
                 image_width=640,

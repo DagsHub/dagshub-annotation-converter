@@ -15,7 +15,7 @@ from dagshub_annotation_converter.formats.yolo.context import (
 )
 from dagshub_annotation_converter.formats.yolo.pose import import_pose_from_string
 from dagshub_annotation_converter.formats.yolo.segmentation import import_segmentation_from_string
-from dagshub_annotation_converter.ir.image import IRAnnotationBase
+from dagshub_annotation_converter.ir.image import IRImageAnnotationBase
 from dagshub_annotation_converter.util import is_image, replace_folder
 
 logger = logging.getLogger(__name__)
@@ -23,10 +23,10 @@ logger = logging.getLogger(__name__)
 
 def load_yolo_from_fs_with_context(
     context: YoloContext,
-) -> dict[str, Sequence[IRAnnotationBase]]:
+) -> dict[str, Sequence[IRImageAnnotationBase]]:
     assert context.path is not None
 
-    annotations: dict[str, Sequence[IRAnnotationBase]] = {}
+    annotations: dict[str, Sequence[IRImageAnnotationBase]] = {}
 
     for dirpath, subdirs, files in os.walk(context.path):
         if context.image_dir_name not in dirpath.split("/"):
@@ -53,7 +53,7 @@ def load_yolo_from_fs_with_context(
 
 def parse_annotation(
     context: YoloContext, base_path: Path, img_path: Path, annotation_path: Path
-) -> Sequence[IRAnnotationBase]:
+) -> Sequence[IRImageAnnotationBase]:
     img = PIL.Image.open(img_path)
     img_width, img_height = img.size
 
@@ -69,7 +69,7 @@ def parse_annotation(
 
     convert_func = convert_funcs[context.annotation_type]
 
-    res: List[IRAnnotationBase] = []
+    res: List[IRImageAnnotationBase] = []
     rel_path = str(img_path.relative_to(base_path))
 
     for ann in annotation_strings:
@@ -84,7 +84,7 @@ def load_yolo_from_fs(
     path: Optional[Union[str, Path]] = None,
     image_dir_name: str = "images",
     label_dir_name: str = "labels",
-) -> tuple[dict[str, Sequence[IRAnnotationBase]], YoloContext]:
+) -> tuple[dict[str, Sequence[IRImageAnnotationBase]], YoloContext]:
     context = YoloContext.from_yaml_file(meta_file, annotation_type=annotation_type)
     context.image_dir_name = image_dir_name
     context.label_dir_name = label_dir_name
@@ -99,7 +99,7 @@ def load_yolo_from_fs(
 # ======== Annotation Export ======== #
 
 
-def annotations_to_string(annotations: Sequence[IRAnnotationBase], context: YoloContext) -> Optional[str]:
+def annotations_to_string(annotations: Sequence[IRImageAnnotationBase], context: YoloContext) -> Optional[str]:
     """
     Serializes multiple YOLO annotations into the contents of the annotations file.
     Also makes sure that only annotations of the correct type for context.annotation_type are serialized.
@@ -126,7 +126,7 @@ def annotations_to_string(annotations: Sequence[IRAnnotationBase], context: Yolo
     return "\n".join([export_fn(ann, context) for ann in filtered_annotations])
 
 
-def export_to_fs(context: YoloContext, annotations: list[IRAnnotationBase], meta_file="annotations.yaml") -> Path:
+def export_to_fs(context: YoloContext, annotations: list[IRImageAnnotationBase], meta_file="annotations.yaml") -> Path:
     """
     Exports annotations to YOLO format.
 

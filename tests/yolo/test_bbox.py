@@ -1,10 +1,10 @@
 from dagshub_annotation_converter.formats.yolo.bbox import import_bbox_from_string, export_bbox
 from dagshub_annotation_converter.ir.image import CoordinateStyle
-from dagshub_annotation_converter.ir.image.annotations.bbox import IRBBoxAnnotation
+from dagshub_annotation_converter.ir.image.annotations.bbox import IRBBoxImageAnnotation
 
 
 def test_bbox_import(yolo_context):
-    expected = IRBBoxAnnotation(
+    expected = IRBBoxImageAnnotation(
         category=yolo_context.categories[0].name,
         top=0.5,
         left=0.5,
@@ -25,7 +25,7 @@ def test_bbox_import(yolo_context):
 def test_bbox_export(yolo_context):
     expected = "0 0.75 0.75 0.5 0.5"
 
-    annotation = IRBBoxAnnotation(
+    annotation = IRBBoxImageAnnotation(
         category=yolo_context.categories[0].name,
         top=0.5,
         left=0.5,

@@ -1,7 +1,7 @@
-from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
+from dagshub_annotation_converter.ir.image.annotations.base import IRImageAnnotationBase
 
 
-class IRBBoxAnnotation(IRAnnotationBase):
+class IRBBoxImageAnnotation(IRImageAnnotationBase):
     top: float
     left: float
     width: float

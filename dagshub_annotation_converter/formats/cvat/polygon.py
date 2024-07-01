@@ -1,15 +1,15 @@
 from lxml.etree import ElementBase
 
 from dagshub_annotation_converter.formats.cvat.context import parse_image_tag
-from dagshub_annotation_converter.ir.image import IRSegmentationAnnotation, CoordinateStyle
+from dagshub_annotation_converter.ir.image import IRSegmentationImageAnnotation, CoordinateStyle
 
 
-def parse_polygon(elem: ElementBase, containing_image: ElementBase) -> IRSegmentationAnnotation:
+def parse_polygon(elem: ElementBase, containing_image: ElementBase) -> IRSegmentationImageAnnotation:
     category = str(elem.attrib["label"])
 
     image_info = parse_image_tag(containing_image)
 
-    res = IRSegmentationAnnotation(
+    res = IRSegmentationImageAnnotation(
         category=category,
         state=CoordinateStyle.DENORMALIZED,
         image_width=image_info.width,

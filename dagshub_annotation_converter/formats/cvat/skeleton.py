@@ -1,10 +1,10 @@
 from lxml.etree import ElementBase
 
 from dagshub_annotation_converter.formats.cvat.context import parse_image_tag
-from dagshub_annotation_converter.ir.image import IRPoseAnnotation, IRPosePoint, CoordinateStyle
+from dagshub_annotation_converter.ir.image import IRPoseImageAnnotation, IRPosePoint, CoordinateStyle
 
 
-def parse_skeleton(elem: ElementBase, containing_image: ElementBase) -> IRPoseAnnotation:
+def parse_skeleton(elem: ElementBase, containing_image: ElementBase) -> IRPoseImageAnnotation:
     # Points also contain the labels, for consistent ordering in LS, they are later sorted
     points: list[tuple[str, IRPosePoint]] = []
 
@@ -31,7 +31,7 @@ def parse_skeleton(elem: ElementBase, containing_image: ElementBase) -> IRPoseAn
 
     res_points = list(map(lambda tup: tup[1], points))
 
-    return IRPoseAnnotation.from_points(
+    return IRPoseImageAnnotation.from_points(
         category=category,
         points=res_points,
         state=CoordinateStyle.DENORMALIZED,

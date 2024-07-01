@@ -7,7 +7,7 @@ from dagshub_annotation_converter.formats.common import (
 from dagshub_annotation_converter.formats.yolo.categories import determine_category
 from dagshub_annotation_converter.formats.yolo.context import YoloContext
 from dagshub_annotation_converter.ir.image import CoordinateStyle
-from dagshub_annotation_converter.ir.image.annotations.pose import IRPoseAnnotation, IRPosePoint
+from dagshub_annotation_converter.ir.image.annotations.pose import IRPoseImageAnnotation, IRPosePoint
 
 
 def import_pose_2dim(
@@ -21,7 +21,7 @@ def import_pose_2dim(
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
     image: Optional[ImageType] = None,
-) -> IRPoseAnnotation:
+) -> IRPoseImageAnnotation:
     points_3dim = [(x, y, None) for x, y in points]
     return import_pose_3dim(
         category=category,
@@ -48,13 +48,13 @@ def import_pose_3dim(
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
     image: Optional[ImageType] = None,
-) -> IRPoseAnnotation:
+) -> IRPoseImageAnnotation:
     image_width, image_height = determine_image_dimensions(
         image_width=image_width, image_height=image_height, image=image
     )
     parsed_category = determine_category(category, context.categories)
 
-    return IRPoseAnnotation(
+    return IRPoseImageAnnotation(
         category=parsed_category.name,
         image_width=image_width,
         image_height=image_height,
@@ -73,7 +73,7 @@ def import_pose_from_string(
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
     image: Optional[ImageType] = None,
-) -> IRPoseAnnotation:
+) -> IRPoseImageAnnotation:
     if len(annotation.split("\n")) > 1:
         raise ValueError("Please pass one annotation at a time")
     parts = annotation.strip().split(" ")
@@ -104,7 +104,7 @@ def import_pose_from_string(
     )
 
 
-def export_pose(annotation: IRPoseAnnotation, context: YoloContext) -> str:
+def export_pose(annotation: IRPoseImageAnnotation, context: YoloContext) -> str:
     if context.keypoint_dim == 2:
         point_list = [f"{point.x} {point.y}" for point in annotation.points if point.visible != False]
     else:

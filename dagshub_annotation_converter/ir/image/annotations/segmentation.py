@@ -2,7 +2,7 @@ from typing import List
 
 from pydantic import BaseModel
 
-from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
+from dagshub_annotation_converter.ir.image.annotations.base import IRImageAnnotationBase
 
 
 class IRSegmentationPoint(BaseModel):
@@ -10,7 +10,7 @@ class IRSegmentationPoint(BaseModel):
     y: float
 
 
-class IRSegmentationAnnotation(IRAnnotationBase):
+class IRSegmentationImageAnnotation(IRImageAnnotationBase):
     points: List[IRSegmentationPoint] = []
 
     def _normalize(self):

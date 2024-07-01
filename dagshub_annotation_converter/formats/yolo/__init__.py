@@ -5,9 +5,9 @@ from dagshub_annotation_converter.formats.yolo.context import YoloContext, YoloA
 from dagshub_annotation_converter.formats.yolo.pose import export_pose
 from dagshub_annotation_converter.formats.yolo.segmentation import export_segmentation
 from dagshub_annotation_converter.ir.image import (
-    IRBBoxAnnotation,
-    IRSegmentationAnnotation,
-    IRPoseAnnotation,
+    IRBBoxImageAnnotation,
+    IRSegmentationImageAnnotation,
+    IRPoseImageAnnotation,
 )
 
 # Type actually has to be IRAnnotationBase, but it messes up MyPy
@@ -20,7 +20,7 @@ export_lookup: Mapping[YoloAnnotationTypes, YoloExportFunctionType] = {
 }
 
 allowed_annotation_types = {
-    "bbox": IRBBoxAnnotation,
-    "segmentation": IRSegmentationAnnotation,
-    "pose": IRPoseAnnotation,
+    "bbox": IRBBoxImageAnnotation,
+    "segmentation": IRSegmentationImageAnnotation,
+    "pose": IRPoseImageAnnotation,
 }

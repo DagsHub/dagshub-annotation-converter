@@ -8,7 +8,7 @@ from dagshub_annotation_converter.formats.yolo.categories import determine_categ
 from dagshub_annotation_converter.formats.yolo.context import YoloContext
 from dagshub_annotation_converter.ir.image import CoordinateStyle
 from dagshub_annotation_converter.ir.image.annotations.segmentation import (
-    IRSegmentationAnnotation,
+    IRSegmentationImageAnnotation,
     IRSegmentationPoint,
 )
 
@@ -26,7 +26,7 @@ def import_segmentation(
     )
     parsed_category = determine_category(category, context.categories)
 
-    return IRSegmentationAnnotation(
+    return IRSegmentationImageAnnotation(
         category=parsed_category.name,
         image_width=image_width,
         image_height=image_height,
@@ -41,7 +41,7 @@ def import_segmentation_from_string(
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
     image: Optional[ImageType] = None,
-) -> IRSegmentationAnnotation:
+) -> IRSegmentationImageAnnotation:
     if len(annotation.split("\n")) > 1:
         raise ValueError("Please pass one annotation at a time")
     parts = annotation.strip().split(" ")
@@ -57,7 +57,7 @@ def import_segmentation_from_string(
     )
 
 
-def export_segmentation(annotation: IRSegmentationAnnotation, context: YoloContext) -> str:
+def export_segmentation(annotation: IRSegmentationImageAnnotation, context: YoloContext) -> str:
     cat_id = context.categories[annotation.category].id
     return " ".join(
         [

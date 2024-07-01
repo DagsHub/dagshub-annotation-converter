@@ -1,10 +1,10 @@
 from lxml.etree import ElementBase
 
 from dagshub_annotation_converter.formats.cvat.context import parse_image_tag
-from dagshub_annotation_converter.ir.image import IRBBoxAnnotation, CoordinateStyle
+from dagshub_annotation_converter.ir.image import IRBBoxImageAnnotation, CoordinateStyle
 
 
-def parse_box(elem: ElementBase, containing_image: ElementBase) -> IRBBoxAnnotation:
+def parse_box(elem: ElementBase, containing_image: ElementBase) -> IRBBoxImageAnnotation:
     top = float(elem.attrib["ytl"])
     bottom = float(elem.attrib["ybr"])
     left = float(elem.attrib["xtl"])
@@ -15,7 +15,7 @@ def parse_box(elem: ElementBase, containing_image: ElementBase) -> IRBBoxAnnotat
 
     image_info = parse_image_tag(containing_image)
 
-    return IRBBoxAnnotation(
+    return IRBBoxImageAnnotation(
         category=str(elem.attrib["label"]),
         top=top,
         left=left,

@@ -1,10 +1,10 @@
 from lxml.etree import ElementBase
 
 from dagshub_annotation_converter.formats.cvat.context import parse_image_tag
-from dagshub_annotation_converter.ir.image import IRPoseAnnotation, IRPosePoint, CoordinateStyle
+from dagshub_annotation_converter.ir.image import IRPoseImageAnnotation, IRPosePoint, CoordinateStyle
 
 
-def parse_points(elem: ElementBase, containing_image: ElementBase) -> IRPoseAnnotation:
+def parse_points(elem: ElementBase, containing_image: ElementBase) -> IRPoseImageAnnotation:
     points: list[IRPosePoint] = []
 
     category = str(elem.attrib["label"])
@@ -15,7 +15,7 @@ def parse_points(elem: ElementBase, containing_image: ElementBase) -> IRPoseAnno
         x, y = point_str.split(",")
         points.append(IRPosePoint(x=float(x), y=float(y)))
 
-    return IRPoseAnnotation.from_points(
+    return IRPoseImageAnnotation.from_points(
         category=category,
         points=points,
         state=CoordinateStyle.DENORMALIZED,

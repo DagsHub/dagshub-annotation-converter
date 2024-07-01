@@ -9,11 +9,11 @@ from dagshub_annotation_converter.formats.cvat import (
 )
 from dagshub_annotation_converter.ir.image import (
     CoordinateStyle,
-    IRBBoxAnnotation,
-    IRSegmentationAnnotation,
+    IRBBoxImageAnnotation,
+    IRSegmentationImageAnnotation,
     IRSegmentationPoint,
     IRPosePoint,
-    IRPoseAnnotation,
+    IRPoseImageAnnotation,
 )
 
 
@@ -35,7 +35,7 @@ def test_box():
 
     actual = parse_box(annotation, image)
 
-    expected = IRBBoxAnnotation(
+    expected = IRBBoxImageAnnotation(
         filename="000.png",
         category="Person",
         image_width=1920,
@@ -71,7 +71,7 @@ def test_segmentation():
         x, y = p.split(",")
         expected_points.append(IRSegmentationPoint(x=float(x), y=float(y)))
 
-    expected = IRSegmentationAnnotation(
+    expected = IRSegmentationImageAnnotation(
         filename="000.png",
         category="Ship",
         image_width=1920,
@@ -100,7 +100,7 @@ def test_points():
         IRPosePoint(x=672.64, y=761.29),
     ]
 
-    expected = IRPoseAnnotation.from_points(
+    expected = IRPoseImageAnnotation.from_points(
         filename="000.png",
         category="Baby Yoda",
         image_width=1920,
@@ -147,7 +147,7 @@ def test_skeleton():
         IRPosePoint(x=966.08, y=497.59, visible=False),
     ]
 
-    expected = IRPoseAnnotation.from_points(
+    expected = IRPoseImageAnnotation.from_points(
         filename="000.png",
         category="Yoda",
         image_width=1920,

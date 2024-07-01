@@ -4,7 +4,12 @@ import pytest
 
 from dagshub_annotation_converter.formats.label_studio.keypointlabels import KeyPointLabelsAnnotation
 from dagshub_annotation_converter.formats.label_studio.task import parse_ls_task, LabelStudioTask
-from dagshub_annotation_converter.ir.image import IRPoseAnnotation, CoordinateStyle, IRBBoxAnnotation, IRPosePoint
+from dagshub_annotation_converter.ir.image import (
+    IRPoseImageAnnotation,
+    CoordinateStyle,
+    IRBBoxImageAnnotation,
+    IRPosePoint,
+)
 from tests.label_studio.common import generate_annotation, generate_task
 
 
@@ -44,7 +49,7 @@ def test_keypoint_ir(parsed_keypoint_task):
 
     assert len(actual) == 1
     ann = actual[0]
-    assert isinstance(ann, IRPoseAnnotation)
+    assert isinstance(ann, IRPoseImageAnnotation)
 
     assert len(ann.points) == 1
     assert ann.points[0].x == 0.5
@@ -225,7 +230,7 @@ def test_pose_consolidation():
 
     annotation_types = [type(ann) for ann in annotations]
     # The order is different because the new poses are appended to the end
-    expected_types = [IRBBoxAnnotation, IRPoseAnnotation, IRPoseAnnotation]
+    expected_types = [IRBBoxImageAnnotation, IRPoseImageAnnotation, IRPoseImageAnnotation]
 
     assert annotation_types == expected_types
 
@@ -240,7 +245,7 @@ def test_ir_pose_addition():
     task = LabelStudioTask()
 
     task.add_ir_annotation(
-        IRPoseAnnotation(
+        IRPoseImageAnnotation(
             image_height=200,
             image_width=200,
             category="cat",

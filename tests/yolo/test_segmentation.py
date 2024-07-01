@@ -1,7 +1,7 @@
 from dagshub_annotation_converter.formats.yolo.segmentation import import_segmentation_from_string
 from dagshub_annotation_converter.ir.image import CoordinateStyle
 from dagshub_annotation_converter.ir.image.annotations.segmentation import (
-    IRSegmentationAnnotation,
+    IRSegmentationImageAnnotation,
     IRSegmentationPoint,
 )
 
@@ -12,7 +12,7 @@ def test_segmentation_import(yolo_context):
         IRSegmentationPoint(x=0.75, y=0.75),
         IRSegmentationPoint(x=0.5, y=0.75),
     ]
-    expected = IRSegmentationAnnotation(
+    expected = IRSegmentationImageAnnotation(
         category=yolo_context.categories[0].name,
         points=points,
         image_width=100,

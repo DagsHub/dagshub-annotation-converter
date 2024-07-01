@@ -8,10 +8,10 @@ from dagshub_annotation_converter.formats.label_studio.rectanglelabels import (
     RectangleLabelsAnnotation,
 )
 from dagshub_annotation_converter.ir.image import (
-    IRPoseAnnotation,
+    IRPoseImageAnnotation,
     IRPosePoint,
     CoordinateStyle,
-    IRAnnotationBase,
+    IRImageAnnotationBase,
 )
 
 
@@ -26,8 +26,8 @@ class KeyPointLabelsAnnotation(ImageAnnotationResultABC):
     value: KeyPointLabelsAnnotationValue
     type: str = "keypointlabels"
 
-    def to_ir_annotation(self) -> list[IRPoseAnnotation]:
-        ann = IRPoseAnnotation.from_points(
+    def to_ir_annotation(self) -> list[IRPoseImageAnnotation]:
+        ann = IRPoseImageAnnotation.from_points(
             category=self.value.keypointlabels[0],
             points=[IRPosePoint(x=self.value.x / 100, y=self.value.y / 100)],
             state=CoordinateStyle.NORMALIZED,
@@ -38,8 +38,8 @@ class KeyPointLabelsAnnotation(ImageAnnotationResultABC):
         return [ann]
 
     @staticmethod
-    def from_ir_annotation(ir_annotation: IRAnnotationBase) -> Sequence["ImageAnnotationResultABC"]:
-        assert isinstance(ir_annotation, IRPoseAnnotation)
+    def from_ir_annotation(ir_annotation: IRImageAnnotationBase) -> Sequence["ImageAnnotationResultABC"]:
+        assert isinstance(ir_annotation, IRPoseImageAnnotation)
 
         ir_annotation = ir_annotation.normalized()
 

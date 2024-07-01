@@ -2,9 +2,9 @@ from pathlib import Path
 
 from dagshub_annotation_converter.converters.cvat import parse_cvat_from_xml_file
 from dagshub_annotation_converter.ir.image import (
-    IRBBoxAnnotation,
-    IRSegmentationAnnotation,
-    IRPoseAnnotation,
+    IRBBoxImageAnnotation,
+    IRSegmentationImageAnnotation,
+    IRPoseImageAnnotation,
 )
 
 
@@ -17,17 +17,17 @@ def test_cvat_import():
 
     # Check only the annotation types, but not the annotations themselves (otherwise the parsing tests would fail)
     expected_annotations = [
-        [IRBBoxAnnotation],
+        [IRBBoxImageAnnotation],
         [
-            IRSegmentationAnnotation,
-            IRBBoxAnnotation,
-            IRSegmentationAnnotation,
-            IRSegmentationAnnotation,
-            IRBBoxAnnotation,
-            IRSegmentationAnnotation,
+            IRSegmentationImageAnnotation,
+            IRBBoxImageAnnotation,
+            IRSegmentationImageAnnotation,
+            IRSegmentationImageAnnotation,
+            IRBBoxImageAnnotation,
+            IRSegmentationImageAnnotation,
         ],
-        [IRBBoxAnnotation, IRPoseAnnotation],
-        [IRPoseAnnotation],
+        [IRBBoxImageAnnotation, IRPoseImageAnnotation],
+        [IRPoseImageAnnotation],
     ]
 
     actual_annotations = [[type(ann) for ann in annotations[file]] for file in expected_files]
