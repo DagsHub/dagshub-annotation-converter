@@ -1,7 +1,7 @@
 from dagshub_annotation_converter.converters.yolo import export_to_fs
 from dagshub_annotation_converter.formats.yolo import YoloContext
 from dagshub_annotation_converter.ir.image import (
-    NormalizationState,
+    CoordinateStyle,
     IRBBoxAnnotation,
     IRSegmentationAnnotation,
     IRSegmentationPoint,
@@ -24,7 +24,7 @@ def test_bbox_export(tmp_path):
             height=0.5,
             image_width=100,
             image_height=200,
-            state=NormalizationState.NORMALIZED,
+            state=CoordinateStyle.NORMALIZED,
         ),
         IRBBoxAnnotation(
             filename="images/dogs/2.jpg",
@@ -35,7 +35,7 @@ def test_bbox_export(tmp_path):
             height=0.5,
             image_width=100,
             image_height=200,
-            state=NormalizationState.NORMALIZED,
+            state=CoordinateStyle.NORMALIZED,
         ),
     ]
 
@@ -59,7 +59,7 @@ def test_segmentation_export(tmp_path):
             points=[IRSegmentationPoint(x=0.0, y=0.5), IRSegmentationPoint(x=0.5, y=0.5)],
             image_width=100,
             image_height=200,
-            state=NormalizationState.NORMALIZED,
+            state=CoordinateStyle.NORMALIZED,
         ),
         IRSegmentationAnnotation(
             filename="images/dogs/2.jpg",
@@ -67,7 +67,7 @@ def test_segmentation_export(tmp_path):
             points=[IRSegmentationPoint(x=0.0, y=0.5), IRSegmentationPoint(x=0.5, y=0.5)],
             image_width=100,
             image_height=200,
-            state=NormalizationState.NORMALIZED,
+            state=CoordinateStyle.NORMALIZED,
         ),
     ]
 
@@ -92,7 +92,7 @@ def test_pose_export(tmp_path):
             points=[IRPosePoint(x=0.0, y=0.5), IRPosePoint(x=0.5, y=0.5)],
             image_width=100,
             image_height=200,
-            state=NormalizationState.NORMALIZED,
+            state=CoordinateStyle.NORMALIZED,
         ),
         IRPoseAnnotation.from_points(
             filename="images/dogs/2.jpg",
@@ -100,7 +100,7 @@ def test_pose_export(tmp_path):
             points=[IRPosePoint(x=0.0, y=0.5), IRPosePoint(x=0.5, y=0.5)],
             image_width=100,
             image_height=200,
-            state=NormalizationState.NORMALIZED,
+            state=CoordinateStyle.NORMALIZED,
         ),
     ]
 
@@ -127,7 +127,7 @@ def test_not_exporting_wrong_annotations(tmp_path):
             height=0.5,
             image_width=100,
             image_height=200,
-            state=NormalizationState.NORMALIZED,
+            state=CoordinateStyle.NORMALIZED,
         ),
         IRSegmentationAnnotation(
             filename="images/dogs/2.jpg",
@@ -135,7 +135,7 @@ def test_not_exporting_wrong_annotations(tmp_path):
             points=[IRSegmentationPoint(x=0.0, y=0.5), IRSegmentationPoint(x=0.5, y=0.5)],
             image_width=100,
             image_height=200,
-            state=NormalizationState.NORMALIZED,
+            state=CoordinateStyle.NORMALIZED,
         ),
     ]
 

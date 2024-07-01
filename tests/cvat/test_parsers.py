@@ -8,7 +8,7 @@ from dagshub_annotation_converter.formats.cvat import (
     parse_skeleton,
 )
 from dagshub_annotation_converter.ir.image import (
-    NormalizationState,
+    CoordinateStyle,
     IRBBoxAnnotation,
     IRSegmentationAnnotation,
     IRSegmentationPoint,
@@ -40,7 +40,7 @@ def test_box():
         category="Person",
         image_width=1920,
         image_height=1200,
-        state=NormalizationState.DENORMALIZED,
+        state=CoordinateStyle.DENORMALIZED,
         top=247.76,
         left=654.53,
         width=1247.56 - 654.53,
@@ -76,7 +76,7 @@ def test_segmentation():
         category="Ship",
         image_width=1920,
         image_height=1200,
-        state=NormalizationState.DENORMALIZED,
+        state=CoordinateStyle.DENORMALIZED,
         points=expected_points,
     )
 
@@ -105,7 +105,7 @@ def test_points():
         category="Baby Yoda",
         image_width=1920,
         image_height=1200,
-        state=NormalizationState.DENORMALIZED,
+        state=CoordinateStyle.DENORMALIZED,
         points=expected_points,
     )
 
@@ -152,7 +152,7 @@ def test_skeleton():
         category="Yoda",
         image_width=1920,
         image_height=1200,
-        state=NormalizationState.DENORMALIZED,
+        state=CoordinateStyle.DENORMALIZED,
         points=expected_points,
     )
 

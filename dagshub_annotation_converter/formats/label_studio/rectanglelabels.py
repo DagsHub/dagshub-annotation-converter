@@ -3,7 +3,7 @@ from typing import Sequence
 from pydantic import BaseModel
 
 from dagshub_annotation_converter.formats.label_studio.base import ImageAnnotationResultABC
-from dagshub_annotation_converter.ir.image import IRBBoxAnnotation, NormalizationState, IRAnnotationBase
+from dagshub_annotation_converter.ir.image import IRBBoxAnnotation, CoordinateStyle, IRAnnotationBase
 
 
 class RectangleLabelsAnnotationValue(BaseModel):
@@ -21,7 +21,7 @@ class RectangleLabelsAnnotation(ImageAnnotationResultABC):
     def to_ir_annotation(self) -> list[IRBBoxAnnotation]:
         res = IRBBoxAnnotation(
             category=self.value.rectanglelabels[0],
-            state=NormalizationState.NORMALIZED,
+            state=CoordinateStyle.NORMALIZED,
             top=self.value.y / 100,
             left=self.value.x / 100,
             width=self.value.width / 100,

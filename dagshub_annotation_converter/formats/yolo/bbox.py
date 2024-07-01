@@ -7,7 +7,7 @@ from dagshub_annotation_converter.formats.common import (
 )
 from dagshub_annotation_converter.formats.yolo.categories import determine_category
 from dagshub_annotation_converter.formats.yolo.context import YoloContext
-from dagshub_annotation_converter.ir.image import NormalizationState
+from dagshub_annotation_converter.ir.image import CoordinateStyle
 from dagshub_annotation_converter.ir.image.annotations.bbox import IRBBoxAnnotation
 
 
@@ -34,7 +34,7 @@ def import_bbox(
         height=height,
         image_width=image_width,
         image_height=image_height,
-        state=NormalizationState.NORMALIZED,
+        state=CoordinateStyle.NORMALIZED,
     )
 
 

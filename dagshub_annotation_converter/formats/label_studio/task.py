@@ -13,7 +13,7 @@ from dagshub_annotation_converter.ir.image import (
     IRAnnotationBase,
     IRPoseAnnotation,
     IRBBoxAnnotation,
-    NormalizationState,
+    CoordinateStyle,
     IRPosePoint,
     IRSegmentationAnnotation,
 )
@@ -178,7 +178,7 @@ class LabelStudioTask(BaseModel):
             sum_annotation = IRPoseAnnotation.from_points(
                 category=category,
                 points=points,
-                state=NormalizationState.NORMALIZED,
+                state=CoordinateStyle.NORMALIZED,
                 image_width=image_width,
                 image_height=image_height,
             )

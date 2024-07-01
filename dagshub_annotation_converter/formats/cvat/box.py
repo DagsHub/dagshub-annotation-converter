@@ -1,7 +1,7 @@
 from lxml.etree import ElementBase
 
 from dagshub_annotation_converter.formats.cvat.context import parse_image_tag
-from dagshub_annotation_converter.ir.image import IRBBoxAnnotation, NormalizationState
+from dagshub_annotation_converter.ir.image import IRBBoxAnnotation, CoordinateStyle
 
 
 def parse_box(elem: ElementBase, containing_image: ElementBase) -> IRBBoxAnnotation:
@@ -24,5 +24,5 @@ def parse_box(elem: ElementBase, containing_image: ElementBase) -> IRBBoxAnnotat
         image_width=image_info.width,
         image_height=image_info.height,
         filename=image_info.name,
-        state=NormalizationState.DENORMALIZED,
+        state=CoordinateStyle.DENORMALIZED,
     )

@@ -4,7 +4,7 @@ import pytest
 
 from dagshub_annotation_converter.formats.label_studio.rectanglelabels import RectangleLabelsAnnotation
 from dagshub_annotation_converter.formats.label_studio.task import parse_ls_task, LabelStudioTask
-from dagshub_annotation_converter.ir.image import IRBBoxAnnotation, NormalizationState
+from dagshub_annotation_converter.ir.image import IRBBoxAnnotation, CoordinateStyle
 from tests.label_studio.common import generate_task, generate_annotation
 
 
@@ -54,14 +54,14 @@ def test_bbox_ir(parsed_bbox_task):
     assert ann.left == 0.25
     assert ann.width == 0.5
     assert ann.height == 0.5
-    assert ann.state == NormalizationState.NORMALIZED
+    assert ann.state == CoordinateStyle.NORMALIZED
 
 
 def test_ir_bbox_addition():
     task = LabelStudioTask()
     bbox = IRBBoxAnnotation(
         category="dog",
-        state=NormalizationState.NORMALIZED,
+        state=CoordinateStyle.NORMALIZED,
         top=0.25,
         left=0.25,
         width=0.5,

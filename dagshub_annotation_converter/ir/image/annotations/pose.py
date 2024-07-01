@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
 
 if TYPE_CHECKING:
-    from dagshub_annotation_converter.ir.image import NormalizationState
+    from dagshub_annotation_converter.ir.image import CoordinateStyle
 
 
 class IRPosePoint(BaseModel):
@@ -50,7 +50,7 @@ class IRPoseAnnotation(IRAnnotationBase):
     def from_points(
         category: str,
         points: List[IRPosePoint],
-        state: "NormalizationState",
+        state: "CoordinateStyle",
         image_width: int,
         image_height: int,
         filename: Optional[str] = None,

@@ -10,7 +10,7 @@ from dagshub_annotation_converter.formats.label_studio.rectanglelabels import (
 from dagshub_annotation_converter.ir.image import (
     IRPoseAnnotation,
     IRPosePoint,
-    NormalizationState,
+    CoordinateStyle,
     IRAnnotationBase,
 )
 
@@ -30,7 +30,7 @@ class KeyPointLabelsAnnotation(ImageAnnotationResultABC):
         ann = IRPoseAnnotation.from_points(
             category=self.value.keypointlabels[0],
             points=[IRPosePoint(x=self.value.x / 100, y=self.value.y / 100)],
-            state=NormalizationState.NORMALIZED,
+            state=CoordinateStyle.NORMALIZED,
             image_width=self.original_width,
             image_height=self.original_height,
         )

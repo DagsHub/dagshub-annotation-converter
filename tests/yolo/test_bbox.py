@@ -1,5 +1,5 @@
 from dagshub_annotation_converter.formats.yolo.bbox import import_bbox_from_string, export_bbox
-from dagshub_annotation_converter.ir.image import NormalizationState
+from dagshub_annotation_converter.ir.image import CoordinateStyle
 from dagshub_annotation_converter.ir.image.annotations.bbox import IRBBoxAnnotation
 
 
@@ -12,7 +12,7 @@ def test_bbox_import(yolo_context):
         height=0.5,
         image_width=100,
         image_height=200,
-        state=NormalizationState.NORMALIZED,
+        state=CoordinateStyle.NORMALIZED,
     )
 
     actual = import_bbox_from_string(
@@ -33,7 +33,7 @@ def test_bbox_export(yolo_context):
         height=0.5,
         image_width=100,
         image_height=200,
-        state=NormalizationState.NORMALIZED,
+        state=CoordinateStyle.NORMALIZED,
     )
 
     assert expected == export_bbox(annotation, yolo_context)

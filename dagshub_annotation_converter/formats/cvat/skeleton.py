@@ -1,7 +1,7 @@
 from lxml.etree import ElementBase
 
 from dagshub_annotation_converter.formats.cvat.context import parse_image_tag
-from dagshub_annotation_converter.ir.image import IRPoseAnnotation, IRPosePoint, NormalizationState
+from dagshub_annotation_converter.ir.image import IRPoseAnnotation, IRPosePoint, CoordinateStyle
 
 
 def parse_skeleton(elem: ElementBase, containing_image: ElementBase) -> IRPoseAnnotation:
@@ -34,7 +34,7 @@ def parse_skeleton(elem: ElementBase, containing_image: ElementBase) -> IRPoseAn
     return IRPoseAnnotation.from_points(
         category=category,
         points=res_points,
-        state=NormalizationState.DENORMALIZED,
+        state=CoordinateStyle.DENORMALIZED,
         image_width=image_info.width,
         image_height=image_info.height,
         filename=image_info.name,

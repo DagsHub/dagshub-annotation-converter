@@ -4,7 +4,7 @@ from typing import Optional
 from pydantic import BaseModel
 from typing_extensions import Self
 
-from dagshub_annotation_converter.ir.image import NormalizationState
+from dagshub_annotation_converter.ir.image import CoordinateStyle
 
 
 class IRAnnotationBase(BaseModel):
@@ -17,7 +17,7 @@ class IRAnnotationBase(BaseModel):
     category: str
     image_width: int
     image_height: int
-    state: NormalizationState
+    state: CoordinateStyle
     imported_id: Optional[str] = None
 
     def with_filename(self, filename: str) -> Self:
@@ -28,11 +28,11 @@ class IRAnnotationBase(BaseModel):
         """
         Returns a copy with all parameters in the annotation normalized
         """
-        if self.state == NormalizationState.NORMALIZED:
+        if self.state == CoordinateStyle.NORMALIZED:
             return self.model_copy()
         normalized = self.model_copy()
         normalized._normalize()
-        normalized.state = NormalizationState.NORMALIZED
+        normalized.state = CoordinateStyle.NORMALIZED
         return normalized
 
     @abstractmethod
@@ -46,11 +46,11 @@ class IRAnnotationBase(BaseModel):
         """
         Returns a copy with all parameters in the annotation denormalized
         """
-        if self.state == NormalizationState.DENORMALIZED:
+        if self.state == CoordinateStyle.DENORMALIZED:
             return self.model_copy()
         denormalized = self.model_copy()
         denormalized._denormalize()
-        denormalized.state = NormalizationState.DENORMALIZED
+        denormalized.state = CoordinateStyle.DENORMALIZED
         return denormalized
 
     @abstractmethod

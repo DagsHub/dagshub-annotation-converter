@@ -1,5 +1,5 @@
 from dagshub_annotation_converter.formats.yolo.pose import import_pose_from_string, export_pose
-from dagshub_annotation_converter.ir.image import NormalizationState
+from dagshub_annotation_converter.ir.image import CoordinateStyle
 from dagshub_annotation_converter.ir.image.annotations.pose import IRPosePoint, IRPoseAnnotation
 
 
@@ -18,7 +18,7 @@ def test_pose_3dim(yolo_context):
         points=points,
         image_width=100,
         image_height=200,
-        state=NormalizationState.NORMALIZED,
+        state=CoordinateStyle.NORMALIZED,
     )
 
     actual = import_pose_from_string(
@@ -48,7 +48,7 @@ def test_pose_2dim(yolo_context):
         points=points,
         image_width=100,
         image_height=200,
-        state=NormalizationState.NORMALIZED,
+        state=CoordinateStyle.NORMALIZED,
     )
 
     actual = import_pose_from_string(
@@ -76,7 +76,7 @@ def test_export_pose_3dim(yolo_context):
         points=points,
         image_width=100,
         image_height=200,
-        state=NormalizationState.NORMALIZED,
+        state=CoordinateStyle.NORMALIZED,
     )
 
     expected = "0 0.75 0.75 0.5 0.5 0.5 0.5 1 0.75 0.75 0 0.5 0.75 1"
@@ -100,7 +100,7 @@ def test_export_pose_2dim(yolo_context):
         points=points,
         image_width=100,
         image_height=200,
-        state=NormalizationState.NORMALIZED,
+        state=CoordinateStyle.NORMALIZED,
     )
 
     expected = "0 0.75 0.75 0.5 0.5 0.5 0.5 0.5 0.75"

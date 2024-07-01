@@ -4,7 +4,7 @@ import pytest
 
 from dagshub_annotation_converter.formats.label_studio.keypointlabels import KeyPointLabelsAnnotation
 from dagshub_annotation_converter.formats.label_studio.task import parse_ls_task, LabelStudioTask
-from dagshub_annotation_converter.ir.image import IRPoseAnnotation, NormalizationState, IRBBoxAnnotation, IRPosePoint
+from dagshub_annotation_converter.ir.image import IRPoseAnnotation, CoordinateStyle, IRBBoxAnnotation, IRPosePoint
 from tests.label_studio.common import generate_annotation, generate_task
 
 
@@ -50,7 +50,7 @@ def test_keypoint_ir(parsed_keypoint_task):
     assert ann.points[0].x == 0.5
     assert ann.points[0].y == 0.5
 
-    assert ann.state == NormalizationState.NORMALIZED
+    assert ann.state == CoordinateStyle.NORMALIZED
 
 
 def test_pose_consolidation():
@@ -244,7 +244,7 @@ def test_ir_pose_addition():
             image_height=200,
             image_width=200,
             category="cat",
-            state=NormalizationState.NORMALIZED,
+            state=CoordinateStyle.NORMALIZED,
             left=0.25,
             top=0.25,
             width=0.3,
