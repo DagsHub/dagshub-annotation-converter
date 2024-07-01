@@ -55,7 +55,7 @@ def import_pose_3dim(
     parsed_category = determine_category(category, context.categories)
 
     return IRPoseImageAnnotation(
-        category=parsed_category.name,
+        categories={parsed_category.name: 1.0},
         image_width=image_width,
         image_height=image_height,
         state=CoordinateStyle.NORMALIZED,
@@ -110,7 +110,9 @@ def export_pose(annotation: IRPoseImageAnnotation, context: YoloContext) -> str:
     else:
         point_list = [f"{point.x} {point.y} {0 if point.visible == False else 1}" for point in annotation.points]
 
-    cat_id = context.categories[annotation.category].id
+    category = annotation.ensure_has_one_category()
+
+    cat_id = context.categories[category].id
 
     return " ".join(
         [

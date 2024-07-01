@@ -48,7 +48,7 @@ class IRPoseImageAnnotation(IRImageAnnotationBase):
 
     @staticmethod
     def from_points(
-        category: str,
+        categories: dict[str, float],
         points: List[IRPosePoint],
         state: "CoordinateStyle",
         image_width: int,
@@ -64,7 +64,7 @@ class IRPoseImageAnnotation(IRImageAnnotationBase):
         max_y = max(point_ys)
 
         return IRPoseImageAnnotation(
-            category=category,
+            categories=categories,
             filename=filename,
             top=min_y,
             left=min_x,

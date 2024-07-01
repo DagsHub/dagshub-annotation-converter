@@ -10,7 +10,7 @@ def test_pose_3dim(yolo_context):
         IRPosePoint(x=0.5, y=0.75, visible=True),
     ]
     expected = IRPoseImageAnnotation(
-        category=yolo_context.categories[0].name,
+        categories={yolo_context.categories[0].name: 1.0},
         top=0.5,
         left=0.5,
         width=0.5,
@@ -40,7 +40,7 @@ def test_pose_2dim(yolo_context):
         IRPosePoint(x=0.5, y=0.75),
     ]
     expected = IRPoseImageAnnotation(
-        category=yolo_context.categories[0].name,
+        categories={yolo_context.categories[0].name: 1.0},
         top=0.5,
         left=0.5,
         width=0.5,
@@ -68,7 +68,7 @@ def test_export_pose_3dim(yolo_context):
         IRPosePoint(x=0.5, y=0.75, visible=True),
     ]
     annotation = IRPoseImageAnnotation(
-        category=yolo_context.categories[0].name,
+        categories={yolo_context.categories[0].name: 1.0},
         top=0.5,
         left=0.5,
         width=0.5,
@@ -92,7 +92,7 @@ def test_export_pose_2dim(yolo_context):
         IRPosePoint(x=0.5, y=0.75, visible=True),
     ]
     annotation = IRPoseImageAnnotation(
-        category=yolo_context.categories[0].name,
+        categories={yolo_context.categories[0].name: 1.0},
         top=0.5,
         left=0.5,
         width=0.5,

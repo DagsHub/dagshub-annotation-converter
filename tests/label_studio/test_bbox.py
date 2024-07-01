@@ -60,7 +60,7 @@ def test_bbox_ir(parsed_bbox_task):
 def test_ir_bbox_addition():
     task = LabelStudioTask()
     bbox = IRBBoxImageAnnotation(
-        category="dog",
+        categories={"dog": 1.0},
         state=CoordinateStyle.NORMALIZED,
         top=0.25,
         left=0.25,

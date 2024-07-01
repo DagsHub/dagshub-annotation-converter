@@ -27,7 +27,7 @@ def import_bbox(
     )
     parsed_category = determine_category(category, context.categories)
     return IRBBoxImageAnnotation(
-        category=parsed_category.name,
+        categories={parsed_category.name: 1.0},
         top=center_y - height / 2,
         left=center_x - width / 2,
         width=width,
@@ -71,7 +71,8 @@ def export_bbox(
     annotation: IRBBoxImageAnnotation,
     context: YoloContext,
 ) -> str:
+    category = annotation.ensure_has_one_category()
     center_x = annotation.left + annotation.width / 2
     center_y = annotation.top + annotation.height / 2
-    cat_id = context.categories[annotation.category].id
+    cat_id = context.categories[category].id
     return f"{cat_id} {center_x} {center_y} {annotation.width} {annotation.height}"

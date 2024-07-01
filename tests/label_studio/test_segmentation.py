@@ -69,7 +69,7 @@ def test_ir_segmentation_addition():
         IRSegmentationImageAnnotation(
             image_height=100,
             image_width=100,
-            category="dog",
+            categories={"dog": 1.0},
             state=CoordinateStyle.NORMALIZED,
             points=[
                 IRSegmentationPoint(x=0.5, y=0.5),

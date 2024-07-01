@@ -27,7 +27,7 @@ def import_segmentation(
     parsed_category = determine_category(category, context.categories)
 
     return IRSegmentationImageAnnotation(
-        category=parsed_category.name,
+        categories={parsed_category.name: 1.0},
         image_width=image_width,
         image_height=image_height,
         state=CoordinateStyle.NORMALIZED,
@@ -58,7 +58,8 @@ def import_segmentation_from_string(
 
 
 def export_segmentation(annotation: IRSegmentationImageAnnotation, context: YoloContext) -> str:
-    cat_id = context.categories[annotation.category].id
+    category = annotation.ensure_has_one_category()
+    cat_id = context.categories[category].id
     return " ".join(
         [
             str(cat_id),

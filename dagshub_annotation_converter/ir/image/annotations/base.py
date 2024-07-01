@@ -7,6 +7,20 @@ from typing_extensions import Self
 from dagshub_annotation_converter.ir.image import CoordinateStyle
 
 
+class MultipleCategoriesError(Exception):
+    def __init__(self, ann: "IRImageAnnotationBase"):
+        super().__init__()
+        self.ann = ann
+
+    def __str__(self):
+        return (
+            f"Annotation of type {type(self.ann)}, file {self.ann.filename} has multiple categories.\n"
+            f"This is not supported for converting to other annotation formats.\n"
+            f"Annotation:\n"
+            f"\t{self.ann}"
+        )
+
+
 class IRImageAnnotationBase(BaseModel):
     """
     Common class for all intermediary annotations
@@ -14,7 +28,8 @@ class IRImageAnnotationBase(BaseModel):
 
     filename: Optional[str] = None
 
-    category: str
+    categories: dict[str, float]
+    """Categories and their confidence. 1 means 100% confidence or ground truth."""
     image_width: int
     image_height: int
     state: CoordinateStyle
@@ -23,6 +38,15 @@ class IRImageAnnotationBase(BaseModel):
     def with_filename(self, filename: str) -> Self:
         self.filename = filename
         return self
+
+    def has_one_category(self) -> bool:
+        return len(self.categories) == 1
+
+    def ensure_has_one_category(self) -> str:
+        """Makes sure that the annotation has one category and returns it."""
+        if not self.has_one_category():
+            raise MultipleCategoriesError(self)
+        return next(iter(self.categories.keys()))
 
     def normalized(self) -> Self:
         """

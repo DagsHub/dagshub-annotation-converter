@@ -28,7 +28,7 @@ class KeyPointLabelsAnnotation(ImageAnnotationResultABC):
 
     def to_ir_annotation(self) -> list[IRPoseImageAnnotation]:
         ann = IRPoseImageAnnotation.from_points(
-            category=self.value.keypointlabels[0],
+            categories={self.value.keypointlabels[0]: 1.0},
             points=[IRPosePoint(x=self.value.x / 100, y=self.value.y / 100)],
             state=CoordinateStyle.NORMALIZED,
             image_width=self.original_width,
@@ -42,6 +42,7 @@ class KeyPointLabelsAnnotation(ImageAnnotationResultABC):
         assert isinstance(ir_annotation, IRPoseImageAnnotation)
 
         ir_annotation = ir_annotation.normalized()
+        category = ir_annotation.ensure_has_one_category()
 
         bbox = RectangleLabelsAnnotation(
             original_width=ir_annotation.image_width,
@@ -51,7 +52,7 @@ class KeyPointLabelsAnnotation(ImageAnnotationResultABC):
                 y=ir_annotation.top * 100,
                 width=ir_annotation.width * 100,
                 height=ir_annotation.height * 100,
-                rectanglelabels=[ir_annotation.category],
+                rectanglelabels=[category],
             ),
         )
 
@@ -64,7 +65,7 @@ class KeyPointLabelsAnnotation(ImageAnnotationResultABC):
                     value=KeyPointLabelsAnnotationValue(
                         x=point.x * 100,
                         y=point.y * 100,
-                        keypointlabels=[ir_annotation.category],
+                        keypointlabels=[category],
                     ),
                 )
             )

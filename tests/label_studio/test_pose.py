@@ -234,10 +234,10 @@ def test_pose_consolidation():
 
     assert annotation_types == expected_types
 
-    assert annotations[0].category == "dog"
-    assert annotations[1].category == "cat"
+    assert annotations[0].categories == {"dog": 1.0}
+    assert annotations[1].categories == {"cat": 1.0}
     assert len(annotations[1].points) == 3
-    assert annotations[2].category == "dog"
+    assert annotations[2].categories == {"dog": 1.0}
     assert len(annotations[2].points) == 3
 
 
@@ -248,7 +248,7 @@ def test_ir_pose_addition():
         IRPoseImageAnnotation(
             image_height=200,
             image_width=200,
-            category="cat",
+            categories={"cat": 1.0},
             state=CoordinateStyle.NORMALIZED,
             left=0.25,
             top=0.25,

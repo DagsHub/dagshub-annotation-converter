@@ -16,7 +16,7 @@ def parse_points(elem: ElementBase, containing_image: ElementBase) -> IRPoseImag
         points.append(IRPosePoint(x=float(x), y=float(y)))
 
     return IRPoseImageAnnotation.from_points(
-        category=category,
+        categories={category: 1.0},
         points=points,
         state=CoordinateStyle.DENORMALIZED,
         image_width=image_info.width,

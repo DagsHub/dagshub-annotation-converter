@@ -20,7 +20,7 @@ class RectangleLabelsAnnotation(ImageAnnotationResultABC):
 
     def to_ir_annotation(self) -> list[IRBBoxImageAnnotation]:
         res = IRBBoxImageAnnotation(
-            category=self.value.rectanglelabels[0],
+            categories={self.value.rectanglelabels[0]: 1.0},
             state=CoordinateStyle.NORMALIZED,
             top=self.value.y / 100,
             left=self.value.x / 100,
@@ -37,6 +37,7 @@ class RectangleLabelsAnnotation(ImageAnnotationResultABC):
         assert isinstance(ir_annotation, IRBBoxImageAnnotation)
 
         ir_annotation = ir_annotation.normalized()
+        category = ir_annotation.ensure_has_one_category()
 
         return [
             RectangleLabelsAnnotation(
@@ -47,7 +48,7 @@ class RectangleLabelsAnnotation(ImageAnnotationResultABC):
                     y=ir_annotation.top * 100,
                     width=ir_annotation.width * 100,
                     height=ir_annotation.height * 100,
-                    rectanglelabels=[ir_annotation.category],
+                    rectanglelabels=[category],
                 ),
             )
         ]

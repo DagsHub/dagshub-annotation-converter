@@ -32,7 +32,7 @@ def parse_skeleton(elem: ElementBase, containing_image: ElementBase) -> IRPoseIm
     res_points = list(map(lambda tup: tup[1], points))
 
     return IRPoseImageAnnotation.from_points(
-        category=category,
+        categories={category: 1.0},
         points=res_points,
         state=CoordinateStyle.DENORMALIZED,
         image_width=image_info.width,

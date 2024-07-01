@@ -19,7 +19,7 @@ class PolygonLabelsAnnotation(ImageAnnotationResultABC):
 
     def to_ir_annotation(self) -> list[IRSegmentationImageAnnotation]:
         res = IRSegmentationImageAnnotation(
-            category=self.value.polygonlabels[0],
+            categories={self.value.polygonlabels[0]: 1.0},
             state=CoordinateStyle.NORMALIZED,
             image_width=self.original_width,
             image_height=self.original_height,
@@ -34,6 +34,7 @@ class PolygonLabelsAnnotation(ImageAnnotationResultABC):
         assert isinstance(ir_annotation, IRSegmentationImageAnnotation)
 
         ir_annotation = ir_annotation.normalized()
+        category = ir_annotation.ensure_has_one_category()
 
         return [
             PolygonLabelsAnnotation(
@@ -41,7 +42,7 @@ class PolygonLabelsAnnotation(ImageAnnotationResultABC):
                 original_height=ir_annotation.image_height,
                 value=PolygonLabelsAnnotationValue(
                     points=[[p.x * 100, p.y * 100] for p in ir_annotation.points],
-                    polygonlabels=[ir_annotation.category],
+                    polygonlabels=[category],
                 ),
             )
         ]

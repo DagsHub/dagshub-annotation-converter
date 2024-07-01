@@ -34,7 +34,7 @@ def test_bbox(data_folder, img_path):
         img_path: [
             IRBBoxImageAnnotation(
                 filename=img_path,
-                category=ctx.categories[0].name,
+                categories={ctx.categories[0].name: 1.0},
                 image_width=640,
                 image_height=480,
                 state=CoordinateStyle.NORMALIZED,
@@ -45,7 +45,7 @@ def test_bbox(data_folder, img_path):
             ),
             IRBBoxImageAnnotation(
                 filename=img_path,
-                category=ctx.categories[1].name,
+                categories={ctx.categories[1].name: 1.0},
                 image_width=640,
                 image_height=480,
                 state=CoordinateStyle.NORMALIZED,
@@ -79,7 +79,7 @@ def test_segmentation(data_folder, img_path):
         img_path: [
             IRSegmentationImageAnnotation(
                 filename=img_path,
-                category=ctx.categories[0].name,
+                categories={ctx.categories[0].name: 1.0},
                 image_width=640,
                 image_height=480,
                 state=CoordinateStyle.NORMALIZED,
@@ -87,7 +87,7 @@ def test_segmentation(data_folder, img_path):
             ),
             IRSegmentationImageAnnotation(
                 filename=img_path,
-                category=ctx.categories[1].name,
+                categories={ctx.categories[1].name: 1.0},
                 image_width=640,
                 image_height=480,
                 state=CoordinateStyle.NORMALIZED,
@@ -95,7 +95,7 @@ def test_segmentation(data_folder, img_path):
             ),
             IRSegmentationImageAnnotation(
                 filename=img_path,
-                category=ctx.categories[0].name,
+                categories={ctx.categories[0].name: 1.0},
                 image_width=640,
                 image_height=480,
                 state=CoordinateStyle.NORMALIZED,
@@ -123,7 +123,7 @@ def generate_expected(img_path, ctx, to_keypoints_fn) -> dict:
         img_path: [
             IRPoseImageAnnotation(
                 filename=img_path,
-                category=ctx.categories[0].name,
+                categories={ctx.categories[0].name: 1.0},
                 image_width=640,
                 image_height=480,
                 state=CoordinateStyle.NORMALIZED,
@@ -135,7 +135,7 @@ def generate_expected(img_path, ctx, to_keypoints_fn) -> dict:
             ),
             IRPoseImageAnnotation(
                 filename=img_path,
-                category=ctx.categories[1].name,
+                categories={ctx.categories[1].name: 1.0},
                 image_width=640,
                 image_height=480,
                 state=CoordinateStyle.NORMALIZED,

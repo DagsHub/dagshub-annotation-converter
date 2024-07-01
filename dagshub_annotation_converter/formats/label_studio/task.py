@@ -140,7 +140,7 @@ class LabelStudioTask(BaseModel):
                 logger.warning(f"Bounding box of pose with annotation ID {bbox_id} is not a bounding box annotation")
             else:
                 bbox = maybe_bbox
-                category = bbox.category
+                category = bbox.ensure_has_one_category()
                 image_height = bbox.image_height
                 image_width = bbox.image_width
                 annotations_to_remove.add(bbox_id)
@@ -159,7 +159,7 @@ class LabelStudioTask(BaseModel):
                     continue
                 else:
                     if category is None:
-                        category = maybe_point.category
+                        category = maybe_point.ensure_has_one_category()
                     if image_width is None:
                         image_width = maybe_point.image_width
                     if image_height is None:
@@ -176,7 +176,7 @@ class LabelStudioTask(BaseModel):
             assert image_height is not None
 
             sum_annotation = IRPoseImageAnnotation.from_points(
-                category=category,
+                categories={category: 1.0},
                 points=points,
                 state=CoordinateStyle.NORMALIZED,
                 image_width=image_width,

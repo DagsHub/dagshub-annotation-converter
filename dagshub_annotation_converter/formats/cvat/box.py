@@ -16,7 +16,7 @@ def parse_box(elem: ElementBase, containing_image: ElementBase) -> IRBBoxImageAn
     image_info = parse_image_tag(containing_image)
 
     return IRBBoxImageAnnotation(
-        category=str(elem.attrib["label"]),
+        categories={str(elem.attrib["label"]): 1.0},
         top=top,
         left=left,
         width=width,

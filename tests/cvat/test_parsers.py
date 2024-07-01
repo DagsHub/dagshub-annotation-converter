@@ -37,7 +37,7 @@ def test_box():
 
     expected = IRBBoxImageAnnotation(
         filename="000.png",
-        category="Person",
+        categories={"Person": 1.0},
         image_width=1920,
         image_height=1200,
         state=CoordinateStyle.DENORMALIZED,
@@ -73,7 +73,7 @@ def test_segmentation():
 
     expected = IRSegmentationImageAnnotation(
         filename="000.png",
-        category="Ship",
+        categories={"Ship": 1.0},
         image_width=1920,
         image_height=1200,
         state=CoordinateStyle.DENORMALIZED,
@@ -102,7 +102,7 @@ def test_points():
 
     expected = IRPoseImageAnnotation.from_points(
         filename="000.png",
-        category="Baby Yoda",
+        categories={"Baby Yoda": 1.0},
         image_width=1920,
         image_height=1200,
         state=CoordinateStyle.DENORMALIZED,
@@ -149,7 +149,7 @@ def test_skeleton():
 
     expected = IRPoseImageAnnotation.from_points(
         filename="000.png",
-        category="Yoda",
+        categories={"Yoda": 1.0},
         image_width=1920,
         image_height=1200,
         state=CoordinateStyle.DENORMALIZED,

@@ -17,7 +17,7 @@ def test_bbox_export(tmp_path):
     annotations = [
         IRBBoxImageAnnotation(
             filename="images/cats/1.jpg",
-            category="cat",
+            categories={"cat": 1.0},
             top=0.0,
             left=0.0,
             width=0.5,
@@ -28,7 +28,7 @@ def test_bbox_export(tmp_path):
         ),
         IRBBoxImageAnnotation(
             filename="images/dogs/2.jpg",
-            category="dog",
+            categories={"dog": 1.0},
             top=0.5,
             left=0.5,
             width=0.5,
@@ -55,7 +55,7 @@ def test_segmentation_export(tmp_path):
     annotations = [
         IRSegmentationImageAnnotation(
             filename="images/cats/1.jpg",
-            category="cat",
+            categories={"cat": 1.0},
             points=[IRSegmentationPoint(x=0.0, y=0.5), IRSegmentationPoint(x=0.5, y=0.5)],
             image_width=100,
             image_height=200,
@@ -63,7 +63,7 @@ def test_segmentation_export(tmp_path):
         ),
         IRSegmentationImageAnnotation(
             filename="images/dogs/2.jpg",
-            category="dog",
+            categories={"dog": 1.0},
             points=[IRSegmentationPoint(x=0.0, y=0.5), IRSegmentationPoint(x=0.5, y=0.5)],
             image_width=100,
             image_height=200,
@@ -88,7 +88,7 @@ def test_pose_export(tmp_path):
     annotations = [
         IRPoseImageAnnotation.from_points(
             filename="images/cats/1.jpg",
-            category="cat",
+            categories={"cat": 1.0},
             points=[IRPosePoint(x=0.0, y=0.5), IRPosePoint(x=0.5, y=0.5)],
             image_width=100,
             image_height=200,
@@ -96,7 +96,7 @@ def test_pose_export(tmp_path):
         ),
         IRPoseImageAnnotation.from_points(
             filename="images/dogs/2.jpg",
-            category="dog",
+            categories={"dog": 1.0},
             points=[IRPosePoint(x=0.0, y=0.5), IRPosePoint(x=0.5, y=0.5)],
             image_width=100,
             image_height=200,
@@ -120,7 +120,7 @@ def test_not_exporting_wrong_annotations(tmp_path):
     annotations = [
         IRBBoxImageAnnotation(
             filename="images/cats/1.jpg",
-            category="cat",
+            categories={"cat": 1.0},
             top=0.0,
             left=0.0,
             width=0.5,
@@ -131,7 +131,7 @@ def test_not_exporting_wrong_annotations(tmp_path):
         ),
         IRSegmentationImageAnnotation(
             filename="images/dogs/2.jpg",
-            category="dog",
+            categories={"dog": 1.0},
             points=[IRSegmentationPoint(x=0.0, y=0.5), IRSegmentationPoint(x=0.5, y=0.5)],
             image_width=100,
             image_height=200,
