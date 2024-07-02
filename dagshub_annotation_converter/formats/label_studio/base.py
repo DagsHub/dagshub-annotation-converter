@@ -1,19 +1,28 @@
 import uuid
 from abc import abstractmethod
-from typing import Sequence
+from typing import Sequence, Optional
 
 from pydantic import BaseModel, Field
 
 from dagshub_annotation_converter.ir.image import IRImageAnnotationBase
+from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
 
 
 class AnnotationResultABC(BaseModel):
     @abstractmethod
-    def to_ir_annotation(self) -> Sequence[IRImageAnnotationBase]:
+    def to_ir_annotation(self) -> Sequence[IRAnnotationBase]:
         """
         Convert LabelStudio annotation to 0..n DAGsHub IR annotations.
 
         Note: This method has a potential side effect of adding new categories.
+        """
+        ...
+
+    @staticmethod
+    @abstractmethod
+    def from_ir_annotation(ir_annotation: IRImageAnnotationBase) -> Sequence["AnnotationResultABC"]:
+        """
+        Convert DagsHub IR annotation to 1..n LabelStudio annotations.
         """
         ...
 
@@ -27,6 +36,8 @@ class ImageAnnotationResultABC(AnnotationResultABC):
     origin: str = "manual"
     to_name: str = "image"
     from_name: str = "label"
+    score: Optional[float] = None
+    """For predictions, the score of the prediction."""
 
     @abstractmethod
     def to_ir_annotation(self) -> Sequence[IRImageAnnotationBase]:

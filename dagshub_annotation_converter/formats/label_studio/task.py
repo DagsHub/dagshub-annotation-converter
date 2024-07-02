@@ -58,14 +58,22 @@ class AnnotationsContainer(BaseModel):
     ground_truth: bool = False
 
 
+class PredictionsContainer(BaseModel):
+    result: AnnotationsList = []
+
+
 PosePointsLookupKey = "pose_points"
 PoseBBoxLookupKey = "pose_boxes"
 
 
 class LabelStudioTask(BaseModel):
-    annotations: list[AnnotationsContainer] = Field(
+    annotations: Optional[list[AnnotationsContainer]] = Field(
         default_factory=lambda: [],
     )
+    predictions: Optional[list[PredictionsContainer]] = Field(
+        default_factory=lambda: [],
+    )
+
     meta: dict[str, Any] = {}
     data: dict[str, Any] = {}
     project: int = 0

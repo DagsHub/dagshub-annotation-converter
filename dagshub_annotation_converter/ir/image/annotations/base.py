@@ -8,7 +8,7 @@ from dagshub_annotation_converter.ir.image import CoordinateStyle
 
 
 class MultipleCategoriesError(Exception):
-    def __init__(self, ann: "IRImageAnnotationBase"):
+    def __init__(self, ann: "IRAnnotationBase"):
         super().__init__()
         self.ann = ann
 
@@ -21,17 +21,15 @@ class MultipleCategoriesError(Exception):
         )
 
 
-class IRImageAnnotationBase(BaseModel):
+class IRAnnotationBase(BaseModel):
     """
-    Common class for all intermediary annotations
+    Base class for all annotations and predictions
     """
 
     filename: Optional[str] = None
 
     categories: dict[str, float]
     """Categories and their confidence. 1 means 100% confidence or ground truth."""
-    image_width: int
-    image_height: int
     state: CoordinateStyle
     imported_id: Optional[str] = None
 
@@ -76,6 +74,29 @@ class IRImageAnnotationBase(BaseModel):
         denormalized._denormalize()
         denormalized.state = CoordinateStyle.DENORMALIZED
         return denormalized
+
+    @abstractmethod
+    def _denormalize(self):
+        """
+        Every annotation should implement this to denormalize itself
+        """
+        ...
+
+
+class IRImageAnnotationBase(IRAnnotationBase):
+    """
+    Common class for all intermediary image annotations
+    """
+
+    image_width: int
+    image_height: int
+
+    @abstractmethod
+    def _normalize(self):
+        """
+        Every annotation should implement this to normalize itself
+        """
+        ...
 
     @abstractmethod
     def _denormalize(self):
