@@ -1,7 +1,42 @@
+import math
+
 from lxml.etree import ElementBase
 
 from dagshub_annotation_converter.formats.cvat.context import parse_image_tag
 from dagshub_annotation_converter.ir.image import IRBBoxImageAnnotation, CoordinateStyle
+
+
+def calculate_bbox(xtl, ytl, xbr, ybr, rotation: float) -> tuple[int, int, int, int, float]:
+    """
+    Converts the CVAT rotation bounding box to the dagshub one.
+
+    CVAT rotates counter-clockwise around the center point.
+    We use LS format, which rotates clockwise around the top-left point
+
+    :return: coordinates of the top-left point, width, height, rotation
+    """
+    if rotation == 0.0:
+        return xtl, ytl, xbr - xtl, ybr - ytl, rotation
+
+    # If rotation is set, then we need to:
+    # - pivot from rotating from center, to rotating from top-left
+    # - change rotation from counter-clockwise, to clock-wise
+    # This can be done by rotating the top-left point relative to the center, the rotation will stay the same
+    xc = xtl + (xbr - xtl) / 2
+    yc = ytl + (ybr - ytl) / 2
+
+    cos = math.cos(math.radians(rotation))
+    sin = math.sin(math.radians(rotation))
+
+    x1 = xc + cos * (xtl - xc) - sin * (ytl - yc)
+    y1 = yc + sin * (xtl - xc) + cos * (ytl - yc)
+
+    # The widths should stay the same
+    width = xbr - xtl
+    height = ybr - ytl
+
+    # Rotation degrees also stay the same
+    return round(x1), round(y1), width, height, rotation
 
 
 def parse_box(elem: ElementBase, containing_image: ElementBase) -> IRBBoxImageAnnotation:
@@ -10,8 +45,9 @@ def parse_box(elem: ElementBase, containing_image: ElementBase) -> IRBBoxImageAn
     left = float(elem.attrib["xtl"])
     right = float(elem.attrib["xbr"])
 
-    width = right - left
-    height = bottom - top
+    rotation = float(elem.attrib.get("rotation", 0.0))
+
+    left, top, width, height, rotation = calculate_bbox(left, top, right, bottom, rotation)
 
     image_info = parse_image_tag(containing_image)
 

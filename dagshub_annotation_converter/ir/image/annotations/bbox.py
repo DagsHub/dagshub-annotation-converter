@@ -6,6 +6,8 @@ class IRBBoxImageAnnotation(IRImageAnnotationBase):
     left: float
     width: float
     height: float
+    rotation: float = 0.0
+    """Rotation in degrees (pivot point - top-left)"""
 
     def _normalize(self):
         self.top = self.top / self.image_height

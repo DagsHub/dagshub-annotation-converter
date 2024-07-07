@@ -11,6 +11,7 @@ class RectangleLabelsAnnotationValue(BaseModel):
     y: float
     width: float
     height: float
+    rotation: float
     rectanglelabels: list[str]
 
 
@@ -26,6 +27,7 @@ class RectangleLabelsAnnotation(ImageAnnotationResultABC):
             left=self.value.x / 100,
             width=self.value.width / 100,
             height=self.value.height / 100,
+            rotation=self.value.rotation,
             image_width=self.original_width,
             image_height=self.original_height,
         )
@@ -48,6 +50,7 @@ class RectangleLabelsAnnotation(ImageAnnotationResultABC):
                     y=ir_annotation.top * 100,
                     width=ir_annotation.width * 100,
                     height=ir_annotation.height * 100,
+                    rotation=ir_annotation.rotation,
                     rectanglelabels=[category],
                 ),
             )

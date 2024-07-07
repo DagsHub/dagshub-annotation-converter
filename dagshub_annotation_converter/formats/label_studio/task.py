@@ -67,10 +67,7 @@ PoseBBoxLookupKey = "pose_boxes"
 
 
 class LabelStudioTask(BaseModel):
-    annotations: Optional[list[AnnotationsContainer]] = Field(
-        default_factory=lambda: [],
-    )
-    predictions: Optional[list[PredictionsContainer]] = Field(
+    annotations: list[AnnotationsContainer] = Field(
         default_factory=lambda: [],
     )
 
