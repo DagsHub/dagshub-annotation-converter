@@ -1,3 +1,4 @@
+import logging
 from typing import Optional, Union
 
 
@@ -9,6 +10,8 @@ from dagshub_annotation_converter.formats.yolo.categories import determine_categ
 from dagshub_annotation_converter.formats.yolo.context import YoloContext
 from dagshub_annotation_converter.ir.image import CoordinateStyle
 from dagshub_annotation_converter.ir.image.annotations.bbox import IRBBoxImageAnnotation
+
+logger = logging.getLogger(__name__)
 
 
 def import_bbox(
@@ -71,6 +74,11 @@ def export_bbox(
     annotation: IRBBoxImageAnnotation,
     context: YoloContext,
 ) -> str:
+    if annotation.rotation != 0.0:
+        logger.warning(
+            f"Bounding box for file {annotation.filename} has a not-zero rotation. "
+            f"This is not supported by YOLO format."
+        )
     category = annotation.ensure_has_one_category()
     center_x = annotation.left + annotation.width / 2
     center_y = annotation.top + annotation.height / 2
