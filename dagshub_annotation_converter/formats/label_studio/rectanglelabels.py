@@ -11,7 +11,7 @@ class RectangleLabelsAnnotationValue(BaseModel):
     y: float
     width: float
     height: float
-    rotation: float
+    rotation: float = 0.0
     rectanglelabels: list[str]
 
 
