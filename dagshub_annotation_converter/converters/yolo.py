@@ -126,7 +126,7 @@ def annotations_to_string(annotations: Sequence[IRImageAnnotationBase], context:
     return "\n".join([export_fn(ann, context) for ann in filtered_annotations])
 
 
-def export_to_fs(context: YoloContext, annotations: list[IRImageAnnotationBase], meta_file="annotations.yaml") -> Path:
+def export_to_fs(context: YoloContext, annotations: list[IRImageAnnotationBase], meta_file="yolo_dagshub.yaml") -> Path:
     """
     Exports annotations to YOLO format.
 

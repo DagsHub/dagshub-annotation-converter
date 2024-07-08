@@ -41,9 +41,9 @@ def test_bbox_export(tmp_path):
 
     p = export_to_fs(ctx, annotations)
 
-    assert p == tmp_path / "annotations.yaml"
+    assert p == tmp_path / "yolo_dagshub.yaml"
 
-    assert (tmp_path / "annotations.yaml").exists()
+    assert (tmp_path / "yolo_dagshub.yaml").exists()
     assert (tmp_path / "data" / "labels" / "cats" / "1.txt").exists()
     assert (tmp_path / "data" / "labels" / "dogs" / "2.txt").exists()
 
@@ -73,9 +73,9 @@ def test_segmentation_export(tmp_path):
 
     p = export_to_fs(ctx, annotations)
 
-    assert p == tmp_path / "annotations.yaml"
+    assert p == tmp_path / "yolo_dagshub.yaml"
 
-    assert (tmp_path / "annotations.yaml").exists()
+    assert (tmp_path / "yolo_dagshub.yaml").exists()
     assert (tmp_path / "data" / "labels" / "cats" / "1.txt").exists()
     assert (tmp_path / "data" / "labels" / "dogs" / "2.txt").exists()
 
@@ -106,9 +106,9 @@ def test_pose_export(tmp_path):
 
     p = export_to_fs(ctx, annotations)
 
-    assert p == tmp_path / "annotations.yaml"
+    assert p == tmp_path / "yolo_dagshub.yaml"
 
-    assert (tmp_path / "annotations.yaml").exists()
+    assert (tmp_path / "yolo_dagshub.yaml").exists()
     assert (tmp_path / "data" / "labels" / "cats" / "1.txt").exists()
     assert (tmp_path / "data" / "labels" / "dogs" / "2.txt").exists()
 
@@ -141,8 +141,8 @@ def test_not_exporting_wrong_annotations(tmp_path):
 
     p = export_to_fs(ctx, annotations)
 
-    assert p == tmp_path / "annotations.yaml"
+    assert p == tmp_path / "yolo_dagshub.yaml"
 
-    assert (tmp_path / "annotations.yaml").exists()
+    assert (tmp_path / "yolo_dagshub.yaml").exists()
     assert (tmp_path / "data" / "labels" / "cats" / "1.txt").exists()
     assert not (tmp_path / "data" / "labels" / "dogs" / "2.txt").exists()
