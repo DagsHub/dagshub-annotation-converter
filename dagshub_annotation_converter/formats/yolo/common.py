@@ -1,9 +1,9 @@
 from typing import Mapping, Any, Callable
 
-from .context import YoloAnnotationTypes, YoloContext
-from .bbox import export_bbox
-from .segmentation import export_segmentation
-from .pose import export_pose
+from .context import YoloAnnotationTypes, YoloContext, YoloConverterFunction
+from .bbox import export_bbox, import_bbox_from_string
+from .segmentation import export_segmentation, import_segmentation_from_string
+from .pose import export_pose, import_pose_from_string
 
 from dagshub_annotation_converter.ir.image import (
     IRBBoxImageAnnotation,
@@ -24,4 +24,10 @@ allowed_annotation_types = {
     "bbox": IRBBoxImageAnnotation,
     "segmentation": IRSegmentationImageAnnotation,
     "pose": IRPoseImageAnnotation,
+}
+
+import_lookup: Mapping[YoloAnnotationTypes, YoloConverterFunction] = {
+    "bbox": import_bbox_from_string,
+    "segmentation": import_segmentation_from_string,
+    "pose": import_pose_from_string,
 }

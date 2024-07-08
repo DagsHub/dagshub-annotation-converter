@@ -1,20 +1,18 @@
 import logging
 import os
 from pathlib import Path
-from typing import Union, Sequence, List, Dict, Optional
+from typing import Union, Sequence, List, Optional
 
 import PIL.Image
 
 from dagshub_annotation_converter.converters.common import group_annotations_by_filename
-from dagshub_annotation_converter.formats.yolo.bbox import import_bbox_from_string
-from dagshub_annotation_converter.formats.yolo.common import allowed_annotation_types, export_lookup
-from dagshub_annotation_converter.formats.yolo.context import (
+from dagshub_annotation_converter.formats.yolo import (
+    export_lookup,
+    allowed_annotation_types,
     YoloContext,
+    import_lookup,
     YoloAnnotationTypes,
-    YoloConverterFunction,
 )
-from dagshub_annotation_converter.formats.yolo.pose import import_pose_from_string
-from dagshub_annotation_converter.formats.yolo.segmentation import import_segmentation_from_string
 from dagshub_annotation_converter.ir.image import IRImageAnnotationBase
 from dagshub_annotation_converter.util import is_image, replace_folder
 
@@ -59,15 +57,9 @@ def parse_annotation(
 
     annotation_strings = annotation_path.read_text().strip().split("\n")
 
-    convert_funcs: Dict[str, YoloConverterFunction] = {
-        "bbox": import_bbox_from_string,
-        "segmentation": import_segmentation_from_string,
-        "pose": import_pose_from_string,
-    }
-
     assert context.annotation_type is not None
 
-    convert_func = convert_funcs[context.annotation_type]
+    convert_func = import_lookup[context.annotation_type]
 
     res: List[IRImageAnnotationBase] = []
     rel_path = str(img_path.relative_to(base_path))
