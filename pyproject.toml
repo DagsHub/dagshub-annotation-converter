@@ -52,6 +52,7 @@ dependencies = [
   "types-lxml",
   "lxml-stubs",
   "dagshub",
+  "ultralytics"
 ]
 
 [tool.hatch.envs.default.scripts]
