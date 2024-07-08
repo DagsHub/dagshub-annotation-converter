@@ -6,8 +6,8 @@ from typing import Union, Sequence, List, Dict, Optional
 import PIL.Image
 
 from dagshub_annotation_converter.converters.common import group_annotations_by_filename
-from dagshub_annotation_converter.formats.yolo import allowed_annotation_types, export_lookup
 from dagshub_annotation_converter.formats.yolo.bbox import import_bbox_from_string
+from dagshub_annotation_converter.formats.yolo.common import allowed_annotation_types, export_lookup
 from dagshub_annotation_converter.formats.yolo.context import (
     YoloContext,
     YoloAnnotationTypes,
