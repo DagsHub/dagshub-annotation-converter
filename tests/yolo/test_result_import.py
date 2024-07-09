@@ -133,6 +133,7 @@ def test_pose_import(yolo_result):
 
     points = [[IRPosePoint(x=x, y=y) for x, y in ps] for ps in points]
 
+    actual = import_yolo_result("pose", yolo_result)
     expected = [
         IRPoseImageAnnotation(
             categories={"cat": 0.9},
@@ -157,3 +158,4 @@ def test_pose_import(yolo_result):
             image_height=480,
         ),
     ]
+    assert actual == expected
