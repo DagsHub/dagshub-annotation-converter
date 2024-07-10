@@ -1,4 +1,4 @@
-from typing import Mapping, Any, Callable
+from typing import Mapping, Any, Callable, Type
 
 from .context import YoloAnnotationTypes, YoloContext, YoloConverterFunction
 from .bbox import export_bbox, import_bbox_from_string
@@ -10,6 +10,7 @@ from dagshub_annotation_converter.ir.image import (
     IRSegmentationImageAnnotation,
     IRPoseImageAnnotation,
 )
+from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
 
 # Type actually has to be IRAnnotationBase, but it messes up MyPy
 YoloExportFunctionType = Callable[[Any, YoloContext], str]
@@ -30,4 +31,10 @@ import_lookup: Mapping[YoloAnnotationTypes, YoloConverterFunction] = {
     "bbox": import_bbox_from_string,
     "segmentation": import_segmentation_from_string,
     "pose": import_pose_from_string,
+}
+
+ir_mapping: Mapping[Type[IRAnnotationBase], YoloAnnotationTypes] = {
+    IRBBoxImageAnnotation: "bbox",
+    IRSegmentationImageAnnotation: "segmentation",
+    IRPoseImageAnnotation: "pose",
 }
