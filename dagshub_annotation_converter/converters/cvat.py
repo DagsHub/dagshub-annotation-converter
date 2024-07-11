@@ -25,7 +25,7 @@ def parse_image_annotations(img: lxml.etree.ElementBase) -> Sequence[IRImageAnno
     return annotations
 
 
-def parse_cvat_from_xml_string(
+def load_cvat_from_xml_string(
     xml_text: bytes,
 ) -> dict[str, Sequence[IRImageAnnotationBase]]:
     annotations = {}
@@ -38,12 +38,12 @@ def parse_cvat_from_xml_string(
     return annotations
 
 
-def parse_cvat_from_xml_file(xml_file: PathLike) -> dict[str, Sequence[IRImageAnnotationBase]]:
+def load_cvat_from_xml_file(xml_file: PathLike) -> dict[str, Sequence[IRImageAnnotationBase]]:
     with open(xml_file, "rb") as f:
-        return parse_cvat_from_xml_string(f.read())
+        return load_cvat_from_xml_string(f.read())
 
 
-def parse_cvat_from_zip(zip_path: PathLike) -> dict[str, Sequence[IRImageAnnotationBase]]:
+def load_cvat_from_zip(zip_path: PathLike) -> dict[str, Sequence[IRImageAnnotationBase]]:
     with ZipFile(zip_path) as proj_zip:
         with proj_zip.open("annotations.xml") as f:
-            return parse_cvat_from_xml_string(f.read())
+            return load_cvat_from_xml_string(f.read())

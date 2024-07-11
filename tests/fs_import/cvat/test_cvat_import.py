@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from dagshub_annotation_converter.converters.cvat import parse_cvat_from_xml_file
+from dagshub_annotation_converter.converters.cvat import load_cvat_from_xml_file
 from dagshub_annotation_converter.ir.image import (
     IRBBoxImageAnnotation,
     IRSegmentationImageAnnotation,
@@ -10,7 +10,7 @@ from dagshub_annotation_converter.ir.image import (
 
 def test_cvat_import():
     annotation_file = Path(__file__).parent / "annotations.xml"
-    annotations = parse_cvat_from_xml_file(annotation_file)
+    annotations = load_cvat_from_xml_file(annotation_file)
 
     expected_files = ["001.png", "002.png", "003.png", "004.png"]
     assert list(annotations.keys()) == list(expected_files)
