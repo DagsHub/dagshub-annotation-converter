@@ -55,7 +55,7 @@ def test_keypoint_ir(parsed_keypoint_task):
     assert ann.points[0].x == 0.5
     assert ann.points[0].y == 0.5
 
-    assert ann.state == CoordinateStyle.NORMALIZED
+    assert ann.coordinate_style == CoordinateStyle.NORMALIZED
 
 
 def test_pose_consolidation():
@@ -249,7 +249,7 @@ def test_ir_pose_addition():
             image_height=200,
             image_width=200,
             categories={"cat": 1.0},
-            state=CoordinateStyle.NORMALIZED,
+            coordinate_style=CoordinateStyle.NORMALIZED,
             left=0.25,
             top=0.25,
             width=0.3,

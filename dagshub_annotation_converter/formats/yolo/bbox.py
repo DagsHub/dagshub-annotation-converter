@@ -37,7 +37,7 @@ def import_bbox(
         height=height,
         image_width=image_width,
         image_height=image_height,
-        state=CoordinateStyle.NORMALIZED,
+        coordinate_style=CoordinateStyle.NORMALIZED,
     )
 
 

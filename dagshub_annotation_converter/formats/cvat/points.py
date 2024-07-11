@@ -18,7 +18,7 @@ def parse_points(elem: ElementBase, containing_image: ElementBase) -> IRPoseImag
     return IRPoseImageAnnotation.from_points(
         categories={category: 1.0},
         points=points,
-        state=CoordinateStyle.DENORMALIZED,
+        coordinate_style=CoordinateStyle.DENORMALIZED,
         image_width=image_info.width,
         image_height=image_info.height,
         filename=image_info.name,

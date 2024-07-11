@@ -58,7 +58,7 @@ def import_pose_3dim(
         categories={parsed_category.name: 1.0},
         image_width=image_width,
         image_height=image_height,
-        state=CoordinateStyle.NORMALIZED,
+        coordinate_style=CoordinateStyle.NORMALIZED,
         top=middle_y - height / 2,
         left=middle_x - width / 2,
         height=height,

@@ -12,7 +12,7 @@ def test_bbox_import(yolo_context):
         height=0.5,
         image_width=100,
         image_height=200,
-        state=CoordinateStyle.NORMALIZED,
+        coordinate_style=CoordinateStyle.NORMALIZED,
     )
 
     actual = import_bbox_from_string(
@@ -33,7 +33,7 @@ def test_bbox_export(yolo_context):
         height=0.5,
         image_width=100,
         image_height=200,
-        state=CoordinateStyle.NORMALIZED,
+        coordinate_style=CoordinateStyle.NORMALIZED,
     )
 
     assert expected == export_bbox(annotation, yolo_context)

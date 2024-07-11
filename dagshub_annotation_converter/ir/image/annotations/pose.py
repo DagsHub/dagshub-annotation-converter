@@ -50,7 +50,7 @@ class IRPoseImageAnnotation(IRImageAnnotationBase):
     def from_points(
         categories: dict[str, float],
         points: List[IRPosePoint],
-        state: "CoordinateStyle",
+        coordinate_style: "CoordinateStyle",
         image_width: int,
         image_height: int,
         filename: Optional[str] = None,
@@ -71,7 +71,7 @@ class IRPoseImageAnnotation(IRImageAnnotationBase):
             width=max_x - min_x,
             height=max_y - min_y,
             points=points,
-            state=state,
+            coordinate_style=coordinate_style,
             image_height=image_height,
             image_width=image_width,
         )

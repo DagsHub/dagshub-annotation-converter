@@ -11,7 +11,7 @@ def parse_polygon(elem: ElementBase, containing_image: ElementBase) -> IRSegment
 
     res = IRSegmentationImageAnnotation(
         categories={category: 1.0},
-        state=CoordinateStyle.DENORMALIZED,
+        coordinate_style=CoordinateStyle.DENORMALIZED,
         image_width=image_info.width,
         image_height=image_info.height,
         filename=image_info.name,

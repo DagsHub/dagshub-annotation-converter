@@ -19,7 +19,7 @@ class PolygonLabelsAnnotation(ImageAnnotationResultABC):
     def to_ir_annotation(self) -> list[IRSegmentationImageAnnotation]:
         res = IRSegmentationImageAnnotation(
             categories={self.value.polygonlabels[0]: 1.0},
-            state=CoordinateStyle.NORMALIZED,
+            coordinate_style=CoordinateStyle.NORMALIZED,
             image_width=self.original_width,
             image_height=self.original_height,
         )

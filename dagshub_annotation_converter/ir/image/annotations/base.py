@@ -30,7 +30,7 @@ class IRAnnotationBase(ParentModel):
 
     categories: dict[str, float]
     """Categories and their confidence. 1 means 100% confidence or ground truth."""
-    state: CoordinateStyle
+    coordinate_style: CoordinateStyle
     imported_id: Optional[str] = None
 
     def with_filename(self, filename: str) -> Self:
@@ -50,11 +50,11 @@ class IRAnnotationBase(ParentModel):
         """
         Returns a copy with all parameters in the annotation normalized
         """
-        if self.state == CoordinateStyle.NORMALIZED:
+        if self.coordinate_style == CoordinateStyle.NORMALIZED:
             return self.model_copy()
         normalized = self.model_copy()
         normalized._normalize()
-        normalized.state = CoordinateStyle.NORMALIZED
+        normalized.coordinate_style = CoordinateStyle.NORMALIZED
         return normalized
 
     @abstractmethod
@@ -68,11 +68,11 @@ class IRAnnotationBase(ParentModel):
         """
         Returns a copy with all parameters in the annotation denormalized
         """
-        if self.state == CoordinateStyle.DENORMALIZED:
+        if self.coordinate_style == CoordinateStyle.DENORMALIZED:
             return self.model_copy()
         denormalized = self.model_copy()
         denormalized._denormalize()
-        denormalized.state = CoordinateStyle.DENORMALIZED
+        denormalized.coordinate_style = CoordinateStyle.DENORMALIZED
         return denormalized
 
     @abstractmethod

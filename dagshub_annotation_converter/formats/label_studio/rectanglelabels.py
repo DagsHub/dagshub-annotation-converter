@@ -22,7 +22,7 @@ class RectangleLabelsAnnotation(ImageAnnotationResultABC):
     def to_ir_annotation(self) -> list[IRBBoxImageAnnotation]:
         res = IRBBoxImageAnnotation(
             categories={self.value.rectanglelabels[0]: 1.0},
-            state=CoordinateStyle.NORMALIZED,
+            coordinate_style=CoordinateStyle.NORMALIZED,
             top=self.value.y / 100,
             left=self.value.x / 100,
             width=self.value.width / 100,

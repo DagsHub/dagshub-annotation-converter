@@ -31,7 +31,7 @@ def _import_result_bboxes(result: "ultralytics.engine.results.Results") -> Seque
         res.append(
             IRBBoxImageAnnotation(
                 categories={cat: result.boxes.conf[i]},
-                state=CoordinateStyle.DENORMALIZED,
+                coordinate_style=CoordinateStyle.DENORMALIZED,
                 image_width=result.orig_shape[1],
                 image_height=result.orig_shape[0],
                 left=x_tl,
@@ -54,7 +54,7 @@ def _import_result_segmentations(
             IRSegmentationImageAnnotation(
                 categories={cat: result.boxes.conf[i]},
                 points=points,
-                state=CoordinateStyle.DENORMALIZED,
+                coordinate_style=CoordinateStyle.DENORMALIZED,
                 image_width=result.orig_shape[1],
                 image_height=result.orig_shape[0],
             )
@@ -85,7 +85,7 @@ def _import_result_poses(result: "ultralytics.engine.results.Results") -> Sequen
                 width=width,
                 height=height,
                 points=points,
-                state=CoordinateStyle.DENORMALIZED,
+                coordinate_style=CoordinateStyle.DENORMALIZED,
                 image_width=result.orig_shape[1],
                 image_height=result.orig_shape[0],
             )

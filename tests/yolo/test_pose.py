@@ -18,7 +18,7 @@ def test_pose_3dim(yolo_context):
         points=points,
         image_width=100,
         image_height=200,
-        state=CoordinateStyle.NORMALIZED,
+        coordinate_style=CoordinateStyle.NORMALIZED,
     )
 
     actual = import_pose_from_string(
@@ -48,7 +48,7 @@ def test_pose_2dim(yolo_context):
         points=points,
         image_width=100,
         image_height=200,
-        state=CoordinateStyle.NORMALIZED,
+        coordinate_style=CoordinateStyle.NORMALIZED,
     )
 
     actual = import_pose_from_string(
@@ -76,7 +76,7 @@ def test_export_pose_3dim(yolo_context):
         points=points,
         image_width=100,
         image_height=200,
-        state=CoordinateStyle.NORMALIZED,
+        coordinate_style=CoordinateStyle.NORMALIZED,
     )
 
     expected = "0 0.75 0.75 0.5 0.5 0.5 0.5 1 0.75 0.75 0 0.5 0.75 1"
@@ -100,7 +100,7 @@ def test_export_pose_2dim(yolo_context):
         points=points,
         image_width=100,
         image_height=200,
-        state=CoordinateStyle.NORMALIZED,
+        coordinate_style=CoordinateStyle.NORMALIZED,
     )
 
     expected = "0 0.75 0.75 0.5 0.5 0.5 0.5 0.5 0.75"

@@ -30,7 +30,7 @@ def import_segmentation(
         categories={parsed_category.name: 1.0},
         image_width=image_width,
         image_height=image_height,
-        state=CoordinateStyle.NORMALIZED,
+        coordinate_style=CoordinateStyle.NORMALIZED,
         points=[IRSegmentationPoint(x=x, y=y) for x, y in points],
     )
 

@@ -54,14 +54,14 @@ def test_bbox_ir(parsed_bbox_task):
     assert ann.left == 0.25
     assert ann.width == 0.5
     assert ann.height == 0.5
-    assert ann.state == CoordinateStyle.NORMALIZED
+    assert ann.coordinate_style == CoordinateStyle.NORMALIZED
 
 
 def test_ir_bbox_addition():
     task = LabelStudioTask()
     bbox = IRBBoxImageAnnotation(
         categories={"dog": 1.0},
-        state=CoordinateStyle.NORMALIZED,
+        coordinate_style=CoordinateStyle.NORMALIZED,
         top=0.25,
         left=0.25,
         width=0.5,

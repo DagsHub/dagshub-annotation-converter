@@ -39,6 +39,8 @@ class YoloContext(ParentModel):
     """Path to the train data, relative to the base path"""
     val_path: Optional[Path] = Path(".")
     """Path to the validation data, relative to the base path"""
+    yaml_location: Optional[Path] = None
+    """Location of the original YAML file (for data path resolution in the FS)"""
 
     @staticmethod
     def from_yaml_file(file_path: Union[str, Path], annotation_type: YoloAnnotationTypes) -> "YoloContext":
@@ -47,6 +49,7 @@ class YoloContext(ParentModel):
         with open(file_path) as f:
             meta_dict = yaml.safe_load(f)
         res.categories = YoloContext._parse_categories(meta_dict)
+        res.yaml_location = file_path
 
         if "kpt_shape" in meta_dict:
             res.keypoints_in_annotation = meta_dict["kpt_shape"][0]
@@ -81,7 +84,7 @@ class YoloContext(ParentModel):
             )
 
         content = {
-            "path": str(path.absolute()),
+            "path": str(path),
             "names": {cat.id: cat.name for cat in self.categories.categories},
             "nc": len(self.categories),
         }

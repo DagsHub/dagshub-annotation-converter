@@ -40,7 +40,7 @@ def test_box():
         categories={"Person": 1.0},
         image_width=1920,
         image_height=1200,
-        state=CoordinateStyle.DENORMALIZED,
+        coordinate_style=CoordinateStyle.DENORMALIZED,
         top=247.76,
         left=654.53,
         width=1247.56 - 654.53,
@@ -76,7 +76,7 @@ def test_segmentation():
         categories={"Ship": 1.0},
         image_width=1920,
         image_height=1200,
-        state=CoordinateStyle.DENORMALIZED,
+        coordinate_style=CoordinateStyle.DENORMALIZED,
         points=expected_points,
     )
 
@@ -105,7 +105,7 @@ def test_points():
         categories={"Baby Yoda": 1.0},
         image_width=1920,
         image_height=1200,
-        state=CoordinateStyle.DENORMALIZED,
+        coordinate_style=CoordinateStyle.DENORMALIZED,
         points=expected_points,
     )
 
@@ -152,7 +152,7 @@ def test_skeleton():
         categories={"Yoda": 1.0},
         image_width=1920,
         image_height=1200,
-        state=CoordinateStyle.DENORMALIZED,
+        coordinate_style=CoordinateStyle.DENORMALIZED,
         points=expected_points,
     )
 

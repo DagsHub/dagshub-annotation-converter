@@ -59,7 +59,7 @@ def test_segmentation_ir(parsed_segmentation_task, segmentation_points):
     converted_points = [IRSegmentationPoint(x=x / 100, y=y / 100) for x, y in segmentation_points]
 
     assert ann.points == converted_points
-    assert ann.state == CoordinateStyle.NORMALIZED
+    assert ann.coordinate_style == CoordinateStyle.NORMALIZED
 
 
 def test_ir_segmentation_addition():
@@ -70,7 +70,7 @@ def test_ir_segmentation_addition():
             image_height=100,
             image_width=100,
             categories={"dog": 1.0},
-            state=CoordinateStyle.NORMALIZED,
+            coordinate_style=CoordinateStyle.NORMALIZED,
             points=[
                 IRSegmentationPoint(x=0.5, y=0.5),
                 IRSegmentationPoint(x=0.75, y=0.75),

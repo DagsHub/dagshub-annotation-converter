@@ -30,7 +30,7 @@ class KeyPointLabelsAnnotation(ImageAnnotationResultABC):
         ann = IRPoseImageAnnotation.from_points(
             categories={self.value.keypointlabels[0]: 1.0},
             points=[IRPosePoint(x=self.value.x / 100, y=self.value.y / 100)],
-            state=CoordinateStyle.NORMALIZED,
+            coordinate_style=CoordinateStyle.NORMALIZED,
             image_width=self.original_width,
             image_height=self.original_height,
         )

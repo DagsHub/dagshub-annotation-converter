@@ -184,7 +184,7 @@ class LabelStudioTask(ParentModel):
             sum_annotation = IRPoseImageAnnotation.from_points(
                 categories={category: 1.0},
                 points=points,
-                state=CoordinateStyle.NORMALIZED,
+                coordinate_style=CoordinateStyle.NORMALIZED,
                 image_width=image_width,
                 image_height=image_height,
             )

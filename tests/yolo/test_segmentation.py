@@ -17,7 +17,7 @@ def test_segmentation_import(yolo_context):
         points=points,
         image_width=100,
         image_height=200,
-        state=CoordinateStyle.NORMALIZED,
+        coordinate_style=CoordinateStyle.NORMALIZED,
     )
 
     actual = import_segmentation_from_string(

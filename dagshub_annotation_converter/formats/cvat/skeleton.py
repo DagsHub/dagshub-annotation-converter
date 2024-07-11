@@ -34,7 +34,7 @@ def parse_skeleton(elem: ElementBase, containing_image: ElementBase) -> IRPoseIm
     return IRPoseImageAnnotation.from_points(
         categories={category: 1.0},
         points=res_points,
-        state=CoordinateStyle.DENORMALIZED,
+        coordinate_style=CoordinateStyle.DENORMALIZED,
         image_width=image_info.width,
         image_height=image_info.height,
         filename=image_info.name,
