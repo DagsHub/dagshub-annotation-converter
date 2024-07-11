@@ -21,19 +21,23 @@ logger = logging.getLogger(__name__)
 
 def load_yolo_from_fs_with_context(
     context: YoloContext,
+    import_dir: Union[str, Path] = ".",
 ) -> dict[str, Sequence[IRImageAnnotationBase]]:
     assert context.path is not None
 
     annotations: dict[str, Sequence[IRImageAnnotationBase]] = {}
 
-    for dirpath, subdirs, files in os.walk(context.path):
+    import_dir_path = Path(import_dir)
+    data_dir_path = import_dir_path / context.path
+
+    for dirpath, subdirs, files in os.walk(data_dir_path):
         if context.image_dir_name not in dirpath.split("/"):
             logger.debug(f"{dirpath} is not an image dir, skipping")
             continue
         for filename in files:
             fullpath = os.path.join(dirpath, filename)
             img = Path(fullpath)
-            relpath = img.relative_to(context.path)
+            relpath = img.relative_to(data_dir_path)
             if not is_image(img):
                 logger.debug(f"Skipping {img} because it's not an image")
                 continue
@@ -44,7 +48,7 @@ def load_yolo_from_fs_with_context(
             if not annotation.exists():
                 logger.warning(f"Couldn't find annotation file [{annotation}] for image file [{img}]")
                 continue
-            annotations[str(relpath)] = parse_annotation(context, context.path, img, annotation)
+            annotations[str(relpath)] = parse_annotation(context, data_dir_path, img, annotation)
 
     return annotations
 
@@ -73,19 +77,16 @@ def parse_annotation(
 def load_yolo_from_fs(
     annotation_type: YoloAnnotationTypes,
     meta_file: Union[str, Path] = "annotations.yaml",
-    path: Optional[Union[str, Path]] = None,
     image_dir_name: str = "images",
     label_dir_name: str = "labels",
 ) -> tuple[dict[str, Sequence[IRImageAnnotationBase]], YoloContext]:
+    meta_file_path = Path(meta_file).absolute()
     context = YoloContext.from_yaml_file(meta_file, annotation_type=annotation_type)
     context.image_dir_name = image_dir_name
     context.label_dir_name = label_dir_name
     context.annotation_type = annotation_type
 
-    if path is not None:
-        context.path = Path(path)
-
-    return load_yolo_from_fs_with_context(context), context
+    return load_yolo_from_fs_with_context(context, import_dir=meta_file_path.parent), context
 
 
 # ======== Annotation Export ======== #
