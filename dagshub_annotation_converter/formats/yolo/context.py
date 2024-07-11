@@ -1,14 +1,13 @@
-import os.path
 from pathlib import Path
 from typing import Dict, Union, Optional, Literal, Callable
 
 import yaml
-from pydantic import BaseModel
 
 
 from dagshub_annotation_converter.formats.common import ImageType
 from dagshub_annotation_converter.formats.yolo.categories import Categories
 from dagshub_annotation_converter.ir.image import IRImageAnnotationBase
+from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 YoloConverterFunction = Callable[
     [str, "YoloContext", Optional[int], Optional[int], Optional[ImageType]], IRImageAnnotationBase
@@ -17,7 +16,7 @@ YoloConverterFunction = Callable[
 YoloAnnotationTypes = Literal["bbox", "segmentation", "pose"]
 
 
-class YoloContext(BaseModel):
+class YoloContext(ParentModel):
     annotation_type: YoloAnnotationTypes
     """Type of annotations associated with this Yolo Context"""
     categories: Categories = Categories()
@@ -54,10 +53,7 @@ class YoloContext(BaseModel):
             res.keypoint_dim = meta_dict["kpt_shape"][1]
 
         if "path" in meta_dict:
-            if os.path.isabs(meta_dict["path"]):
-                res.path = Path(meta_dict["path"])
-            else:
-                res.path = file_path.parent / meta_dict["path"]
+            res.path = Path(meta_dict["path"])
 
         if "train" in meta_dict:
             res.train_path = Path(meta_dict["train"])

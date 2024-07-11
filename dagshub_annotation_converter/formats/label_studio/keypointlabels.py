@@ -1,6 +1,5 @@
 from typing import Sequence
 
-from pydantic import BaseModel
 
 from dagshub_annotation_converter.formats.label_studio.base import ImageAnnotationResultABC
 from dagshub_annotation_converter.formats.label_studio.rectanglelabels import (
@@ -13,9 +12,10 @@ from dagshub_annotation_converter.ir.image import (
     CoordinateStyle,
     IRImageAnnotationBase,
 )
+from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 
-class KeyPointLabelsAnnotationValue(BaseModel):
+class KeyPointLabelsAnnotationValue(ParentModel):
     x: float
     y: float
     width: float = 1.0

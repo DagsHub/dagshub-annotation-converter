@@ -3,7 +3,7 @@ import logging
 import random
 from typing import Any, Sequence, Annotated, Type, Optional, Union, cast
 
-from pydantic import BaseModel, SerializeAsAny, Field, BeforeValidator
+from pydantic import SerializeAsAny, Field, BeforeValidator
 
 from dagshub_annotation_converter.formats.label_studio.base import AnnotationResultABC, ImageAnnotationResultABC
 from dagshub_annotation_converter.formats.label_studio.keypointlabels import KeyPointLabelsAnnotation
@@ -17,6 +17,7 @@ from dagshub_annotation_converter.ir.image import (
     IRPosePoint,
     IRSegmentationImageAnnotation,
 )
+from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 task_lookup: dict[str, Type[AnnotationResultABC]] = {
     "polygonlabels": PolygonLabelsAnnotation,
@@ -52,13 +53,13 @@ def ls_annotation_validator(v: Any) -> list[AnnotationResultABC]:
 AnnotationsList = Annotated[list[SerializeAsAny[AnnotationResultABC]], BeforeValidator(ls_annotation_validator)]
 
 
-class AnnotationsContainer(BaseModel):
+class AnnotationsContainer(ParentModel):
     completed_by: Optional[int] = None
     result: AnnotationsList = []
     ground_truth: bool = False
 
 
-class PredictionsContainer(BaseModel):
+class PredictionsContainer(ParentModel):
     result: AnnotationsList = []
 
 
@@ -66,7 +67,7 @@ PosePointsLookupKey = "pose_points"
 PoseBBoxLookupKey = "pose_boxes"
 
 
-class LabelStudioTask(BaseModel):
+class LabelStudioTask(ParentModel):
     annotations: list[AnnotationsContainer] = Field(
         default_factory=lambda: [],
     )

@@ -1,14 +1,14 @@
 from typing import List, Optional, TYPE_CHECKING
 
-from pydantic import BaseModel
 
 from dagshub_annotation_converter.ir.image.annotations.base import IRImageAnnotationBase
+from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 if TYPE_CHECKING:
     from dagshub_annotation_converter.ir.image import CoordinateStyle
 
 
-class IRPosePoint(BaseModel):
+class IRPosePoint(ParentModel):
     x: float
     y: float
     visible: Optional[bool] = None

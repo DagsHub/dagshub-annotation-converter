@@ -1,10 +1,10 @@
 from abc import abstractmethod
 from typing import Optional
 
-from pydantic import BaseModel
 from typing_extensions import Self
 
 from dagshub_annotation_converter.ir.image import CoordinateStyle
+from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 
 class MultipleCategoriesError(Exception):
@@ -21,7 +21,7 @@ class MultipleCategoriesError(Exception):
         )
 
 
-class IRAnnotationBase(BaseModel):
+class IRAnnotationBase(ParentModel):
     """
     Base class for all annotations and predictions
     """

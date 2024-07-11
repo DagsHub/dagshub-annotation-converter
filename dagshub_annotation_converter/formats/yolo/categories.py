@@ -1,9 +1,9 @@
 from typing import Union, Optional
 
-from pydantic import BaseModel
+from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 
-class Category(BaseModel):
+class Category(ParentModel):
     name: str
     id: int
 
@@ -11,7 +11,7 @@ class Category(BaseModel):
         return hash(self.name)
 
 
-class Categories(BaseModel):
+class Categories(ParentModel):
     categories: list[Category] = []
     _id_lookup: dict[int, Category] = {}
     _name_lookup: dict[str, Category] = {}

@@ -1,13 +1,12 @@
 from typing import Sequence
 
-from pydantic import BaseModel
-
 
 from dagshub_annotation_converter.formats.label_studio.base import ImageAnnotationResultABC
 from dagshub_annotation_converter.ir.image import IRSegmentationImageAnnotation, CoordinateStyle, IRImageAnnotationBase
+from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 
-class PolygonLabelsAnnotationValue(BaseModel):
+class PolygonLabelsAnnotationValue(ParentModel):
     points: list[list[float]]
     polygonlabels: list[str]
     closed: bool = True

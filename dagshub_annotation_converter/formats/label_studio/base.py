@@ -2,13 +2,14 @@ import uuid
 from abc import abstractmethod
 from typing import Sequence, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from dagshub_annotation_converter.ir.image import IRImageAnnotationBase
 from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
+from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 
-class AnnotationResultABC(BaseModel):
+class AnnotationResultABC(ParentModel):
     @abstractmethod
     def to_ir_annotation(self) -> Sequence[IRAnnotationBase]:
         """

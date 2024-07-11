@@ -1,8 +1,9 @@
 from lxml.etree import ElementBase
-from pydantic import BaseModel
+
+from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 
-class CVATImageInfo(BaseModel):
+class CVATImageInfo(ParentModel):
     name: str
     width: int
     height: int

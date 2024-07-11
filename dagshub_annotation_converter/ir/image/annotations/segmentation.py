@@ -1,11 +1,11 @@
 from typing import List
 
-from pydantic import BaseModel
 
 from dagshub_annotation_converter.ir.image.annotations.base import IRImageAnnotationBase
+from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 
-class IRSegmentationPoint(BaseModel):
+class IRSegmentationPoint(ParentModel):
     x: float
     y: float
 

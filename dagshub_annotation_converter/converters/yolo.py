@@ -85,6 +85,8 @@ def load_yolo_from_fs(
     if path is not None:
         context.path = Path(path)
 
+    # TODO: handle relative paths here better!!!
+
     return load_yolo_from_fs_with_context(context), context
 
 
