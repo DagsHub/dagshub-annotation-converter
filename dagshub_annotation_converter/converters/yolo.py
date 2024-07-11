@@ -28,7 +28,11 @@ def load_yolo_from_fs_with_context(
     annotations: dict[str, Sequence[IRImageAnnotationBase]] = {}
 
     import_dir_path = Path(import_dir)
-    data_dir_path = import_dir_path / context.path
+
+    if context.path.is_absolute():
+        data_dir_path = context.path
+    else:
+        data_dir_path = import_dir_path / context.path
 
     for dirpath, subdirs, files in os.walk(data_dir_path):
         if context.image_dir_name not in dirpath.split("/"):
@@ -142,7 +146,7 @@ def export_to_fs(
     """
     if context.path is None:
         print(f"`YoloContext.path` was not set. Exporting to {os.path.join(os.getcwd(), 'data')}")
-        context.path = Path.cwd() / "data"
+        context.path = Path("data")
 
     grouped_annotations = group_annotations_by_filename(annotations)
 
