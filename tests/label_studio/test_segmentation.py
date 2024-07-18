@@ -1,3 +1,5 @@
+from typing import List
+
 import pytest
 
 from dagshub_annotation_converter.formats.label_studio.polygonlabels import PolygonLabelsAnnotation

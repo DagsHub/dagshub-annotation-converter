@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from lxml.etree import ElementBase
 import lxml.etree
 
