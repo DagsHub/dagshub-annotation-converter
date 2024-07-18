@@ -1,7 +1,9 @@
 import datetime
 import logging
 import random
-from typing import Any, Sequence, Annotated, Type, Optional, Union, cast, List, Dict
+from typing import Any, Sequence, Type, Optional, Union, cast, List, Dict
+
+from typing_extensions import Annotated
 
 from pydantic import SerializeAsAny, Field, BeforeValidator
 
