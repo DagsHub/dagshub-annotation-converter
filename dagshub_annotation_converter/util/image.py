@@ -1,11 +1,12 @@
 from pathlib import Path
+from typing import Set
 
 from dagshub_annotation_converter.util.path import get_extension
 
 _supported_image_formats = None
 
 
-def supported_image_formats() -> set[str]:
+def supported_image_formats() -> Set[str]:
     global _supported_image_formats
     if _supported_image_formats is None:
         from PIL import Image

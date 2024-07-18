@@ -1,5 +1,4 @@
-from typing import Sequence
-
+from typing import Sequence, List
 
 from dagshub_annotation_converter.formats.label_studio.base import ImageAnnotationResultABC
 from dagshub_annotation_converter.ir.image import IRSegmentationImageAnnotation, CoordinateStyle, IRImageAnnotationBase
@@ -7,8 +6,8 @@ from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 
 class PolygonLabelsAnnotationValue(ParentModel):
-    points: list[list[float]]
-    polygonlabels: list[str]
+    points: List[List[float]]
+    polygonlabels: List[str]
     closed: bool = True
 
 
@@ -16,7 +15,7 @@ class PolygonLabelsAnnotation(ImageAnnotationResultABC):
     value: PolygonLabelsAnnotationValue
     type: str = "polygonlabels"
 
-    def to_ir_annotation(self) -> list[IRSegmentationImageAnnotation]:
+    def to_ir_annotation(self) -> List[IRSegmentationImageAnnotation]:
         res = IRSegmentationImageAnnotation(
             categories={self.value.polygonlabels[0]: 1.0},
             coordinate_style=CoordinateStyle.NORMALIZED,

@@ -1,4 +1,5 @@
 import math
+from typing import Tuple
 
 from lxml.etree import ElementBase
 
@@ -6,7 +7,7 @@ from dagshub_annotation_converter.formats.cvat.context import parse_image_tag
 from dagshub_annotation_converter.ir.image import IRBBoxImageAnnotation, CoordinateStyle
 
 
-def calculate_bbox(xtl, ytl, xbr, ybr, rotation: float) -> tuple[int, int, int, int, float]:
+def calculate_bbox(xtl, ytl, xbr, ybr, rotation: float) -> Tuple[int, int, int, int, float]:
     """
     Converts the CVAT rotation bounding box to the dagshub one.
 

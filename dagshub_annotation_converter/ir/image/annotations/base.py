@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Optional
+from typing import Optional, Dict
 
 from typing_extensions import Self
 
@@ -28,7 +28,7 @@ class IRAnnotationBase(ParentModel):
 
     filename: Optional[str] = None
 
-    categories: dict[str, float]
+    categories: Dict[str, float]
     """Categories and their confidence. 1 means 100% confidence or ground truth."""
     coordinate_style: CoordinateStyle
     imported_id: Optional[str] = None

@@ -21,7 +21,7 @@ def wrap_in_image_tag(data: str) -> str:
     return f'<image id="0" name="000.png" width="1920" height="1200">{data}</image>'
 
 
-def to_xml(data: str) -> tuple[ElementBase, ElementBase]:
+def to_xml(data: str) -> Tuple[ElementBase, ElementBase]:
     """Returns the image element + annotation element"""
     return lxml.etree.fromstring(wrap_in_image_tag(data)), lxml.etree.fromstring(data)
 

@@ -11,7 +11,7 @@ from tests.label_studio.common import generate_annotation, generate_task
 
 
 @pytest.fixture
-def segmentation_points() -> list[list[int]]:
+def segmentation_points() -> List[List[int]]:
     return [
         [50, 50],
         [75, 75],

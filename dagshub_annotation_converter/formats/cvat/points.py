@@ -1,3 +1,5 @@
+from typing import List
+
 from lxml.etree import ElementBase
 
 from dagshub_annotation_converter.formats.cvat.context import parse_image_tag
@@ -5,7 +7,7 @@ from dagshub_annotation_converter.ir.image import IRPoseImageAnnotation, IRPoseP
 
 
 def parse_points(elem: ElementBase, containing_image: ElementBase) -> IRPoseImageAnnotation:
-    points: list[IRPosePoint] = []
+    points: List[IRPosePoint] = []
 
     category = str(elem.attrib["label"])
 

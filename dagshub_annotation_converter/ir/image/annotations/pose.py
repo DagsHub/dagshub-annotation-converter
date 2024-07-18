@@ -1,5 +1,4 @@
-from typing import List, Optional, TYPE_CHECKING
-
+from typing import List, Optional, TYPE_CHECKING, Dict
 
 from dagshub_annotation_converter.ir.image.annotations.base import IRImageAnnotationBase
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
@@ -48,7 +47,7 @@ class IRPoseImageAnnotation(IRImageAnnotationBase):
 
     @staticmethod
     def from_points(
-        categories: dict[str, float],
+        categories: Dict[str, float],
         points: List[IRPosePoint],
         coordinate_style: "CoordinateStyle",
         image_width: int,

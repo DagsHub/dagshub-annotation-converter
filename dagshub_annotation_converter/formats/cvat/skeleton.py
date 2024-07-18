@@ -1,3 +1,5 @@
+from typing import Tuple, List
+
 from lxml.etree import ElementBase
 
 from dagshub_annotation_converter.formats.cvat.context import parse_image_tag
@@ -6,7 +8,7 @@ from dagshub_annotation_converter.ir.image import IRPoseImageAnnotation, IRPoseP
 
 def parse_skeleton(elem: ElementBase, containing_image: ElementBase) -> IRPoseImageAnnotation:
     # Points also contain the labels, for consistent ordering in LS, they are later sorted
-    points: list[tuple[str, IRPosePoint]] = []
+    points: List[Tuple[str, IRPosePoint]] = []
 
     category = str(elem.attrib["label"])
 

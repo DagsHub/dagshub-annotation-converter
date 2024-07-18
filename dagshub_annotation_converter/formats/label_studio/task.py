@@ -1,7 +1,7 @@
 import datetime
 import logging
 import random
-from typing import Any, Sequence, Annotated, Type, Optional, Union, cast
+from typing import Any, Sequence, Annotated, Type, Optional, Union, cast, List, Dict
 
 from pydantic import SerializeAsAny, Field, BeforeValidator
 
@@ -19,13 +19,13 @@ from dagshub_annotation_converter.ir.image import (
 )
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
-task_lookup: dict[str, Type[AnnotationResultABC]] = {
+task_lookup: Dict[str, Type[AnnotationResultABC]] = {
     "polygonlabels": PolygonLabelsAnnotation,
     "rectanglelabels": RectangleLabelsAnnotation,
     "keypointlabels": KeyPointLabelsAnnotation,
 }
 
-ir_annotation_lookup: dict[Type[IRImageAnnotationBase], Type[ImageAnnotationResultABC]] = {
+ir_annotation_lookup: Dict[Type[IRImageAnnotationBase], Type[ImageAnnotationResultABC]] = {
     IRPoseImageAnnotation: KeyPointLabelsAnnotation,
     IRBBoxImageAnnotation: RectangleLabelsAnnotation,
     IRSegmentationImageAnnotation: PolygonLabelsAnnotation,
@@ -34,10 +34,10 @@ ir_annotation_lookup: dict[Type[IRImageAnnotationBase], Type[ImageAnnotationResu
 logger = logging.getLogger(__name__)
 
 
-def ls_annotation_validator(v: Any) -> list[AnnotationResultABC]:
+def ls_annotation_validator(v: Any) -> List[AnnotationResultABC]:
     assert isinstance(v, list)
 
-    annotations: list[AnnotationResultABC] = []
+    annotations: List[AnnotationResultABC] = []
 
     for raw_annotation in v:
         assert isinstance(raw_annotation, dict)
@@ -50,7 +50,7 @@ def ls_annotation_validator(v: Any) -> list[AnnotationResultABC]:
     return annotations
 
 
-AnnotationsList = Annotated[list[SerializeAsAny[AnnotationResultABC]], BeforeValidator(ls_annotation_validator)]
+AnnotationsList = Annotated[List[SerializeAsAny[AnnotationResultABC]], BeforeValidator(ls_annotation_validator)]
 
 
 class AnnotationsContainer(ParentModel):
@@ -68,12 +68,12 @@ PoseBBoxLookupKey = "pose_boxes"
 
 
 class LabelStudioTask(ParentModel):
-    annotations: list[AnnotationsContainer] = Field(
+    annotations: List[AnnotationsContainer] = Field(
         default_factory=lambda: [],
     )
 
-    meta: dict[str, Any] = {}
-    data: dict[str, Any] = {}
+    meta: Dict[str, Any] = {}
+    data: Dict[str, Any] = {}
     project: int = 0
     created_at: datetime.datetime = datetime.datetime.now(tz=datetime.timezone.utc)
     updated_at: datetime.datetime = datetime.datetime.now(tz=datetime.timezone.utc)
@@ -90,7 +90,7 @@ class LabelStudioTask(ParentModel):
         for ann in annotations:
             self.add_annotation(ann)
 
-    def log_pose_metadata(self, bbox: RectangleLabelsAnnotation, keypoints: list[KeyPointLabelsAnnotation]):
+    def log_pose_metadata(self, bbox: RectangleLabelsAnnotation, keypoints: List[KeyPointLabelsAnnotation]):
         """
         Log additional metadata for pose annotation, that can be used later to reconstruct the pose on import
 
@@ -106,7 +106,7 @@ class LabelStudioTask(ParentModel):
         self.data[PosePointsLookupKey].append([point.id for point in keypoints])
 
     def to_ir_annotations(self, filename: Optional[str] = None) -> Sequence[IRImageAnnotationBase]:
-        res: list[IRImageAnnotationBase] = []
+        res: List[IRImageAnnotationBase] = []
         for anns in self.annotations:
             for ann in anns.result:
                 to_add = ann.to_ir_annotation()
@@ -117,18 +117,18 @@ class LabelStudioTask(ParentModel):
         res = self._reimport_poses(res)
         return res
 
-    def _reimport_poses(self, annotations: list[IRImageAnnotationBase]) -> list[IRImageAnnotationBase]:
+    def _reimport_poses(self, annotations: List[IRImageAnnotationBase]) -> List[IRImageAnnotationBase]:
         if PosePointsLookupKey not in self.data or PoseBBoxLookupKey not in self.data:
             return annotations
 
         # Build a dictionary of all annotation indexes in the task by id
         # Keep the indexes instead of annotations, so we can pop them for convenience
         annotation_lookup = {ann.imported_id: ann for ann in annotations if ann.imported_id is not None}
-        pose_bboxes: list[str] = self.data[PoseBBoxLookupKey]
-        pose_points: list[list[str]] = self.data[PosePointsLookupKey]
+        pose_bboxes: List[str] = self.data[PoseBBoxLookupKey]
+        pose_points: List[List[str]] = self.data[PosePointsLookupKey]
 
         annotations_to_remove: set[str] = set()
-        poses: list[IRPoseImageAnnotation] = []
+        poses: List[IRPoseImageAnnotation] = []
 
         for bbox_id, point_ids in zip(pose_bboxes, pose_points):
             # Fetch the bbox of the pose
@@ -151,7 +151,7 @@ class LabelStudioTask(ParentModel):
                 image_width = bbox.image_width
                 annotations_to_remove.add(bbox_id)
             # Fetch the points
-            points: list[IRPosePoint] = []
+            points: List[IRPosePoint] = []
             for point_id in point_ids:
                 maybe_point = annotation_lookup.get(point_id)
                 if maybe_point is None:
@@ -217,7 +217,7 @@ class LabelStudioTask(ParentModel):
         # For pose: log additional metadata
         if isinstance(ann, IRPoseImageAnnotation):
             bbox = cast(RectangleLabelsAnnotation, ls_anns[0])
-            keypoints = cast(list[KeyPointLabelsAnnotation], ls_anns[1:])
+            keypoints = cast(List[KeyPointLabelsAnnotation], ls_anns[1:])
             self.log_pose_metadata(bbox, keypoints)
 
     def add_ir_annotations(self, anns: Sequence[IRImageAnnotationBase]):

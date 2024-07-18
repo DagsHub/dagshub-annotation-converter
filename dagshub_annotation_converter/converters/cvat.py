@@ -1,6 +1,6 @@
 import logging
 from os import PathLike
-from typing import Sequence
+from typing import Sequence, List, Dict
 from zipfile import ZipFile
 
 import lxml.etree
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def parse_image_annotations(img: lxml.etree.ElementBase) -> Sequence[IRImageAnnotationBase]:
-    annotations: list[IRImageAnnotationBase] = []
+    annotations: List[IRImageAnnotationBase] = []
     for annotation_elem in img:
         annotation_type = annotation_elem.tag
         if annotation_type not in annotation_parsers:
@@ -27,7 +27,7 @@ def parse_image_annotations(img: lxml.etree.ElementBase) -> Sequence[IRImageAnno
 
 def load_cvat_from_xml_string(
     xml_text: bytes,
-) -> dict[str, Sequence[IRImageAnnotationBase]]:
+) -> Dict[str, Sequence[IRImageAnnotationBase]]:
     annotations = {}
     root_elem = lxml.etree.XML(xml_text)
 
@@ -38,12 +38,12 @@ def load_cvat_from_xml_string(
     return annotations
 
 
-def load_cvat_from_xml_file(xml_file: PathLike) -> dict[str, Sequence[IRImageAnnotationBase]]:
+def load_cvat_from_xml_file(xml_file: PathLike) -> Dict[str, Sequence[IRImageAnnotationBase]]:
     with open(xml_file, "rb") as f:
         return load_cvat_from_xml_string(f.read())
 
 
-def load_cvat_from_zip(zip_path: PathLike) -> dict[str, Sequence[IRImageAnnotationBase]]:
+def load_cvat_from_zip(zip_path: PathLike) -> Dict[str, Sequence[IRImageAnnotationBase]]:
     with ZipFile(zip_path) as proj_zip:
         with proj_zip.open("annotations.xml") as f:
             return load_cvat_from_xml_string(f.read())

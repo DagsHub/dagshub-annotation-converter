@@ -1,5 +1,4 @@
-from typing import Sequence
-
+from typing import Sequence, List
 
 from dagshub_annotation_converter.formats.label_studio.base import ImageAnnotationResultABC
 from dagshub_annotation_converter.formats.label_studio.rectanglelabels import (
@@ -19,14 +18,14 @@ class KeyPointLabelsAnnotationValue(ParentModel):
     x: float
     y: float
     width: float = 1.0
-    keypointlabels: list[str]
+    keypointlabels: List[str]
 
 
 class KeyPointLabelsAnnotation(ImageAnnotationResultABC):
     value: KeyPointLabelsAnnotationValue
     type: str = "keypointlabels"
 
-    def to_ir_annotation(self) -> list[IRPoseImageAnnotation]:
+    def to_ir_annotation(self) -> List[IRPoseImageAnnotation]:
         ann = IRPoseImageAnnotation.from_points(
             categories={self.value.keypointlabels[0]: 1.0},
             points=[IRPosePoint(x=self.value.x / 100, y=self.value.y / 100)],

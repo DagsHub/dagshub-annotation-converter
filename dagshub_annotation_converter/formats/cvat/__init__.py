@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Dict
 
 from lxml.etree import ElementBase
 
@@ -10,7 +10,7 @@ from dagshub_annotation_converter.ir.image import IRImageAnnotationBase
 
 CVATParserFunction = Callable[[ElementBase, ElementBase], IRImageAnnotationBase]
 
-annotation_parsers: dict[str, CVATParserFunction] = {
+annotation_parsers: Dict[str, CVATParserFunction] = {
     "box": parse_box,
     "polygon": parse_polygon,
     "points": parse_points,

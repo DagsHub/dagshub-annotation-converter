@@ -1,4 +1,4 @@
-from typing import Union, Optional
+from typing import Union, Optional, Dict, List
 
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
@@ -12,9 +12,9 @@ class Category(ParentModel):
 
 
 class Categories(ParentModel):
-    categories: list[Category] = []
-    _id_lookup: dict[int, Category] = {}
-    _name_lookup: dict[str, Category] = {}
+    categories: List[Category] = []
+    _id_lookup: Dict[int, Category] = {}
+    _name_lookup: Dict[str, Category] = {}
 
     def __getitem__(self, item: Union[int, str]) -> Category:
         if isinstance(item, int):

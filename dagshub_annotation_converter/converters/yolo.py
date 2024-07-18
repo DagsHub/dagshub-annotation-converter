@@ -1,7 +1,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Union, Sequence, List, Optional
+from typing import Union, Sequence, List, Optional, Dict, Tuple
 
 import PIL.Image
 
@@ -22,10 +22,10 @@ logger = logging.getLogger(__name__)
 def load_yolo_from_fs_with_context(
     context: YoloContext,
     import_dir: Union[str, Path] = ".",
-) -> dict[str, Sequence[IRImageAnnotationBase]]:
+) -> Dict[str, Sequence[IRImageAnnotationBase]]:
     assert context.path is not None
 
-    annotations: dict[str, Sequence[IRImageAnnotationBase]] = {}
+    annotations: Dict[str, Sequence[IRImageAnnotationBase]] = {}
 
     import_dir_path = Path(import_dir)
 
@@ -83,7 +83,7 @@ def load_yolo_from_fs(
     meta_file: Union[str, Path] = "annotations.yaml",
     image_dir_name: str = "images",
     label_dir_name: str = "labels",
-) -> tuple[dict[str, Sequence[IRImageAnnotationBase]], YoloContext]:
+) -> Tuple[Dict[str, Sequence[IRImageAnnotationBase]], YoloContext]:
     meta_file_path = Path(meta_file).absolute()
     context = YoloContext.from_yaml_file(meta_file, annotation_type=annotation_type)
     context.image_dir_name = image_dir_name
@@ -125,7 +125,7 @@ def annotations_to_string(annotations: Sequence[IRImageAnnotationBase], context:
 
 def export_to_fs(
     context: YoloContext,
-    annotations: list[IRImageAnnotationBase],
+    annotations: List[IRImageAnnotationBase],
     export_dir: Union[str, Path] = ".",
     meta_file="yolo_dagshub.yaml",
 ) -> Path:

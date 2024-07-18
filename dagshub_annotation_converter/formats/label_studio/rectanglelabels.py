@@ -1,5 +1,4 @@
-from typing import Sequence
-
+from typing import Sequence, List
 
 from dagshub_annotation_converter.formats.label_studio.base import ImageAnnotationResultABC
 from dagshub_annotation_converter.ir.image import IRBBoxImageAnnotation, CoordinateStyle, IRImageAnnotationBase
@@ -12,14 +11,14 @@ class RectangleLabelsAnnotationValue(ParentModel):
     width: float
     height: float
     rotation: float = 0.0
-    rectanglelabels: list[str]
+    rectanglelabels: List[str]
 
 
 class RectangleLabelsAnnotation(ImageAnnotationResultABC):
     value: RectangleLabelsAnnotationValue
     type: str = "rectanglelabels"
 
-    def to_ir_annotation(self) -> list[IRBBoxImageAnnotation]:
+    def to_ir_annotation(self) -> List[IRBBoxImageAnnotation]:
         res = IRBBoxImageAnnotation(
             categories={self.value.rectanglelabels[0]: 1.0},
             coordinate_style=CoordinateStyle.NORMALIZED,

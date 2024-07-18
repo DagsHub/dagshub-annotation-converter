@@ -1,4 +1,4 @@
-from typing import Sequence, Mapping
+from typing import Sequence, Mapping, List, Dict
 
 from dagshub_annotation_converter.ir.image import IRImageAnnotationBase
 
@@ -6,7 +6,7 @@ from dagshub_annotation_converter.ir.image import IRImageAnnotationBase
 def group_annotations_by_filename(
     annotations: Sequence[IRImageAnnotationBase],
 ) -> Mapping[str, Sequence[IRImageAnnotationBase]]:
-    res: dict[str, list[IRImageAnnotationBase]] = {}
+    res: Dict[str, List[IRImageAnnotationBase]] = {}
     for ann in annotations:
         if ann.filename is None:
             raise ValueError(f"An annotation {ann} doesn't have a filename associated, aborting")
