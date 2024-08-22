@@ -262,8 +262,8 @@ class AnnotatedFile(BaseModel):
 
 
 class PoseConfig(BaseModel):
-    pose_points: dict[Category, int] = {}
-    flipped_points: dict[Category, list[int]] = {}
+    pose_points: Dict[Category, int] = {}
+    flipped_points: Dict[Category, List[int]] = {}
 
     def bind_pose_points_to_max(self) -> int:
         """

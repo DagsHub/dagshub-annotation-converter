@@ -1,5 +1,6 @@
 import logging
-from typing import TYPE_CHECKING, List, Optional, Union, TypeGuard
+from typing import TYPE_CHECKING, List, Optional, Union
+from typing_extensions import TypeGuard
 
 from dagshub_annotation_converter.schema.ir.annotation_ir import (
     AnnotationProject,
@@ -97,7 +98,7 @@ class DagshubDatasourceImporter:
             project.files.append(ann_file)
 
     @staticmethod
-    def is_all_image_annotations(val: list[AnnotationResultABC]) -> TypeGuard[list[ImageAnnotationResultABC]]:
+    def is_all_image_annotations(val: List[AnnotationResultABC]) -> TypeGuard[List[ImageAnnotationResultABC]]:
         return all(isinstance(x, ImageAnnotationResultABC) for x in val)
 
     def convert_ls_task_to_ir(self, project: AnnotationProject, f: AnnotatedFile, task: LabelStudioTask):
@@ -193,7 +194,7 @@ class DagshubDatasourceImporter:
     @staticmethod
     def convert_ls_annotation_to_ir(
         project: AnnotationProject, f: AnnotatedFile, annotation: ImageAnnotationResultABC
-    ) -> list[AnnotationABC]:
+    ) -> List[AnnotationABC]:
         # Set the image dimensions if they weren't set already
         if f.image_width is None or f.image_height is None:
             f.image_width = annotation.original_width

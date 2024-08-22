@@ -1,3 +1,5 @@
+from typing import List
+
 from pydantic import BaseModel
 
 from dagshub_annotation_converter.schema.ir.annotation_ir import (
@@ -10,8 +12,8 @@ from dagshub_annotation_converter.schema.label_studio.abc import ImageAnnotation
 
 
 class PolygonLabelsAnnotationValue(BaseModel):
-    points: list[list[float]]
-    polygonlabels: list[str]
+    points: List[List[float]]
+    polygonlabels: List[str]
     closed: bool = True
 
 
@@ -19,7 +21,7 @@ class PolygonLabelsAnnotation(ImageAnnotationResultABC):
     value: PolygonLabelsAnnotationValue
     type: str = "polygonlabels"
 
-    def to_ir_annotation(self, project: AnnotationProject) -> list[AnnotationABC]:
+    def to_ir_annotation(self, project: AnnotationProject) -> List[AnnotationABC]:
         category = project.categories.get_or_create(self.value.polygonlabels[0])
         res = SegmentationAnnotation(category=category, state=NormalizationState.NORMALIZED)
         for p in self.value.points:

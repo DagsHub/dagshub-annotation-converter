@@ -1,5 +1,6 @@
 import uuid
 from abc import abstractmethod
+from typing import List
 
 from pydantic import BaseModel, Field
 
@@ -21,4 +22,4 @@ class ImageAnnotationResultABC(AnnotationResultABC):
     from_name: str = "label"
 
     @abstractmethod
-    def to_ir_annotation(self, project: AnnotationProject) -> list[AnnotationABC]: ...
+    def to_ir_annotation(self, project: AnnotationProject) -> List[AnnotationABC]: ...

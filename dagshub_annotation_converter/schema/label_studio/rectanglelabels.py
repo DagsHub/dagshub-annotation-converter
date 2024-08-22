@@ -1,3 +1,5 @@
+from typing import List
+
 from pydantic import BaseModel
 
 from dagshub_annotation_converter.schema.ir.annotation_ir import (
@@ -14,14 +16,14 @@ class RectangleLabelsAnnotationValue(BaseModel):
     y: float
     width: float
     height: float
-    rectanglelabels: list[str]
+    rectanglelabels: List[str]
 
 
 class RectangleLabelsAnnotation(ImageAnnotationResultABC):
     value: RectangleLabelsAnnotationValue
     type: str = "rectanglelabels"
 
-    def to_ir_annotation(self, project: AnnotationProject) -> list[AnnotationABC]:
+    def to_ir_annotation(self, project: AnnotationProject) -> List[AnnotationABC]:
         res = BBoxAnnotation(
             category=project.categories.get_or_create(self.value.rectanglelabels[0]),
             state=NormalizationState.NORMALIZED,
