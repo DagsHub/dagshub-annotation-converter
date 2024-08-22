@@ -25,7 +25,7 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-  "pydantic",
+  "pydantic>=2.0.0",
   "pyyaml",
   "typing_extensions",
   "pandas",
@@ -62,6 +62,12 @@ cov-report = [
 cov = [
   "test-cov",
   "cov-report",
+]
+
+[tool.hatch.envs.hatch-test]
+dependencies = [
+  "pytest",
+  "dagshub",
 ]
 
 [[tool.hatch.envs.all.matrix]]

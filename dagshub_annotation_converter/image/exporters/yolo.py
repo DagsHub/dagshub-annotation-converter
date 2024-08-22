@@ -4,7 +4,7 @@ import os
 from abc import abstractmethod
 from os import PathLike
 from pathlib import Path
-from typing import Union, Literal
+from typing import Union, Literal, Tuple
 
 import yaml
 
@@ -45,7 +45,7 @@ class YoloExporterStrategy:
         }
         return yaml_structure
 
-    def determine_test_and_val_folders(self, data_dir: Path, image_dir_name: str) -> tuple[str, str]:
+    def determine_test_and_val_folders(self, data_dir: Path, image_dir_name: str) -> Tuple[str, str]:
         """
         Tries to find test and val folder.
         Current logic:

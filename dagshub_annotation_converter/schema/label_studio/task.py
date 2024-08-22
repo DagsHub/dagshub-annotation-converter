@@ -1,6 +1,8 @@
 import datetime
 import random
-from typing import Any, Sequence, Annotated, Type, Optional
+from typing import Any, Sequence, Type, Optional, Dict, List
+
+from typing_extensions import Annotated
 
 from pydantic import BaseModel, SerializeAsAny, Field, BeforeValidator
 
@@ -9,17 +11,17 @@ from dagshub_annotation_converter.schema.label_studio.keypointlabels import KeyP
 from dagshub_annotation_converter.schema.label_studio.polygonlabels import PolygonLabelsAnnotation
 from dagshub_annotation_converter.schema.label_studio.rectanglelabels import RectangleLabelsAnnotation
 
-task_lookup: dict[str, Type[AnnotationResultABC]] = {
+task_lookup: Dict[str, Type[AnnotationResultABC]] = {
     "polygonlabels": PolygonLabelsAnnotation,
     "rectanglelabels": RectangleLabelsAnnotation,
     "keypointlabels": KeyPointLabelsAnnotation,
 }
 
 
-def ls_annotation_validator(v: Any) -> list[AnnotationResultABC]:
+def ls_annotation_validator(v: Any) -> List[AnnotationResultABC]:
     assert isinstance(v, list)
 
-    annotations: list[AnnotationResultABC] = []
+    annotations: List[AnnotationResultABC] = []
 
     for raw_annotation in v:
         assert isinstance(raw_annotation, dict)
@@ -32,7 +34,7 @@ def ls_annotation_validator(v: Any) -> list[AnnotationResultABC]:
     return annotations
 
 
-AnnotationsList = Annotated[list[SerializeAsAny[AnnotationResultABC]], BeforeValidator(ls_annotation_validator)]
+AnnotationsList = Annotated[List[SerializeAsAny[AnnotationResultABC]], BeforeValidator(ls_annotation_validator)]
 
 
 class AnnotationsContainer(BaseModel):
@@ -46,11 +48,11 @@ PoseBBoxLookupKey = "pose_boxes"
 
 
 class LabelStudioTask(BaseModel):
-    annotations: list[AnnotationsContainer] = Field(
+    annotations: List[AnnotationsContainer] = Field(
         default_factory=lambda: [],
     )
-    meta: dict[str, Any] = {}
-    data: dict[str, Any] = {}
+    meta: Dict[str, Any] = {}
+    data: Dict[str, Any] = {}
     project: int = 0
     created_at: datetime.datetime = datetime.datetime.now(tz=datetime.timezone.utc)
     updated_at: datetime.datetime = datetime.datetime.now(tz=datetime.timezone.utc)
@@ -67,7 +69,7 @@ class LabelStudioTask(BaseModel):
         for ann in annotations:
             self.add_annotation(ann)
 
-    def log_pose_metadata(self, bbox: RectangleLabelsAnnotation, keypoints: list[KeyPointLabelsAnnotation]):
+    def log_pose_metadata(self, bbox: RectangleLabelsAnnotation, keypoints: List[KeyPointLabelsAnnotation]):
         if PosePointsLookupKey not in self.data:
             self.data[PosePointsLookupKey] = []
         if PoseBBoxLookupKey not in self.data:
