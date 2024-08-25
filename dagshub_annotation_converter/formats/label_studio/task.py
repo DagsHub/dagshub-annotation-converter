@@ -47,7 +47,7 @@ def ls_annotation_validator(v: Any) -> List[AnnotationResultABC]:
         assert raw_annotation["type"] in task_lookup
 
         ann_class = task_lookup[raw_annotation["type"]]
-        annotations.append(ann_class.parse_obj(raw_annotation))
+        annotations.append(ann_class.model_validate(raw_annotation))
 
     return annotations
 

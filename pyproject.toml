@@ -53,7 +53,7 @@ dependencies = [
   "types-lxml",
   "lxml-stubs",
   "dagshub",
-  "ultralytics"
+  "ultralytics",
 ]
 
 [tool.hatch.envs.default.scripts]
@@ -72,6 +72,7 @@ cov = [
 dependencies = [
   "pytest",
   "dagshub",
+  "ultralytics",
 ]
 
 [[tool.hatch.envs.all.matrix]]
