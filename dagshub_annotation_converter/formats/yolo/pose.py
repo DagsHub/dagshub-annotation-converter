@@ -106,9 +106,9 @@ def import_pose_from_string(
 
 def export_pose(annotation: IRPoseImageAnnotation, context: YoloContext) -> str:
     if context.keypoint_dim == 2:
-        point_list = [f"{point.x} {point.y}" for point in annotation.points if point.visible is False]
+        point_list = [f"{point.x} {point.y}" for point in annotation.points if point.visible is not False]
     else:
-        point_list = [f"{point.x} {point.y} {0 if point.visible is False else 1}" for point in annotation.points]
+        point_list = [f"{point.x} {point.y} {0 if point.visible is not False else 1}" for point in annotation.points]
 
     category = annotation.ensure_has_one_category()
 
