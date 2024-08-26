@@ -23,6 +23,7 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
+  "License :: OSI Approved :: MIT License",
 ]
 dependencies = [
   "pydantic>=2.0.0",
@@ -45,11 +46,14 @@ path = "dagshub_annotation_converter/__init__.py"
 dependencies = [
   "coverage[toml]>=6.5",
   "pytest",
+  "devtools",
   "pandas-stubs",
   "types-pillow",
   "types-pyyaml",
   "types-lxml",
   "lxml-stubs",
+  "dagshub",
+  "ultralytics",
 ]
 
 [tool.hatch.envs.default.scripts]
@@ -68,6 +72,7 @@ cov = [
 dependencies = [
   "pytest",
   "dagshub",
+  "ultralytics",
 ]
 
 [[tool.hatch.envs.all.matrix]]
@@ -104,3 +109,9 @@ exclude_lines = [
 exclude = [
   "^scratches/**"
 ]
+plugins = [
+  "pydantic.mypy",
+]
+
+[tool.pytest.ini_options]
+log_cli = "True"
