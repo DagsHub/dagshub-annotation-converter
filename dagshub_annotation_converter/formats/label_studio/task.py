@@ -8,6 +8,7 @@ from typing_extensions import Annotated
 from pydantic import SerializeAsAny, Field, BeforeValidator
 
 from dagshub_annotation_converter.formats.label_studio.base import AnnotationResultABC, ImageAnnotationResultABC
+from dagshub_annotation_converter.formats.label_studio.ellipselabels import EllipseLabelsAnnotation
 from dagshub_annotation_converter.formats.label_studio.keypointlabels import KeyPointLabelsAnnotation
 from dagshub_annotation_converter.formats.label_studio.polygonlabels import PolygonLabelsAnnotation
 from dagshub_annotation_converter.formats.label_studio.rectanglelabels import RectangleLabelsAnnotation
@@ -18,6 +19,7 @@ from dagshub_annotation_converter.ir.image import (
     CoordinateStyle,
     IRPosePoint,
     IRSegmentationImageAnnotation,
+    IREllipseImageAnnotation,
 )
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
@@ -25,12 +27,14 @@ task_lookup: Dict[str, Type[AnnotationResultABC]] = {
     "polygonlabels": PolygonLabelsAnnotation,
     "rectanglelabels": RectangleLabelsAnnotation,
     "keypointlabels": KeyPointLabelsAnnotation,
+    "ellipselabels": EllipseLabelsAnnotation,
 }
 
 ir_annotation_lookup: Dict[Type[IRImageAnnotationBase], Type[ImageAnnotationResultABC]] = {
     IRPoseImageAnnotation: KeyPointLabelsAnnotation,
     IRBBoxImageAnnotation: RectangleLabelsAnnotation,
     IRSegmentationImageAnnotation: PolygonLabelsAnnotation,
+    IREllipseImageAnnotation: EllipseLabelsAnnotation,
 }
 
 logger = logging.getLogger(__name__)

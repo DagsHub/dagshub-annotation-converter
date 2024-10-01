@@ -58,6 +58,7 @@ def parse_box(elem: ElementBase, containing_image: ElementBase) -> IRBBoxImageAn
         left=left,
         width=width,
         height=height,
+        rotation=rotation,
         image_width=image_info.width,
         image_height=image_info.height,
         filename=image_info.name,

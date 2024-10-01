@@ -3,6 +3,7 @@ from typing import Callable, Dict
 from lxml.etree import ElementBase
 
 from .box import parse_box
+from .ellipse import parse_ellipse
 from .polygon import parse_polygon
 from .points import parse_points
 from .skeleton import parse_skeleton
@@ -15,4 +16,5 @@ annotation_parsers: Dict[str, CVATParserFunction] = {
     "polygon": parse_polygon,
     "points": parse_points,
     "skeleton": parse_skeleton,
+    "ellipse": parse_ellipse,
 }
