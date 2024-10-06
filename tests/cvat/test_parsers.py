@@ -7,7 +7,7 @@ from dagshub_annotation_converter.formats.cvat import (
     parse_box,
     parse_polygon,
     parse_points,
-    parse_skeleton,
+    parse_skeleton, parse_ellipse,
 )
 from dagshub_annotation_converter.ir.image import (
     CoordinateStyle,
@@ -15,7 +15,7 @@ from dagshub_annotation_converter.ir.image import (
     IRSegmentationImageAnnotation,
     IRSegmentationPoint,
     IRPosePoint,
-    IRPoseImageAnnotation,
+    IRPoseImageAnnotation, IREllipseImageAnnotation,
 )
 
 
@@ -159,3 +159,29 @@ def test_skeleton():
     )
 
     assert expected == actual
+
+
+def test_ellipse():
+    data = """
+    <ellipse label="circle1" source="manual" occluded="0" cx="392.23" cy="322.84" rx="205.06" ry="202.84" z_order="0">
+    </ellipse> 
+    """
+
+    image, annotation = to_xml(data)
+
+    actual = parse_ellipse(annotation, image)
+
+    expected = IREllipseImageAnnotation(
+        filename="000.png",
+        categories={"circle1": 1.0},
+        image_width=1920,
+        image_height=1200,
+        coordinate_style=CoordinateStyle.DENORMALIZED,
+        center_x=392,
+        center_y=323,
+        radius_x=205.06,
+        radius_y=202.84,
+        rotation=0.0,
+    )
+
+    assert actual == expected

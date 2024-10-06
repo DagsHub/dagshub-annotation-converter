@@ -1,6 +1,6 @@
 import logging
 from os import PathLike
-from typing import Sequence, List, Dict
+from typing import Sequence, List, Dict, Union
 from zipfile import ZipFile
 
 import lxml.etree
@@ -38,12 +38,12 @@ def load_cvat_from_xml_string(
     return annotations
 
 
-def load_cvat_from_xml_file(xml_file: PathLike) -> Dict[str, Sequence[IRImageAnnotationBase]]:
+def load_cvat_from_xml_file(xml_file: Union[str, PathLike]) -> Dict[str, Sequence[IRImageAnnotationBase]]:
     with open(xml_file, "rb") as f:
         return load_cvat_from_xml_string(f.read())
 
 
-def load_cvat_from_zip(zip_path: PathLike) -> Dict[str, Sequence[IRImageAnnotationBase]]:
+def load_cvat_from_zip(zip_path: Union[str, PathLike]) -> Dict[str, Sequence[IRImageAnnotationBase]]:
     with ZipFile(zip_path) as proj_zip:
         with proj_zip.open("annotations.xml") as f:
             return load_cvat_from_xml_string(f.read())
