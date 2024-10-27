@@ -123,6 +123,33 @@ def annotations_to_string(annotations: Sequence[IRImageAnnotationBase], context:
     return "\n".join([export_fn(ann, context) for ann in filtered_annotations])
 
 
+def _get_common_folder_with_part(paths: List[Path], part: str) -> Optional[Path]:
+    paths_with_part = [p for p in paths if part in p.parts]
+    if len(paths_with_part) == 0:
+        return None
+
+    candidates = set()
+    for p in paths_with_part:
+        for i, path_part in enumerate(p.parts):
+            if path_part == part:
+                candidates.add(Path(*p.parts[: i + 1]))
+    if len(candidates) == 1:
+        return candidates.pop()
+
+    # Choose the shortest one. If there are multiple shortest ones - return None
+    shortest = min(candidates, key=lambda p: len(p.parts))
+    shortest_candidates = [p for p in candidates if len(p.parts) == len(shortest.parts)]
+    if len(shortest_candidates) > 1:
+        return None
+    return shortest
+
+
+def _guess_train_val_test_split(image_paths: List[str]) -> Tuple[Optional[Path], Optional[Path], Optional[Path]]:
+    paths = [Path(p) for p in image_paths]
+    splits = ["train", "val", "test"]
+    return (*[_get_common_folder_with_part(paths, split) for split in splits],)
+
+
 def export_to_fs(
     context: YoloContext,
     annotations: List[IRImageAnnotationBase],
@@ -166,7 +193,9 @@ def export_to_fs(
             with open(annotation_filename, "w") as f:
                 f.write(annotation_content)
 
-    # TODO: test/val splitting
+    context.train_path, context.val_path, context.test_path = _guess_train_val_test_split(
+        list(grouped_annotations.keys())
+    )
     yaml_file_path = export_path / meta_file
     with open(yaml_file_path, "w") as yaml_f:
         yaml_f.write(context.get_yaml_content())
