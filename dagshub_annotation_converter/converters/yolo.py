@@ -193,9 +193,19 @@ def export_to_fs(
             with open(annotation_filename, "w") as f:
                 f.write(annotation_content)
 
-    context.train_path, context.val_path, context.test_path = _guess_train_val_test_split(
+    guessed_train_path, guessed_val_path, guessed_test_path = _guess_train_val_test_split(
         list(grouped_annotations.keys())
     )
+
+    # Don't accidentally override with Nones. If we find Nones, then assume YOLO should train on the whole dataset
+    if guessed_train_path is not None:
+        context.train_path = guessed_train_path
+
+    if guessed_val_path is not None:
+        context.val_path = guessed_val_path
+
+    context.test_path = guessed_test_path
+
     yaml_file_path = export_path / meta_file
     with open(yaml_file_path, "w") as yaml_f:
         yaml_f.write(context.get_yaml_content())
