@@ -1,4 +1,6 @@
-from dagshub_annotation_converter.converters.yolo import export_to_fs
+from pathlib import Path
+
+from dagshub_annotation_converter.converters.yolo import export_to_fs, _get_common_folder_with_part
 from dagshub_annotation_converter.formats.yolo import YoloContext
 from dagshub_annotation_converter.ir.image import (
     CoordinateStyle,
@@ -8,6 +10,8 @@ from dagshub_annotation_converter.ir.image import (
     IRPoseImageAnnotation,
     IRPosePoint,
 )
+
+import pytest
 
 
 def test_bbox_export(tmp_path):
@@ -146,3 +150,26 @@ def test_not_exporting_wrong_annotations(tmp_path):
     assert (tmp_path / "yolo_dagshub.yaml").exists()
     assert (tmp_path / "data" / "labels" / "cats" / "1.txt").exists()
     assert not (tmp_path / "data" / "labels" / "dogs" / "2.txt").exists()
+
+
+@pytest.mark.parametrize(
+    "paths, prefix, expected",
+    (
+        (["/a/b/c", "/a/b/d", "/a/b/e"], "b", "/a/b"),
+        (["/a/b/c", "/a/b/d", "/a/b/e"], "b", "/a/b"),
+        (["/a/b/c", "/a/b/d", "/a/b/b"], "b", "/a/b"),
+        (["/a/b/c", "/a/b/d", "/a/b/e/b"], "b", "/a/b"),
+        (["/a/b/c", "/a/e/b", "/a/e/b/b"], "b", "/a/b"),
+        (["/a/b/c", "/a/b/d", "/some_other/b/e"], "b", None),  # Fails because there are two different common b folders
+        (["/a/b/c", "/a/some_other/d", "/a/b/e"], "b", "/a/b"),
+        (["/a/b/c", "/a/bbb/d", "/a/b/e"], "b", "/a/b"),
+    ),
+)
+def test__get_common_folder_with_part(paths, prefix, expected):
+    paths = [Path(p) for p in paths]
+    actual = _get_common_folder_with_part(paths, prefix)
+
+    if expected is not None:
+        expected = Path(expected)
+
+    assert actual == expected

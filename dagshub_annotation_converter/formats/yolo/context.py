@@ -39,6 +39,8 @@ class YoloContext(ParentModel):
     """Path to the train data, relative to the base path"""
     val_path: Optional[Path] = Path(".")
     """Path to the validation data, relative to the base path"""
+    test_path: Optional[Path] = None
+    """Path to the test data, relative to the base path (defaults to None, might be discovered)"""
 
     @staticmethod
     def from_yaml_file(file_path: Union[str, Path], annotation_type: YoloAnnotationTypes) -> "YoloContext":
@@ -59,6 +61,8 @@ class YoloContext(ParentModel):
             res.train_path = Path(meta_dict["train"])
         if "val" in meta_dict:
             res.val_path = Path(meta_dict["val"])
+        if "test" in meta_dict:
+            res.test_path = Path(meta_dict["test"])
 
         return res
 
@@ -81,7 +85,7 @@ class YoloContext(ParentModel):
             )
 
         content = {
-            "path": str(path),
+            "path": str(path.resolve()),
             "names": {cat.id: cat.name for cat in self.categories.categories},
             "nc": len(self.categories),
         }
@@ -90,6 +94,8 @@ class YoloContext(ParentModel):
             content["train"] = str(self.train_path)
         if self.val_path is not None:
             content["val"] = str(self.val_path)
+        if self.test_path is not None:
+            content["test"] = str(self.test_path)
 
         if self.annotation_type == "pose":
             if self.keypoints_in_annotation is None:
