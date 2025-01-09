@@ -15,7 +15,7 @@ import pytest
 
 
 def test_bbox_export(tmp_path):
-    ctx = YoloContext(annotation_type="bbox", path="data")
+    ctx = YoloContext(annotation_type="bbox", path=Path("data"))
     ctx.categories.add(name="cat")
     ctx.categories.add(name="dog")
     annotations = [
@@ -53,7 +53,7 @@ def test_bbox_export(tmp_path):
 
 
 def test_segmentation_export(tmp_path):
-    ctx = YoloContext(annotation_type="segmentation", path="data")
+    ctx = YoloContext(annotation_type="segmentation", path=Path("data"))
     ctx.categories.add(name="cat")
     ctx.categories.add(name="dog")
     annotations = [
@@ -85,7 +85,7 @@ def test_segmentation_export(tmp_path):
 
 
 def test_pose_export(tmp_path):
-    ctx = YoloContext(annotation_type="pose", path="data")
+    ctx = YoloContext(annotation_type="pose", path=Path("data"))
     ctx.categories.add(name="cat")
     ctx.categories.add(name="dog")
     ctx.keypoints_in_annotation = 2
@@ -118,7 +118,7 @@ def test_pose_export(tmp_path):
 
 
 def test_not_exporting_wrong_annotations(tmp_path):
-    ctx = YoloContext(annotation_type="bbox", path="data")
+    ctx = YoloContext(annotation_type="bbox", path=Path("data"))
     ctx.categories.add(name="cat")
     ctx.categories.add(name="dog")
     annotations = [
@@ -173,3 +173,41 @@ def test__get_common_folder_with_part(paths, prefix, expected):
         expected = Path(expected)
 
     assert actual == expected
+
+
+def test_export_with_image_in_path(tmp_path):
+    ctx = YoloContext(annotation_type="bbox", path=Path("data/images"))
+    ctx.categories.add(name="cat")
+    ctx.categories.add(name="dog")
+    annotations = [
+        IRBBoxImageAnnotation(
+            filename="cats/1.jpg",
+            categories={"cat": 1.0},
+            top=0.0,
+            left=0.0,
+            width=0.5,
+            height=0.5,
+            image_width=100,
+            image_height=200,
+            coordinate_style=CoordinateStyle.NORMALIZED,
+        ),
+        IRBBoxImageAnnotation(
+            filename="dogs/2.jpg",
+            categories={"dog": 1.0},
+            top=0.5,
+            left=0.5,
+            width=0.5,
+            height=0.5,
+            image_width=100,
+            image_height=200,
+            coordinate_style=CoordinateStyle.NORMALIZED,
+        ),
+    ]
+
+    p = export_to_fs(ctx, annotations, export_dir=tmp_path)
+
+    assert p == tmp_path / "yolo_dagshub.yaml"
+
+    assert (tmp_path / "yolo_dagshub.yaml").exists()
+    assert (tmp_path / "data" / "labels" / "cats" / "1.txt").exists()
+    assert (tmp_path / "data" / "labels" / "dogs" / "2.txt").exists()
