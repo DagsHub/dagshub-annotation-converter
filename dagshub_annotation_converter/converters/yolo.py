@@ -180,17 +180,17 @@ def export_to_fs(
     export_path = Path(export_dir)
 
     for filename, anns in grouped_annotations.items():
-        annotation_filepath = replace_folder(
-            Path(filename), context.image_dir_name, context.label_dir_name, context.label_extension
+        annotation_filepath = export_path / context.path / filename
+        out_path = replace_folder(
+            annotation_filepath, context.image_dir_name, context.label_dir_name, context.label_extension
         )
-        if annotation_filepath is None:
+        if out_path is None:
             logger.warning(f"Couldn't generate annotation file path for image file [{filename}]")
             continue
-        annotation_filename = export_path / context.path / annotation_filepath
-        annotation_filename.parent.mkdir(parents=True, exist_ok=True)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
         annotation_content = annotations_to_string(anns, context)
         if annotation_content is not None:
-            with open(annotation_filename, "w") as f:
+            with open(out_path, "w") as f:
                 f.write(annotation_content)
 
     guessed_train_path, guessed_val_path, guessed_test_path = _guess_train_val_test_split(
