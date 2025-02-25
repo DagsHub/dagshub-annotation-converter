@@ -143,6 +143,7 @@ class LabelStudioTask(ParentModel):
             category: Optional[str] = None
             image_width: Optional[int] = None
             image_height: Optional[int] = None
+            filename: Optional[str] = None
             if maybe_bbox is None:
                 logger.warning(
                     f"Bounding box of pose with annotation ID {bbox_id} "
@@ -155,6 +156,7 @@ class LabelStudioTask(ParentModel):
                 category = bbox.ensure_has_one_category()
                 image_height = bbox.image_height
                 image_width = bbox.image_width
+                filename = bbox.filename
                 annotations_to_remove.add(bbox_id)
             # Fetch the points
             points: List[IRPosePoint] = []
@@ -176,6 +178,8 @@ class LabelStudioTask(ParentModel):
                         image_width = maybe_point.image_width
                     if image_height is None:
                         image_height = maybe_point.image_height
+                    if filename is None:
+                        filename = maybe_point.filename
                     points.extend(maybe_point.points)
                     annotations_to_remove.add(point_id)
 
@@ -193,6 +197,7 @@ class LabelStudioTask(ParentModel):
                 coordinate_style=CoordinateStyle.NORMALIZED,
                 image_width=image_width,
                 image_height=image_height,
+                filename=filename,
             )
             if bbox is not None:
                 sum_annotation.width = bbox.width
