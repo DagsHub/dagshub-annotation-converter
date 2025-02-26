@@ -13,7 +13,7 @@ from dagshub_annotation_converter.formats.yolo import (
     import_lookup,
     YoloAnnotationTypes,
 )
-from dagshub_annotation_converter.ir.image import IRImageAnnotationBase, IRPoseImageAnnotation
+from dagshub_annotation_converter.ir.image import IRImageAnnotationBase
 from dagshub_annotation_converter.util import is_image, replace_folder
 
 logger = logging.getLogger(__name__)
