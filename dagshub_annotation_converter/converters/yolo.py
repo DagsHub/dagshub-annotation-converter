@@ -208,20 +208,7 @@ def export_to_fs(
 
     # For pose annotations, if the number of keypoints is not set, guess it from the passed annotations
     if context.annotation_type == "pose" and context.keypoints_in_annotation is None:
-        max_keypoints = 0
-        for anns in grouped_annotations.values():
-            for ann in anns:
-                if isinstance(ann, IRPoseImageAnnotation):
-                    current_keypoints = len(ann.points)
-                    if current_keypoints > max_keypoints:
-                        if max_keypoints > 0:
-                            logger.warning(
-                                f"Found annotation with {current_keypoints} keypoints, "
-                                f"which is more than previously found maximum of {max_keypoints}.\n"
-                                "Your annotations might be inconsistent."
-                            )
-                        max_keypoints = current_keypoints
-        context.keypoints_in_annotation = max_keypoints
+        context.infer_keypoints_from_annotations(annotations)
 
     yaml_file_path = export_path / meta_file
     with open(yaml_file_path, "w") as yaml_f:

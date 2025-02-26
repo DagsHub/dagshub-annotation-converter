@@ -1,5 +1,6 @@
+import logging
 from pathlib import Path
-from typing import Dict, Union, Optional, Literal, Callable
+from typing import Dict, List, Union, Optional, Literal, Callable
 
 import yaml
 
@@ -7,6 +8,7 @@ import yaml
 from dagshub_annotation_converter.formats.common import ImageType
 from dagshub_annotation_converter.formats.yolo.categories import Categories
 from dagshub_annotation_converter.ir.image import IRImageAnnotationBase
+from dagshub_annotation_converter.ir.image.annotations.pose import IRPoseImageAnnotation
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 YoloConverterFunction = Callable[
@@ -14,6 +16,8 @@ YoloConverterFunction = Callable[
 ]
 
 YoloAnnotationTypes = Literal["bbox", "segmentation", "pose"]
+
+logger = logging.getLogger(__name__)
 
 
 class YoloContext(ParentModel):
@@ -106,3 +110,19 @@ class YoloContext(ParentModel):
             content["kpt_shape"] = [self.keypoints_in_annotation, self.keypoint_dim]
 
         return yaml.dump(content)
+
+    def infer_keypoints_from_annotations(self, annotations: List[IRImageAnnotationBase]):
+        if self.annotation_type != "pose":
+            raise ValueError("Keypoints in annotation can only be inferred for pose annotations")
+        self.keypoints_in_annotation = 0
+        for ann in annotations:
+            if isinstance(ann, IRPoseImageAnnotation):
+                current_keypoints = len(ann.points)
+                if current_keypoints > self.keypoints_in_annotation:
+                    if self.keypoints_in_annotation > 0:
+                        logger.warning(
+                            f"Found annotation with {current_keypoints} keypoints, "
+                            f"which is more than previously found maximum of {self.keypoints_in_annotation}.\n"
+                            "Your annotations might be inconsistent."
+                        )
+                    self.keypoints_in_annotation = current_keypoints
