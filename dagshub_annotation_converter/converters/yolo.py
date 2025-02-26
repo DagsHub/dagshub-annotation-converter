@@ -206,6 +206,10 @@ def export_to_fs(
 
     context.test_path = guessed_test_path
 
+    # For pose annotations, if the number of keypoints is not set, guess it from the passed annotations
+    if context.annotation_type == "pose" and context.keypoints_in_annotation is None:
+        context.infer_keypoints_from_annotations(annotations)
+
     yaml_file_path = export_path / meta_file
     with open(yaml_file_path, "w") as yaml_f:
         yaml_f.write(context.get_yaml_content())

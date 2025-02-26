@@ -2,3 +2,8 @@ scratches/
 *.env
 dist/
 .coverage*
+
+.DS_Store
+.idea/
+.vscode/
+__pycache__/
