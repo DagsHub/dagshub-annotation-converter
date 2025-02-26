@@ -211,3 +211,42 @@ def test_export_with_image_in_path(tmp_path):
     assert (tmp_path / "yolo_dagshub.yaml").exists()
     assert (tmp_path / "data" / "labels" / "cats" / "1.txt").exists()
     assert (tmp_path / "data" / "labels" / "dogs" / "2.txt").exists()
+
+
+def test_pose_export_point(tmp_path):
+    ctx = YoloContext(annotation_type="pose", path=Path("data"))
+    ctx.categories.add(name="person")
+    annotations = [
+        IRPoseImageAnnotation.from_points(
+            filename="images/people/1.jpg",
+            categories={"person": 1.0},
+            points=[
+                IRPosePoint(x=0.1, y=0.1, visibility=2),
+                IRPosePoint(x=0.2, y=0.2, visibility=2),
+                IRPosePoint(x=0.3, y=0.3, visibility=2),
+            ],
+            image_width=100,
+            image_height=200,
+            coordinate_style=CoordinateStyle.NORMALIZED,
+        ),
+        IRPoseImageAnnotation.from_points(
+            filename="images/people/2.jpg",
+            categories={"person": 1.0},
+            points=[
+                IRPosePoint(x=0.4, y=0.4, visibility=2),
+                IRPosePoint(x=0.5, y=0.5, visibility=2),
+                IRPosePoint(x=0.6, y=0.6, visibility=2),
+            ],
+            image_width=100,
+            image_height=200,
+            coordinate_style=CoordinateStyle.NORMALIZED,
+        ),
+    ]
+
+    p = export_to_fs(ctx, annotations, export_dir=tmp_path)
+
+    assert ctx.keypoints_in_annotation == 3  # Should be inferred from the annotations
+    assert p == tmp_path / "yolo_dagshub.yaml"
+    assert (tmp_path / "yolo_dagshub.yaml").exists()
+    assert (tmp_path / "data" / "labels" / "people" / "1.txt").exists()
+    assert (tmp_path / "data" / "labels" / "people" / "2.txt").exists()
