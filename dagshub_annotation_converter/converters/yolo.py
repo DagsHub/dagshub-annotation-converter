@@ -52,7 +52,9 @@ def load_yolo_from_fs_with_context(
             if not annotation.exists():
                 logger.warning(f"Couldn't find annotation file [{annotation}] for image file [{img}]")
                 continue
-            annotations[str(relpath)] = parse_annotation(context, data_dir_path, img, annotation)
+            parsed_annotations = parse_annotation(context, data_dir_path, img, annotation)
+            if len(parsed_annotations) > 0:
+                annotations[str(relpath)] = parse_annotation(context, data_dir_path, img, annotation)
 
     return annotations
 
@@ -63,7 +65,7 @@ def parse_annotation(
     img = PIL.Image.open(img_path)
     img_width, img_height = img.size
 
-    annotation_strings = annotation_path.read_text().strip().split("\n")
+    annotation_strings = [ann for ann in annotation_path.read_text().strip().split("\n") if ann]
 
     assert context.annotation_type is not None
 

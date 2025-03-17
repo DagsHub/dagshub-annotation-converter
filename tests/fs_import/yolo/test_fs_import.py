@@ -181,3 +181,11 @@ def test_pose_3dim(data_folder, img_path):
     expected = generate_expected(img_path, ctx, to_keypoints)
 
     assert annotations == expected
+
+
+def test_empty_annotation(data_folder):
+    yaml = data_folder / "pose_2dim.yaml"
+
+    annotations, ctx = load_yolo_from_fs("pose", yaml, label_dir_name="empty")
+
+    assert annotations == {}
