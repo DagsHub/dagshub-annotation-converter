@@ -188,4 +188,4 @@ def test_empty_annotation(data_folder):
 
     annotations, ctx = load_yolo_from_fs("pose", yaml, label_dir_name="empty")
 
-    assert annotations == {}
+    assert annotations == {"images/testimg.png": []}
