@@ -60,7 +60,7 @@ AnnotationsList = Annotated[List[SerializeAsAny[AnnotationResultABC]], BeforeVal
 
 
 class AnnotationsContainer(ParentModel):
-    completed_by: Optional[int] = None
+    completed_by: Optional[Any] = None
     result: AnnotationsList = []
     ground_truth: bool = False
 
@@ -80,10 +80,10 @@ class LabelStudioTask(ParentModel):
 
     meta: Dict[str, Any] = {}
     data: Dict[str, Any] = {}
-    project: int = 0
+    project: Any = 0
     created_at: datetime.datetime = datetime.datetime.now(tz=datetime.timezone.utc)
     updated_at: datetime.datetime = datetime.datetime.now(tz=datetime.timezone.utc)
-    id: int = Field(default_factory=lambda: random.randint(0, 2**63 - 1))
+    id: Any = Field(default_factory=lambda: random.randint(0, 2**63 - 1))
 
     user_id: int = Field(exclude=True, default=1)
 
@@ -164,8 +164,7 @@ class LabelStudioTask(ParentModel):
                 maybe_point = annotation_lookup.get(point_id)
                 if maybe_point is None:
                     logger.warning(
-                        f"Point of pose with annotation ID {bbox_id} "
-                        f"does not exist in the task but exists in metadata"
+                        f"Point of pose with annotation ID {bbox_id} does not exist in the task but exists in metadata"
                     )
                     continue
                 elif not isinstance(maybe_point, IRPoseImageAnnotation):
