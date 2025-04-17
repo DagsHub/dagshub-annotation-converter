@@ -116,8 +116,11 @@ class LabelStudioTask(ParentModel):
         for anns in self.annotations:
             for ann in anns.result:
                 to_add = ann.to_ir_annotation()
-                if filename is not None:
-                    for a in to_add:
+                for a in to_add:
+                    # Carry over extra values from the annotation
+                    if ann.__pydantic_extra__ is not None:
+                        a.__pydantic_extra__ = ann.__pydantic_extra__.copy()
+                    if filename is not None:
                         a.filename = filename
                 res.extend(to_add)
         res = self._reimport_poses(res)
@@ -222,6 +225,10 @@ class LabelStudioTask(ParentModel):
             raise ValueError(f"Unsupported IR annotation type: {type(ann)}")
 
         ls_anns = ls_ann_type.from_ir_annotation(ann)
+        # carry over the extras
+        if ann.__pydantic_extra__ is not None:
+            for ls_ann in ls_anns:
+                ls_ann.__pydantic_extra__ = ann.__pydantic_extra__.copy()
         self.add_annotations(ls_anns)
 
         # For pose: log additional metadata
