@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from dagshub_annotation_converter.formats.label_studio.task import LabelStudioTask
 
 
@@ -26,8 +28,9 @@ def test_extra_values_persist():
     assert json_dict["super_extra_field3"] == {"Hello": "World"}
 
 
-def test_extra_values_persist_in_annotations():
-    json_data = {
+@pytest.fixture
+def task_with_extras_in_annotations():
+    return {
         "id": 12345,
         "project": "someProject",
         "meta": {},
@@ -49,9 +52,9 @@ def test_extra_values_persist_in_annotations():
                         "from_name": "bbox",
                         "to_name": "image",
                         "group_id": 0,
-                        "super_extra_field": "HELLO!!!",
-                        "super_extra_field2": 25,
-                        "super_extra_field3": {"Hello": "World"},
+                        "super_extra_field": "HELLO!!! result",
+                        "super_extra_field2": 255,
+                        "super_extra_field3": {"Hello": "World result"},
                         "value": {
                             "x": 0.1,
                             "y": 1.0,
@@ -72,7 +75,9 @@ def test_extra_values_persist_in_annotations():
         ],
     }
 
-    parsed = LabelStudioTask.model_validate_json(json.dumps(json_data))
+
+def test_extra_values_persist_in_annotations(task_with_extras_in_annotations):
+    parsed = LabelStudioTask.model_validate_json(json.dumps(task_with_extras_in_annotations))
     serialized = parsed.model_dump_json()
     json_dict = json.loads(serialized)
     annotation = json_dict["annotations"][0]
@@ -81,6 +86,21 @@ def test_extra_values_persist_in_annotations():
     assert annotation["super_extra_field3"] == {"Hello": "World"}
 
     result = annotation["result"][0]
-    assert result["super_extra_field"] == "HELLO!!!"
-    assert result["super_extra_field2"] == 25
-    assert result["super_extra_field3"] == {"Hello": "World"}
+    assert result["super_extra_field"] == "HELLO!!! result"
+    assert result["super_extra_field2"] == 255
+    assert result["super_extra_field3"] == {"Hello": "World result"}
+
+
+def test_extra_values_persist_through_add_annotations(task_with_extras_in_annotations):
+    parsed = LabelStudioTask.model_validate_json(json.dumps(task_with_extras_in_annotations))
+
+    new_task = LabelStudioTask()
+    new_task.add_ir_annotations(parsed.to_ir_annotations())
+
+    serialized = new_task.model_dump_json()
+    json_dict = json.loads(serialized)
+
+    result = json_dict["annotations"][0]["result"][0]
+    assert result["super_extra_field"] == "HELLO!!! result"
+    assert result["super_extra_field2"] == 255
+    assert result["super_extra_field3"] == {"Hello": "World result"}
