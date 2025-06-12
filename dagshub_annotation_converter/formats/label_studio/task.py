@@ -232,7 +232,8 @@ class LabelStudioTask(ParentModel):
         self.add_annotations(ls_anns)
 
         # For pose: log additional metadata
-        if isinstance(ann, IRPoseImageAnnotation):
+        # If we got back just one annotation, then it's a single point, otherwise it's [bounding box, *points]
+        if isinstance(ann, IRPoseImageAnnotation) and len(ls_anns) > 1:
             bbox = cast(RectangleLabelsAnnotation, ls_anns[0])
             keypoints = cast(List[KeyPointLabelsAnnotation], ls_anns[1:])
             self.log_pose_metadata(bbox, keypoints)
@@ -240,6 +241,12 @@ class LabelStudioTask(ParentModel):
     def add_ir_annotations(self, anns: Sequence[IRImageAnnotationBase]):
         for ann in anns:
             self.add_ir_annotation(ann)
+
+    @staticmethod
+    def from_ir_annotations(anns: Sequence[IRImageAnnotationBase]) -> "LabelStudioTask":
+        res = LabelStudioTask()
+        res.add_ir_annotations(anns)
+        return res
 
 
 def parse_ls_task(task: Union[str, bytes]) -> LabelStudioTask:
