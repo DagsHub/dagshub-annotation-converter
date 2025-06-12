@@ -43,21 +43,25 @@ class KeyPointLabelsAnnotation(ImageAnnotationResultABC):
         ir_annotation = ir_annotation.normalized()
         category = ir_annotation.ensure_has_one_category()
 
-        bbox = RectangleLabelsAnnotation(
-            original_width=ir_annotation.image_width,
-            original_height=ir_annotation.image_height,
-            value=RectangleLabelsAnnotationValue(
-                x=ir_annotation.left * 100,
-                y=ir_annotation.top * 100,
-                width=ir_annotation.width * 100,
-                height=ir_annotation.height * 100,
-                rectanglelabels=[category],
-            ),
-        )
+        res: List[ImageAnnotationResultABC] = []
 
-        points = []
+        # For poses (multiple points) - add a bounding box
+        if len(ir_annotation.points) > 1:
+            bbox = RectangleLabelsAnnotation(
+                original_width=ir_annotation.image_width,
+                original_height=ir_annotation.image_height,
+                value=RectangleLabelsAnnotationValue(
+                    x=ir_annotation.left * 100,
+                    y=ir_annotation.top * 100,
+                    width=ir_annotation.width * 100,
+                    height=ir_annotation.height * 100,
+                    rectanglelabels=[category],
+                ),
+            )
+            res.append(bbox)
+
         for point in ir_annotation.points:
-            points.append(
+            res.append(
                 KeyPointLabelsAnnotation(
                     original_width=ir_annotation.image_width,
                     original_height=ir_annotation.image_height,
@@ -69,4 +73,4 @@ class KeyPointLabelsAnnotation(ImageAnnotationResultABC):
                 )
             )
 
-        return [bbox, *points]
+        return res
