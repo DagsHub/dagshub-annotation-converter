@@ -1,6 +1,6 @@
 from lxml.etree import ElementBase
 
-from dagshub_annotation_converter.formats.cvat.context import parse_image_tag
+from dagshub_annotation_converter.formats.cvat.context import parse_image_tag, parse_metadata
 from dagshub_annotation_converter.ir.image import IREllipseImageAnnotation, CoordinateStyle
 
 
@@ -25,4 +25,5 @@ def parse_ellipse(elem: ElementBase, containing_image: ElementBase) -> IREllipse
         image_height=image_info.height,
         filename=image_info.name,
         coordinate_style=CoordinateStyle.DENORMALIZED,
+        meta=parse_metadata(elem),
     )

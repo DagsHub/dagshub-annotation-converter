@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 
 from typing_extensions import Self
 
@@ -32,6 +32,7 @@ class IRAnnotationBase(ParentModel):
     """Categories and their confidence. 1 means 100% confidence or ground truth."""
     coordinate_style: CoordinateStyle
     imported_id: Optional[str] = None
+    meta: Dict[str, Any] = {}
 
     def with_filename(self, filename: str) -> Self:
         self.filename = filename
