@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<annotations>
+  <version>1.1</version>
+  <meta>
+    <task>
+      <id>1</id>
+      <name>babyyoda</name>
+      <size>7</size>
+      <mode>annotation</mode>
+      <overlap>0</overlap>
+      <bugtracker></bugtracker>
+      <created>2025-07-13 12:09:41.683169+00:00</created>
+      <updated>2025-07-17 09:12:31.887619+00:00</updated>
+      <subset>default</subset>
+      <start_frame>0</start_frame>
+      <stop_frame>6</stop_frame>
+      <frame_filter></frame_filter>
+      <segments>
+        <segment>
+          <id>1</id>
+          <start>0</start>
+          <stop>6</stop>
+          <url>http://localhost:8082/api/jobs/1</url>
+        </segment>
+      </segments>
+      <owner>
+        <username>kirill</username>
+        <email>kirill@example.com</email>
+      </owner>
+      <assignee></assignee>
+      <labels>
+        <label>
+          <name>Pointy</name>
+          <color>#412ab3</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+        </label>
+        <label>
+          <name>Skelly</name>
+          <color>#2faa43</color>
+          <type>skeleton</type>
+          <attributes>
+          </attributes>
+          <svg>&lt;circle r="0.75" cx="22.240802764892578" cy="21.97881317138672" data-type="element node" data-element-id="1" data-node-id="1" data-label-name="1"&gt;&lt;/circle&gt;
+&lt;circle r="0.75" cx="70.56856536865234" cy="20.975467681884766" data-type="element node" data-element-id="2" data-node-id="2" data-label-name="2"&gt;&lt;/circle&gt;
+&lt;circle r="0.75" cx="50" cy="42.04570388793945" data-type="element node" data-element-id="3" data-node-id="3" data-label-name="3"&gt;&lt;/circle&gt;
+&lt;circle r="0.75" cx="35.785953521728516" cy="69.47045135498047" data-type="element node" data-element-id="4" data-node-id="4" data-label-name="4"&gt;&lt;/circle&gt;
+&lt;circle r="0.75" cx="76.75585174560547" cy="75.49051666259766" data-type="element node" data-element-id="5" data-node-id="5" data-label-name="5"&gt;&lt;/circle&gt;</svg>
+        </label>
+        <label>
+          <name>1</name>
+          <color>#d12345</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+          <parent>Skelly</parent>
+        </label>
+        <label>
+          <name>2</name>
+          <color>#350dea</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+          <parent>Skelly</parent>
+        </label>
+        <label>
+          <name>3</name>
+          <color>#479ffe</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+          <parent>Skelly</parent>
+        </label>
+        <label>
+          <name>4</name>
+          <color>#4a649f</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+          <parent>Skelly</parent>
+        </label>
+        <label>
+          <name>5</name>
+          <color>#478144</color>
+          <type>points</type>
+          <attributes>
+          </attributes>
+          <parent>Skelly</parent>
+        </label>
+        <label>
+          <name>Pointy_Box</name>
+          <color>#3df53d</color>
+          <type>rectangle</type>
+          <attributes>
+          </attributes>
+        </label>
+      </labels>
+    </task>
+    <dumped>2025-07-17 09:12:42.948722+00:00</dumped>
+  </meta>
+  <image id="0" name="000.png" width="1920" height="1200">
+    <box label="Pointy_1" source="manual" occluded="0" xtl="722.19" ytl="272.64" xbr="1045.57" ybr="614.93" z_order="0" group_id="1">
+    </box>
+    <points label="Pointy_1" source="manual" occluded="0" points="818.71,421.89;880.40,419.90;838.61,461.69;851.54,538.31;786.87,342.29;899.90,335.92" z_order="0" group_id="1">
+    </points>
+    <points label="Pointy_2" source="manual" occluded="0" points="206.32,657.31;350.60,648.19;261.04,731.11;370.50,732.77" z_order="0" group_id="2">
+    </points>
+    <box label="Pointy_2" source="manual" occluded="0" xtl="151.59" ytl="624.98" xbr="431.03" ybr="800.76" z_order="0" group_id="2">
+    </box>
+    <box label="Pointy_2" source="manual" occluded="0" xtl="155.59" ytl="625.98" xbr="431.03" ybr="800.76" z_order="0" group_id="2">
+    </box>
+    <skeleton label="Pointy_3" source="manual" z_order="0" group_id="3">
+      <points label="1" source="manual" outside="0" occluded="0" points="1428.08,667.88" group_id="3">
+      </points>
+      <points label="2" source="manual" outside="0" occluded="0" points="1561.54,666.88" group_id="3">
+      </points>
+      <points label="3" source="manual" outside="0" occluded="0" points="1490.16,727.74" group_id="3">
+      </points>
+      <points label="4" source="manual" outside="0" occluded="0" points="1437.35,831.88" group_id="3">
+      </points>
+      <points label="5" source="manual" outside="0" occluded="0" points="1508.13,829.78" group_id="3">
+      </points>
+    </skeleton>
+    <box label="Pointy_3" source="manual" occluded="0" xtl="1337.91" ytl="602.29" xbr="1645.27" ybr="958.51" z_order="0" group_id="3">
+    </box>
+    <box label="Pointy_misc" source="manual" occluded="0" xtl="179.70" ytl="284.88" xbr="547.76" ybr="429.15" z_order="0">
+    </box>
+    <skeleton label="Pointy_misc" source="manual" z_order="0">
+      <points label="1" source="manual" outside="0" occluded="0" points="853.23,756.73">
+      </points>
+      <points label="2" source="manual" outside="0" occluded="0" points="992.60,752.54">
+      </points>
+      <points label="3" source="manual" outside="0" occluded="0" points="933.29,840.61">
+      </points>
+      <points label="4" source="manual" outside="0" occluded="0" points="892.30,955.24">
+      </points>
+      <points label="5" source="manual" outside="0" occluded="0" points="1010.45,980.40">
+      </points>
+    </skeleton>
+    <points label="Pointy_misc" source="manual" occluded="0" points="1429.65,334.33;1702.29,320.40;1568.95,457.71;1737.11,428.86" z_order="0">
+    </points>
+  </image>
+</annotations>

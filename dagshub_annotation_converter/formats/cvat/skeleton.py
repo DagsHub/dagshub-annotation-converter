@@ -2,7 +2,7 @@ from typing import Tuple, List
 
 from lxml.etree import ElementBase
 
-from dagshub_annotation_converter.formats.cvat.context import parse_image_tag
+from dagshub_annotation_converter.formats.cvat.context import parse_image_tag, parse_metadata
 from dagshub_annotation_converter.ir.image import IRPoseImageAnnotation, IRPosePoint, CoordinateStyle
 
 
@@ -40,4 +40,5 @@ def parse_skeleton(elem: ElementBase, containing_image: ElementBase) -> IRPoseIm
         image_width=image_info.width,
         image_height=image_info.height,
         filename=image_info.name,
+        meta=parse_metadata(elem),
     )
