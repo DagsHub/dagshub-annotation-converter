@@ -30,7 +30,7 @@ class YoloContext(ParentModel):
     image_dir_name: str = "images"
     """Name of the directory containing image files"""
     keypoint_dim: Literal[2, 3] = 3
-    """[For pose annotations] 
+    """[For pose annotations]
     Dimension of the annotation: 2 - x, y; 3 - x, y, visibility"""
     keypoints_in_annotation: Optional[int] = None
     """[For pose annotations]

@@ -35,7 +35,7 @@ def load_yolo_from_fs_with_context(
         data_dir_path = import_dir_path / context.path
 
     for dirpath, subdirs, files in os.walk(data_dir_path):
-        if context.image_dir_name not in dirpath.split("/"):
+        if context.image_dir_name not in Path(dirpath).parts:
             logger.debug(f"{dirpath} is not an image dir, skipping")
             continue
         for filename in files:
