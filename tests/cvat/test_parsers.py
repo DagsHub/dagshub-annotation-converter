@@ -7,7 +7,8 @@ from dagshub_annotation_converter.formats.cvat import (
     parse_box,
     parse_polygon,
     parse_points,
-    parse_skeleton, parse_ellipse,
+    parse_skeleton,
+    parse_ellipse,
 )
 from dagshub_annotation_converter.ir.image import (
     CoordinateStyle,
@@ -15,7 +16,8 @@ from dagshub_annotation_converter.ir.image import (
     IRSegmentationImageAnnotation,
     IRSegmentationPoint,
     IRPosePoint,
-    IRPoseImageAnnotation, IREllipseImageAnnotation,
+    IRPoseImageAnnotation,
+    IREllipseImageAnnotation,
 )
 
 
@@ -36,6 +38,7 @@ def test_box():
     image, annotation = to_xml(data)
 
     actual = parse_box(annotation, image)
+    actual.meta = {}
 
     expected = IRBBoxImageAnnotation(
         filename="000.png",
@@ -63,6 +66,7 @@ def test_segmentation():
     image, annotation = to_xml(data)
 
     actual = parse_polygon(annotation, image)
+    actual.meta = {}
 
     expected_points = []
     points = (
@@ -95,6 +99,7 @@ def test_points():
     image, annotation = to_xml(data)
 
     actual = parse_points(annotation, image)
+    actual.meta = {}
 
     expected_points = [
         IRPosePoint(x=697.51, y=665.77),
@@ -137,6 +142,7 @@ def test_skeleton():
     image, annotation = to_xml(data)
 
     actual = parse_skeleton(annotation, image)
+    actual.meta = {}
 
     # NOTE: order is important here!
     expected_points = [
@@ -170,6 +176,7 @@ def test_ellipse():
     image, annotation = to_xml(data)
 
     actual = parse_ellipse(annotation, image)
+    actual.meta = {}
 
     expected = IREllipseImageAnnotation(
         filename="000.png",
