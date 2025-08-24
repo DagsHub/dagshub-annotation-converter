@@ -6,6 +6,8 @@ from lxml.etree import ElementBase
 from dagshub_annotation_converter.formats.cvat.context import parse_image_tag, parse_metadata
 from dagshub_annotation_converter.ir.image import IRBBoxImageAnnotation, CoordinateStyle
 
+_keys = {"xtl", "ytl", "xbr", "ybr", "rotation", "label"}
+
 
 def calculate_bbox(xtl, ytl, xbr, ybr, rotation: float) -> Tuple[int, int, int, int, float]:
     """
@@ -63,5 +65,5 @@ def parse_box(elem: ElementBase, containing_image: ElementBase) -> IRBBoxImageAn
         image_height=image_info.height,
         filename=image_info.name,
         coordinate_style=CoordinateStyle.DENORMALIZED,
-        meta=parse_metadata(elem),
+        meta=parse_metadata(elem, _keys),
     )

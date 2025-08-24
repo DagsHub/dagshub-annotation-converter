@@ -21,6 +21,7 @@ class PolygonLabelsAnnotation(ImageAnnotationResultABC):
             coordinate_style=CoordinateStyle.NORMALIZED,
             image_width=self.original_width,
             image_height=self.original_height,
+            meta=self.meta or {},
         )
         for p in self.value.points:
             res.add_point(p[0] / 100, p[1] / 100)
@@ -42,5 +43,6 @@ class PolygonLabelsAnnotation(ImageAnnotationResultABC):
                     points=[[p.x * 100, p.y * 100] for p in ir_annotation.points],
                     polygonlabels=[category],
                 ),
+                meta=ir_annotation.meta or None,
             )
         ]

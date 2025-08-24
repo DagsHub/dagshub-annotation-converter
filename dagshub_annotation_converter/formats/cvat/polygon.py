@@ -3,6 +3,8 @@ from lxml.etree import ElementBase
 from dagshub_annotation_converter.formats.cvat.context import parse_image_tag, parse_metadata
 from dagshub_annotation_converter.ir.image import IRSegmentationImageAnnotation, CoordinateStyle
 
+_keys = {"label", "points"}
+
 
 def parse_polygon(elem: ElementBase, containing_image: ElementBase) -> IRSegmentationImageAnnotation:
     category = str(elem.attrib["label"])
@@ -15,7 +17,7 @@ def parse_polygon(elem: ElementBase, containing_image: ElementBase) -> IRSegment
         image_width=image_info.width,
         image_height=image_info.height,
         filename=image_info.name,
-        meta=parse_metadata(elem),
+        meta=parse_metadata(elem, _keys),
     )
 
     for point_str in elem.attrib["points"].split(";"):

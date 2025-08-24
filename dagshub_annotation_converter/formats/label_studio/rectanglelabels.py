@@ -29,6 +29,7 @@ class RectangleLabelsAnnotation(ImageAnnotationResultABC):
             rotation=self.value.rotation,
             image_width=self.original_width,
             image_height=self.original_height,
+            meta=self.meta or {},
         )
         res.imported_id = self.id
         return [res]
@@ -52,5 +53,6 @@ class RectangleLabelsAnnotation(ImageAnnotationResultABC):
                     rotation=ir_annotation.rotation,
                     rectanglelabels=[category],
                 ),
+                meta=ir_annotation.meta or None,
             )
         ]

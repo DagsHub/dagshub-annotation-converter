@@ -19,9 +19,9 @@ def parse_image_tag(image: ElementBase) -> CVATImageInfo:
     )
 
 
-def parse_metadata(xml: ElementBase) -> Dict[str, Any]:
+def parse_metadata(xml: ElementBase, reserved_keys: set[str]) -> Dict[str, Any]:
     res = {}
-    group_id = xml.attrib.get("group_id")
-    if group_id is not None:
-        res["group_id"] = group_id
+    for key, value in xml.attrib.items():
+        if key not in reserved_keys:
+            res[key] = value
     return res

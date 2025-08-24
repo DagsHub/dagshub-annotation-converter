@@ -32,6 +32,7 @@ class KeyPointLabelsAnnotation(ImageAnnotationResultABC):
             coordinate_style=CoordinateStyle.NORMALIZED,
             image_width=self.original_width,
             image_height=self.original_height,
+            meta=self.meta or {},
         )
         ann.imported_id = self.id
         return [ann]
@@ -57,6 +58,7 @@ class KeyPointLabelsAnnotation(ImageAnnotationResultABC):
                     height=ir_annotation.height * 100,
                     rectanglelabels=[category],
                 ),
+                meta=ir_annotation.meta or None,
             )
             res.append(bbox)
 
@@ -70,6 +72,7 @@ class KeyPointLabelsAnnotation(ImageAnnotationResultABC):
                         y=point.y * 100,
                         keypointlabels=[category],
                     ),
+                    meta=ir_annotation.meta or None,
                 )
             )
 
