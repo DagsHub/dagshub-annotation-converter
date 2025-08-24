@@ -1,5 +1,3 @@
-import pprint
-
 import pytest
 
 from dagshub_annotation_converter.formats.cvat import parse_ellipse
@@ -42,8 +40,6 @@ def test_extras_persist_in_labelstudio(cvat_ellipse):
     ls_task = LabelStudioTask()
     ls_task.add_ir_annotation(cvat_ellipse)
     task_dump = ls_task.model_dump()
-    print()
-    pprint.pprint(task_dump)
     meta = task_dump["annotations"][0]["result"][0].get("meta")
     assert meta == {
         "group_id": "1",
