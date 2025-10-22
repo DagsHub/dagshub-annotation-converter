@@ -18,4 +18,4 @@ def supported_image_formats() -> Set[str]:
 
 
 def is_image(path: Path) -> bool:
-    return get_extension(path) in supported_image_formats()
+    return get_extension(path).lower() in supported_image_formats()

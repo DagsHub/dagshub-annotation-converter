@@ -7,7 +7,7 @@ def get_extension(path: Path) -> Optional[str]:
     ext_dot_index = name.rfind(".")
     if ext_dot_index == -1:
         return None
-    return name[ext_dot_index:].lower()
+    return name[ext_dot_index:]
 
 
 def replace_folder(
