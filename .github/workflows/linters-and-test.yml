@@ -17,14 +17,14 @@ jobs:
 
   run-tests:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: [3.8, 3.9, "3.10", 3.11, 3.12, 3.13]
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        python-version: [3.8, 3.9, "3.10", 3.11, 3.12, 3.13]
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
       - name: Install Hatch
-        run: pipx install hatch && hatch env prune
+        run: pipx install hatch
       - name: Run tests
-        run: hatch test -py ${{ matrix.python-version }}
+        run: hatch test -a
