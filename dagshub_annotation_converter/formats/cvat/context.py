@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, Set
 
 from lxml.etree import ElementBase
 
@@ -19,7 +19,7 @@ def parse_image_tag(image: ElementBase) -> CVATImageInfo:
     )
 
 
-def parse_metadata(xml: ElementBase, reserved_keys: set[str]) -> Dict[str, Any]:
+def parse_metadata(xml: ElementBase, reserved_keys: Set[str]) -> Dict[str, Any]:
     res = {}
     for key, value in xml.attrib.items():
         if key not in reserved_keys:

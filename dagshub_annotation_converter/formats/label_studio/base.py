@@ -1,6 +1,6 @@
 import uuid
 from abc import abstractmethod
-from typing import Sequence, Optional, Any
+from typing import Sequence, Optional, Any, Dict
 
 from pydantic import Field
 
@@ -39,7 +39,7 @@ class ImageAnnotationResultABC(AnnotationResultABC):
     from_name: str = "label"
     score: Optional[float] = None
     """For predictions, the score of the prediction."""
-    meta: Optional[dict[str, Any]] = None
+    meta: Optional[Dict[str, Any]] = None
 
     @abstractmethod
     def to_ir_annotation(self) -> Sequence[IRImageAnnotationBase]:
