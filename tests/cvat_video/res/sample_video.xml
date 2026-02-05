@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<annotations>
+  <version>1.1</version>
+  <meta>
+    <task>
+      <id>1</id>
+      <name>test_video</name>
+      <size>5</size>
+      <mode>interpolation</mode>
+      <original_size>
+        <width>1920</width>
+        <height>1080</height>
+      </original_size>
+    </task>
+    <dumped>2024-01-15 10:30:00.000000+00:00</dumped>
+  </meta>
+  <!-- Track 1: person walking left to right -->
+  <track id="0" label="person" source="manual">
+    <box frame="0" outside="0" occluded="0" keyframe="1"
+         xtl="100" ytl="150" xbr="150" ybr="270" z_order="0"/>
+    <box frame="1" outside="0" occluded="0" keyframe="0"
+         xtl="110" ytl="152" xbr="160" ybr="272" z_order="0"/>
+    <box frame="2" outside="0" occluded="1" keyframe="0"
+         xtl="120" ytl="154" xbr="170" ybr="274" z_order="0"/>
+    <box frame="3" outside="0" occluded="0" keyframe="1"
+         xtl="130" ytl="156" xbr="180" ybr="276" z_order="0"/>
+    <box frame="4" outside="0" occluded="0" keyframe="0"
+         xtl="140" ytl="158" xbr="190" ybr="278" z_order="0"/>
+  </track>
+  <!-- Track 2: car moving right to left -->
+  <track id="1" label="car" source="manual">
+    <box frame="0" outside="0" occluded="0" keyframe="1"
+         xtl="500" ytl="200" xbr="650" ybr="300" z_order="0"/>
+    <box frame="1" outside="0" occluded="0" keyframe="0"
+         xtl="480" ytl="200" xbr="630" ybr="300" z_order="0"/>
+    <box frame="2" outside="0" occluded="0" keyframe="0"
+         xtl="460" ytl="200" xbr="610" ybr="300" z_order="0"/>
+    <box frame="3" outside="0" occluded="1" keyframe="0"
+         xtl="440" ytl="200" xbr="590" ybr="300" z_order="0"/>
+    <box frame="4" outside="0" occluded="0" keyframe="1"
+         xtl="420" ytl="200" xbr="570" ybr="300" z_order="0"/>
+  </track>
+</annotations>
