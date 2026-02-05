@@ -1,0 +1,39 @@
+{
+    "info": {
+        "description": "Sample COCO Dataset for Testing",
+        "version": "1.0",
+        "year": 2023,
+        "date_created": "2023/10/27"
+    },
+    "licenses": [],
+    "images": [
+        {
+            "id": 1,
+            "width": 800,
+            "height": 600,
+            "file_name": "test_image.jpg",
+            "license": 0,
+            "flickr_url": "",
+            "coco_url": "",
+            "date_captured": ""
+        }
+    ],
+    "categories": [
+        {
+            "id": 1,
+            "name": "cat",
+            "supercategory": "animal"
+        }
+    ],
+    "annotations": [
+        {
+            "id": 1,
+            "image_id": 1,
+            "category_id": 1,
+            "segmentation": [],
+            "area": 6000.0,
+            "bbox": [100, 100, 200, 300], 
+            "iscrowd": 0
+        }
+    ]
+}
