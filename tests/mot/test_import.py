@@ -1,9 +1,6 @@
 """Tests for MOT format import."""
-import pytest
-from pathlib import Path
 
 from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
-from dagshub_annotation_converter.formats.mot import MOTContext
 from dagshub_annotation_converter.formats.mot.bbox import import_bbox_from_line
 from dagshub_annotation_converter.converters.mot import load_mot_from_file, load_mot_from_dir
 
@@ -66,7 +63,7 @@ class TestMOTLineImport:
         ann = import_bbox_from_line(line, mot_context)
         
         # Should still parse, but mark as ignored in metadata
-        assert ann.meta.get("ignored") == True
+        assert ann.meta.get("ignored")
 
     def test_parse_line_with_partial_visibility(self, mot_context):
         """Test parsing MOT line with partial occlusion."""

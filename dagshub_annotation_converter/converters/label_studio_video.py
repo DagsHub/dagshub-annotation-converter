@@ -6,11 +6,10 @@ Provides bidirectional conversion between Video IR and Label Studio Video format
 
 import logging
 from collections import defaultdict
-from typing import Dict, List, Sequence
+from typing import Dict, List
 
 from dagshub_annotation_converter.formats.label_studio.videorectangle import (
     VideoRectangleAnnotation,
-    VideoRectangleValue,
 )
 from dagshub_annotation_converter.formats.label_studio.task import (
     LabelStudioTask,

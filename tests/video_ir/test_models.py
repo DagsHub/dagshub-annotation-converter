@@ -1,11 +1,9 @@
 """Tests for Video IR data models."""
-import pytest
 
 # These imports will fail until the Video IR module is implemented
 # This is intentional - tests define the contract first
 from dagshub_annotation_converter.ir.video import (
     IRVideoBBoxAnnotation,
-    IRVideoAnnotationBase,
     CoordinateStyle,
 )
 

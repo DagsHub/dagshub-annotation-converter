@@ -1,8 +1,6 @@
 """Tests for CVAT Video format import."""
-import pytest
-from pathlib import Path
 
-from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
+from dagshub_annotation_converter.ir.video import CoordinateStyle
 from dagshub_annotation_converter.formats.cvat.video import parse_video_track
 from dagshub_annotation_converter.converters.cvat import load_cvat_from_xml_file
 
@@ -57,11 +55,11 @@ class TestCVATVideoTrackParsing:
         
         # Frame 0 should be keyframe
         frame_0_ann = [a for a in annotations if a.frame_number == 0][0]
-        assert frame_0_ann.meta.get("keyframe") == True
+        assert frame_0_ann.meta.get("keyframe")
         
         # Frame 1 should not be keyframe
         frame_1_ann = [a for a in annotations if a.frame_number == 1][0]
-        assert frame_1_ann.meta.get("keyframe") == False
+        assert not frame_1_ann.meta.get("keyframe")
 
 
 class TestCVATVideoFileImport:

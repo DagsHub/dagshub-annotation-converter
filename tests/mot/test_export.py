@@ -1,10 +1,8 @@
 """Tests for MOT format export."""
-import pytest
 from pathlib import Path
 import tempfile
 
 from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
-from dagshub_annotation_converter.formats.mot import MOTContext
 from dagshub_annotation_converter.formats.mot.bbox import export_bbox_to_line
 from dagshub_annotation_converter.converters.mot import export_to_mot
 
@@ -169,7 +167,7 @@ class TestMOTFileExport:
             
             # Read and verify output
             content = output_path.read_text()
-            lines = [l for l in content.strip().split("\n") if l and not l.startswith("#")]
+            lines = [line for line in content.strip().split("\n") if line and not line.startswith("#")]
             
             assert len(lines) == 3
             

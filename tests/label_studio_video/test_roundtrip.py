@@ -3,7 +3,6 @@ import pytest
 from pathlib import Path
 import tempfile
 
-from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
 from dagshub_annotation_converter.formats.mot import MOTContext
 from dagshub_annotation_converter.converters.mot import load_mot_from_file, export_to_mot
 from dagshub_annotation_converter.converters.cvat import load_cvat_from_xml_file
@@ -79,7 +78,7 @@ class TestMOTToLabelStudioRoundtrip:
             
             # Verify output
             content = output_path.read_text()
-            lines = [l for l in content.strip().split("\n") if l and not l.startswith("#")]
+            lines = [line for line in content.strip().split("\n") if line and not line.startswith("#")]
             
             # Should have 10 lines (5 frames x 2 tracks)
             assert len(lines) == 10
@@ -252,7 +251,7 @@ class TestCrossFormatConversion:
             
             # Verify output
             content = output_path.read_text()
-            lines = [l for l in content.strip().split("\n") if l and not l.startswith("#")]
+            lines = [line for line in content.strip().split("\n") if line and not line.startswith("#")]
             
             # Should have 10 lines (5 frames x 2 tracks)
             assert len(lines) == 10

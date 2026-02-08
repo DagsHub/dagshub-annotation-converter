@@ -1,7 +1,7 @@
 """MOT format context and configuration."""
 
 from pathlib import Path
-from typing import Dict, Optional, List
+from typing import Dict, Optional
 import configparser
 
 from dagshub_annotation_converter.util.pydantic_util import ParentModel

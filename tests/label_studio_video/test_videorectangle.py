@@ -1,6 +1,4 @@
 """Tests for Label Studio Video rectangle format."""
-import pytest
-from pathlib import Path
 
 from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
 from dagshub_annotation_converter.formats.label_studio.videorectangle import (
@@ -29,7 +27,7 @@ class TestVideoRectangleSequenceItem:
         assert item.y == 13.888889
         assert item.width == 2.604167
         assert item.height == 11.111111
-        assert item.enabled == True
+        assert item.enabled
         assert item.time == 0.033
 
 

@@ -34,7 +34,9 @@ def _load_coco_dict(coco: Dict[str, Any]) -> Tuple[Dict[str, Sequence[IRImageAnn
         image_id = int(raw_annotation["image_id"])
         image = image_lookup.get(image_id)
         if image is None:
-            logger.warning("Skipping COCO annotation id=%s with unknown image_id=%s", raw_annotation.get("id"), image_id)
+            logger.warning(
+                "Skipping COCO annotation id=%s with unknown image_id=%s",
+                raw_annotation.get("id"), image_id)
             continue
 
         filename = str(image["file_name"])
