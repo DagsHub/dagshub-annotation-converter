@@ -1,8 +1,16 @@
 """Tests for MOT format import."""
 
+import tempfile
+from pathlib import Path
+from zipfile import ZipFile
+
 from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
 from dagshub_annotation_converter.formats.mot.bbox import import_bbox_from_line
-from dagshub_annotation_converter.converters.mot import load_mot_from_file, load_mot_from_dir
+from dagshub_annotation_converter.converters.mot import (
+    load_mot_from_file,
+    load_mot_from_dir,
+    load_mot_from_zip,
+)
 
 
 class TestMOTLineImport:
@@ -114,6 +122,50 @@ class TestMOTFileImport:
         # Total should be 10 annotations (5 frames x 2 tracks)
         total_anns = sum(len(anns) for anns in annotations.values())
         assert total_anns == 10
+
+
+class TestMOTZipImport:
+    """Tests for importing MOT from zip (reads directly, no extraction)."""
+
+    def test_load_from_zip_same_as_dir(self, sample_mot_dir):
+        """Test that load_mot_from_zip produces same result as load_mot_from_dir."""
+        res_dir = Path(__file__).parent / "res"
+        with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as f:
+            zip_path = Path(f.name)
+        try:
+            with ZipFile(zip_path, "w") as z:
+                for f in (res_dir / "gt").iterdir():
+                    z.write(f, f"gt/{f.name}")
+                z.write(res_dir / "seqinfo.ini", "seqinfo.ini")
+            dir_anns, dir_ctx = load_mot_from_dir(sample_mot_dir)
+            zip_anns, zip_ctx = load_mot_from_zip(zip_path)
+            assert len(dir_anns) == len(zip_anns)
+            for frame, anns in dir_anns.items():
+                assert frame in zip_anns
+                assert len(anns) == len(zip_anns[frame])
+            assert dir_ctx.frame_rate == zip_ctx.frame_rate
+            assert dir_ctx.image_width == zip_ctx.image_width
+            assert dir_ctx.categories == zip_ctx.categories
+        finally:
+            zip_path.unlink(missing_ok=True)
+
+    def test_load_from_zip_nested_structure(self, sample_mot_dir):
+        """Test loading from zip with nested seqname/gt/ structure."""
+        res_dir = Path(__file__).parent / "res"
+        with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as f:
+            zip_path = Path(f.name)
+        try:
+            with ZipFile(zip_path, "w") as z:
+                z.write(res_dir / "gt" / "gt.txt", "myseq/gt/gt.txt")
+                z.write(res_dir / "gt" / "labels.txt", "myseq/gt/labels.txt")
+                z.write(res_dir / "seqinfo.ini", "myseq/seqinfo.ini")
+            zip_anns, zip_ctx = load_mot_from_zip(zip_path)
+            assert len(zip_anns) > 0
+            total = sum(len(a) for a in zip_anns.values())
+            assert total == 10
+            assert zip_ctx.categories == {1: "person", 2: "car"}
+        finally:
+            zip_path.unlink(missing_ok=True)
 
 
 class TestMOTDirectoryImport:

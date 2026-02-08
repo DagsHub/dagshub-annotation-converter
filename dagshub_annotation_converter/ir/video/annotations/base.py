@@ -12,7 +12,7 @@ class IRVideoAnnotationBase(IRImageAnnotationBase):
     
     Extends IRImageAnnotationBase with video-specific fields:
     - track_id: Unique identifier for an object across frames
-    - frame_number: Frame index (1-based, as per CVAT MOT format)
+    - frame_number: Frame index (0-based; first frame is 0)
     - timestamp: Optional timestamp in seconds
     - video_path: Optional reference to source video
     """
@@ -21,7 +21,7 @@ class IRVideoAnnotationBase(IRImageAnnotationBase):
     """Unique identifier for tracking an object across frames."""
     
     frame_number: int
-    """Frame number (1-based index)."""
+    """Frame number (0-based index; first frame is 0)."""
     
     timestamp: Optional[float] = None
     """Timestamp in seconds (optional)."""

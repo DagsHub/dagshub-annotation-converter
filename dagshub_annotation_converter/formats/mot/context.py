@@ -1,5 +1,6 @@
 """MOT format context and configuration."""
 
+import io
 from pathlib import Path
 from typing import Dict, Optional
 import configparser
@@ -69,6 +70,21 @@ class MOTContext(ParentModel):
         return ctx
 
     @staticmethod
+    def from_seqinfo_string(content: str) -> "MOTContext":
+        """Load context from seqinfo.ini content (string)."""
+        config = configparser.ConfigParser()
+        config.read_file(io.StringIO(content))
+        ctx = MOTContext()
+        if config.has_section("Sequence"):
+            seq = config["Sequence"]
+            ctx.seq_name = seq.get("name")
+            ctx.frame_rate = float(seq.get("frameRate", 30.0))
+            ctx.seq_length = int(seq.get("seqLength", 0)) or None
+            ctx.image_width = int(seq.get("imWidth", 0)) or None
+            ctx.image_height = int(seq.get("imHeight", 0)) or None
+        return ctx
+
+    @staticmethod
     def load_labels(labels_path: Path) -> Dict[int, str]:
         """
         Load category mapping from labels.txt file.
@@ -86,6 +102,16 @@ class MOTContext(ParentModel):
                 name = line.strip()
                 if name:
                     categories[idx] = name
+        return categories
+
+    @staticmethod
+    def load_labels_from_string(content: str) -> Dict[int, str]:
+        """Load category mapping from labels.txt content (string)."""
+        categories = {}
+        for idx, line in enumerate(io.StringIO(content), start=1):
+            name = line.strip()
+            if name:
+                categories[idx] = name
         return categories
 
     def get_category_name(self, class_id: int) -> str:

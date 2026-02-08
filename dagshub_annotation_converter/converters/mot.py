@@ -5,7 +5,6 @@ Supports CVAT MOT 1.1 format for video object tracking.
 """
 
 import logging
-import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 from zipfile import ZipFile
@@ -14,6 +13,27 @@ from dagshub_annotation_converter.formats.mot import MOTContext, import_bbox_fro
 from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation
 
 logger = logging.getLogger(__name__)
+
+
+def _is_safe_zip_path(name: str) -> bool:
+    """Reject path traversal (Zip Slip)."""
+    path = Path(name)
+    return not path.is_absolute() and ".." not in path.parts
+
+
+def _find_mot_prefix_in_zip(z: ZipFile) -> str:
+    """Find the MOT root prefix (e.g. '' or 'seqname/') from zip entries."""
+    names = [n for n in z.namelist() if _is_safe_zip_path(n)]
+    # Prefer gt/gt.txt at root
+    if "gt/gt.txt" in names:
+        return ""
+    # Look for X/gt/gt.txt
+    for name in names:
+        parts = name.split("/")
+        if len(parts) >= 3 and parts[-2] == "gt" and parts[-1] == "gt.txt":
+            prefix = "/".join(parts[:-2]) + "/"
+            return prefix
+    raise FileNotFoundError("Could not find gt/gt.txt in zip")
 
 
 def load_mot_from_file(
@@ -105,6 +125,20 @@ def load_mot_from_dir(
     return annotations, context
 
 
+def _load_mot_from_gt_content(gt_content: str, context: MOTContext) -> Dict[int, Sequence[IRVideoBBoxAnnotation]]:
+    """Parse gt.txt content into annotations by frame."""
+    annotations: Dict[int, List[IRVideoBBoxAnnotation]] = {}
+    for line in gt_content.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        ann = import_bbox_from_line(line, context)
+        if ann.frame_number not in annotations:
+            annotations[ann.frame_number] = []
+        annotations[ann.frame_number].append(ann)
+    return annotations
+
+
 def load_mot_from_zip(
     zip_path: Union[str, Path],
     image_width: Optional[int] = None,
@@ -113,11 +147,15 @@ def load_mot_from_zip(
     """
     Load MOT annotations from a ZIP archive.
     
+    Reads files directly from the zip (no extraction) to avoid Zip Slip.
+    
     Expected ZIP structure:
       gt/
         gt.txt
         labels.txt (optional)
       seqinfo.ini (optional)
+    
+    Or nested: seqname/gt/gt.txt, seqname/gt/labels.txt, seqname/seqinfo.ini
     
     Args:
         zip_path: Path to ZIP archive containing MOT data
@@ -129,24 +167,38 @@ def load_mot_from_zip(
     """
     zip_path = Path(zip_path)
     
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        with ZipFile(zip_path) as z:
-            z.extractall(tmp_dir)
+    with ZipFile(zip_path) as z:
+        prefix = _find_mot_prefix_in_zip(z)
+        gt_key = f"{prefix}gt/gt.txt"
+        labels_key = f"{prefix}gt/labels.txt"
+        seqinfo_key = f"{prefix}seqinfo.ini"
         
-        # Find the MOT root (might be at root or in a subdirectory)
-        tmp_path = Path(tmp_dir)
-        gt_dir = tmp_path / "gt"
-        if gt_dir.exists():
-            mot_dir = tmp_path
+        if gt_key not in z.namelist() or not _is_safe_zip_path(gt_key):
+            raise FileNotFoundError(f"Could not find gt/gt.txt in {zip_path}")
+        
+        # Build context
+        if seqinfo_key in z.namelist() and _is_safe_zip_path(seqinfo_key):
+            with z.open(seqinfo_key) as f:
+                context = MOTContext.from_seqinfo_string(f.read().decode("utf-8"))
         else:
-            # Check for a single subdirectory containing gt/
-            subdirs = [d for d in tmp_path.iterdir() if d.is_dir()]
-            if len(subdirs) == 1 and (subdirs[0] / "gt").exists():
-                mot_dir = subdirs[0]
-            else:
-                raise FileNotFoundError(f"Could not find gt/ folder in {zip_path}")
+            context = MOTContext()
+            logger.warning("seqinfo.ini not found in zip, using default context")
         
-        return load_mot_from_dir(mot_dir, image_width, image_height)
+        if image_width is not None:
+            context.image_width = image_width
+        if image_height is not None:
+            context.image_height = image_height
+        
+        if labels_key in z.namelist() and _is_safe_zip_path(labels_key):
+            with z.open(labels_key) as f:
+                context.categories = MOTContext.load_labels_from_string(f.read().decode("utf-8"))
+        
+        # Load gt.txt
+        with z.open(gt_key) as f:
+            gt_content = f.read().decode("utf-8")
+        annotations = _load_mot_from_gt_content(gt_content, context)
+    
+    return annotations, context
 
 
 def export_to_mot(
@@ -220,9 +272,9 @@ def export_mot_to_dir(
     # Write seqinfo.ini (at root level)
     seqinfo_path = output_dir / "seqinfo.ini"
     
-    # Infer seq_length from annotations if not set
+    # Infer seq_length from annotations if not set (IR frames are 0-based)
     if context.seq_length is None and annotations:
-        context.seq_length = max(ann.frame_number for ann in annotations)
+        context.seq_length = max(ann.frame_number for ann in annotations) + 1
     
     context.write_seqinfo(seqinfo_path)
     
