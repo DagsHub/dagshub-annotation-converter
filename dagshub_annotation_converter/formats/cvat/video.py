@@ -40,11 +40,6 @@ def parse_video_track(
     for box_elem in track_elem.findall("box"):
         frame_number = int(box_elem.attrib["frame"])
         outside = int(box_elem.attrib.get("outside", 0))
-        
-        # Skip frames where object is outside (not visible)
-        if outside == 1:
-            continue
-        
         occluded = int(box_elem.attrib.get("occluded", 0))
         keyframe = int(box_elem.attrib.get("keyframe", 0))
         
@@ -60,13 +55,19 @@ def parse_video_track(
         width = xbr - xtl
         height = ybr - ytl
         
-        # Visibility: 1.0 if not occluded, < 1.0 if occluded
-        visibility = 0.5 if occluded == 1 else 1.0
+        # Visibility: 0.0 for outside (track terminated), 0.5 for occluded, 1.0 otherwise
+        if outside == 1:
+            visibility = 0.0
+        elif occluded == 1:
+            visibility = 0.5
+        else:
+            visibility = 1.0
         
         # Build metadata
         meta = {
             "keyframe": keyframe == 1,
             "z_order": int(box_elem.attrib.get("z_order", 0)),
+            "outside": outside == 1,
         }
         
         ann = IRVideoBBoxAnnotation(
@@ -163,9 +164,10 @@ def export_video_track_to_xml(
         xbr = ann.left + ann.width
         ybr = ann.top + ann.height
         
-        # Determine occluded and keyframe from meta
+        # Determine outside, occluded, and keyframe from meta/visibility
+        outside = 1 if ann.meta.get("outside", False) else 0
         occluded = 0
-        if ann.visibility < 1.0:
+        if not outside and ann.visibility < 1.0:
             occluded = 1
         keyframe = 1 if ann.meta.get("keyframe", True) else 0
         z_order = ann.meta.get("z_order", 0)
@@ -173,7 +175,7 @@ def export_video_track_to_xml(
         # Create box element
         box_elem = etree.SubElement(track_elem, "box")
         box_elem.set("frame", str(ann.frame_number))
-        box_elem.set("outside", "0")
+        box_elem.set("outside", str(outside))
         box_elem.set("occluded", str(occluded))
         box_elem.set("keyframe", str(keyframe))
         box_elem.set("xtl", f"{xtl:.2f}")

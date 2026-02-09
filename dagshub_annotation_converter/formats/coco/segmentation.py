@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Sequence
 
 from dagshub_annotation_converter.formats.coco.context import CocoContext
 from dagshub_annotation_converter.ir.image import CoordinateStyle
@@ -81,4 +81,39 @@ def export_segmentation(
         "segmentation": [segmentation],
         "iscrowd": 0,
         "area": _polygon_area(denormalized.points),
+    }
+
+
+def export_segmentation_group(
+    annotations: Sequence[IRSegmentationImageAnnotation],
+    context: CocoContext,
+    image_id: int,
+    annotation_id: int,
+) -> Dict[str, Any]:
+    if len(annotations) == 0:
+        raise ValueError("Cannot export an empty segmentation group")
+
+    first = annotations[0].denormalized()
+    category_name = first.ensure_has_one_category()
+    category_id = context.get_category_id(category_name)
+
+    segmentation: List[List[float]] = []
+    area = 0.0
+    for annotation in annotations:
+        denormalized = annotation.denormalized()
+        if denormalized.ensure_has_one_category() != category_name:
+            raise ValueError("All segmentation annotations in a group must have the same category")
+        polygon: List[float] = []
+        for point in denormalized.points:
+            polygon.extend([point.x, point.y])
+        segmentation.append(polygon)
+        area += _polygon_area(denormalized.points)
+
+    return {
+        "id": annotation_id,
+        "image_id": image_id,
+        "category_id": category_id,
+        "segmentation": segmentation,
+        "iscrowd": 0,
+        "area": area,
     }

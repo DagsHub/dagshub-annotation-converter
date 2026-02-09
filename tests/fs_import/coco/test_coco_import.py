@@ -13,7 +13,7 @@ def test_coco_import():
 
     expected_types = {
         "images/a.jpg": [IRBBoxImageAnnotation, IRBBoxImageAnnotation, IRSegmentationImageAnnotation],
-        "images/b.jpg": [IRSegmentationImageAnnotation],
+        "images/b.jpg": [IRSegmentationImageAnnotation, IRSegmentationImageAnnotation, IRSegmentationImageAnnotation],
     }
     actual_types = {filename: [type(ann) for ann in anns] for filename, anns in annotations.items()}
 

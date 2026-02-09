@@ -9,7 +9,7 @@ from dagshub_annotation_converter.formats.coco import (
     import_bbox,
     import_segmentation,
     export_bbox,
-    export_segmentation,
+    export_segmentation_group,
 )
 from dagshub_annotation_converter.ir.image import (
     IRImageAnnotationBase,
@@ -18,6 +18,27 @@ from dagshub_annotation_converter.ir.image import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _consume_annotation_id(
+    imported_id: Optional[str],
+    used_ids: set,
+    next_annotation_id: int,
+) -> Tuple[int, int]:
+    if imported_id is not None:
+        try:
+            parsed_id = int(imported_id)
+            if parsed_id > 0 and parsed_id not in used_ids:
+                used_ids.add(parsed_id)
+                return parsed_id, max(next_annotation_id, parsed_id + 1)
+        except ValueError:
+            pass
+
+    while next_annotation_id in used_ids:
+        next_annotation_id += 1
+    assigned_id = next_annotation_id
+    used_ids.add(assigned_id)
+    return assigned_id, next_annotation_id + 1
 
 
 def _load_coco_dict(coco: Dict[str, Any]) -> Tuple[Dict[str, Sequence[IRImageAnnotationBase]], CocoContext]:
@@ -73,6 +94,7 @@ def _build_coco_dict(
     images: List[Dict[str, Any]] = []
     coco_annotations: List[Dict[str, Any]] = []
     annotation_id = 1
+    used_annotation_ids = set()
 
     for image_id, (filename, anns) in enumerate(grouped.items(), start=1):
         first = anns[0]
@@ -85,19 +107,39 @@ def _build_coco_dict(
             }
         )
 
+        segmentation_groups: List[List[IRSegmentationImageAnnotation]] = []
+        segmentation_group_lookup: Dict[Tuple[str, str], int] = {}
+
         for ann in anns:
             if isinstance(ann, IRBBoxImageAnnotation):
-                coco_annotations.append(export_bbox(ann, export_context, image_id, annotation_id))
-                annotation_id += 1
-            elif isinstance(ann, IRSegmentationImageAnnotation):
-                coco_annotations.append(export_segmentation(ann, export_context, image_id, annotation_id))
-                annotation_id += 1
-            else:
-                logger.warning(
-                    "Skipping unsupported annotation type for COCO export: %s (file=%s)",
-                    type(ann).__name__,
-                    filename,
-                )
+                ann_id, annotation_id = _consume_annotation_id(ann.imported_id, used_annotation_ids, annotation_id)
+                coco_annotations.append(export_bbox(ann, export_context, image_id, ann_id))
+                continue
+
+            if isinstance(ann, IRSegmentationImageAnnotation):
+                if ann.imported_id is None:
+                    segmentation_groups.append([ann])
+                    continue
+
+                category_name = ann.ensure_has_one_category()
+                key = (ann.imported_id, category_name)
+                if key not in segmentation_group_lookup:
+                    segmentation_group_lookup[key] = len(segmentation_groups)
+                    segmentation_groups.append([ann])
+                else:
+                    segmentation_groups[segmentation_group_lookup[key]].append(ann)
+                continue
+
+            logger.warning(
+                "Skipping unsupported annotation type for COCO export: %s (file=%s)",
+                type(ann).__name__,
+                filename,
+            )
+
+        for group in segmentation_groups:
+            group_imported_id = group[0].imported_id
+            ann_id, annotation_id = _consume_annotation_id(group_imported_id, used_annotation_ids, annotation_id)
+            coco_annotations.append(export_segmentation_group(group, export_context, image_id, ann_id))
 
     categories = [{"id": category_id, "name": name} for category_id, name in sorted(export_context.categories.items())]
 
@@ -122,4 +164,3 @@ def export_to_coco_file(
         json.dump(coco, f, indent=2)
 
     return output_path
-

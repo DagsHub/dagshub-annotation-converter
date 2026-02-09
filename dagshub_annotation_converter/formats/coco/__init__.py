@@ -1,6 +1,10 @@
 from dagshub_annotation_converter.formats.coco.bbox import import_bbox, export_bbox
 from dagshub_annotation_converter.formats.coco.context import CocoContext
-from dagshub_annotation_converter.formats.coco.segmentation import import_segmentation, export_segmentation
+from dagshub_annotation_converter.formats.coco.segmentation import (
+    import_segmentation,
+    export_segmentation,
+    export_segmentation_group,
+)
 
 __all__ = [
     "CocoContext",
@@ -8,4 +12,5 @@ __all__ = [
     "export_bbox",
     "import_segmentation",
     "export_segmentation",
+    "export_segmentation_group",
 ]

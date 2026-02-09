@@ -27,7 +27,7 @@
     <box frame="4" outside="0" occluded="0" keyframe="0"
          xtl="140" ytl="158" xbr="190" ybr="278" z_order="0"/>
   </track>
-  <!-- Track 2: car moving right to left -->
+  <!-- Track 2: car moving right to left, disappears at frame 3 -->
   <track id="1" label="car" source="manual">
     <box frame="0" outside="0" occluded="0" keyframe="1"
          xtl="500" ytl="200" xbr="650" ybr="300" z_order="0"/>
@@ -35,7 +35,7 @@
          xtl="480" ytl="200" xbr="630" ybr="300" z_order="0"/>
     <box frame="2" outside="0" occluded="0" keyframe="0"
          xtl="460" ytl="200" xbr="610" ybr="300" z_order="0"/>
-    <box frame="3" outside="0" occluded="1" keyframe="0"
+    <box frame="3" outside="1" occluded="0" keyframe="1"
          xtl="440" ytl="200" xbr="590" ybr="300" z_order="0"/>
     <box frame="4" outside="0" occluded="0" keyframe="1"
          xtl="420" ytl="200" xbr="570" ybr="300" z_order="0"/>

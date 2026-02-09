@@ -63,6 +63,17 @@ def test_coco_import_export_roundtrip(tmp_path):
     export_to_coco_file(flattened, output, context=context)
     reimported, _ = load_coco_from_file(output)
 
+    output_payload = json.loads(output.read_text())
+    image_to_name = {image["id"]: image["file_name"] for image in output_payload["images"]}
+    multi_polygon_anns = [
+        ann
+        for ann in output_payload["annotations"]
+        if isinstance(ann.get("segmentation"), list)
+        and len(ann["segmentation"]) == 2
+        and image_to_name.get(ann["image_id"]) == "images/b.jpg"
+    ]
+    assert len(multi_polygon_anns) == 1
+
     def strip_imported_ids(annotations_map):
         stripped = {}
         for filename, anns in annotations_map.items():

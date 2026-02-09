@@ -71,5 +71,33 @@ def test_coco_import():
                 IRSegmentationPoint(x=4.0, y=6.0),
                 IRSegmentationPoint(x=1.0, y=6.0),
             ],
-        )
+        ),
+        IRSegmentationImageAnnotation(
+            filename="images/b.jpg",
+            imported_id="13",
+            categories={"dog": 1.0},
+            image_width=50,
+            image_height=40,
+            coordinate_style=CoordinateStyle.DENORMALIZED,
+            points=[
+                IRSegmentationPoint(x=10.0, y=10.0),
+                IRSegmentationPoint(x=15.0, y=10.0),
+                IRSegmentationPoint(x=15.0, y=15.0),
+                IRSegmentationPoint(x=10.0, y=15.0),
+            ],
+        ),
+        IRSegmentationImageAnnotation(
+            filename="images/b.jpg",
+            imported_id="13",
+            categories={"dog": 1.0},
+            image_width=50,
+            image_height=40,
+            coordinate_style=CoordinateStyle.DENORMALIZED,
+            points=[
+                IRSegmentationPoint(x=20.0, y=20.0),
+                IRSegmentationPoint(x=25.0, y=20.0),
+                IRSegmentationPoint(x=25.0, y=25.0),
+                IRSegmentationPoint(x=20.0, y=25.0),
+            ],
+        ),
     ]

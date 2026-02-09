@@ -1,7 +1,12 @@
 """Tests for CVAT Video format import."""
 
+from lxml import etree
+
 from dagshub_annotation_converter.ir.video import CoordinateStyle
-from dagshub_annotation_converter.formats.cvat.video import parse_video_track
+from dagshub_annotation_converter.formats.cvat.video import (
+    parse_video_track,
+    export_video_track_to_xml,
+)
 from dagshub_annotation_converter.converters.cvat import load_cvat_from_xml_file
 
 
@@ -10,8 +15,6 @@ class TestCVATVideoTrackParsing:
 
     def test_parse_track_basic(self, sample_cvat_video_xml):
         """Test parsing a basic CVAT video track."""
-        from lxml import etree
-        
         tree = etree.parse(str(sample_cvat_video_xml))
         tracks = tree.findall(".//track")
         
@@ -32,22 +35,41 @@ class TestCVATVideoTrackParsing:
 
     def test_parse_track_with_occlusion(self, sample_cvat_video_xml):
         """Test parsing track with occluded frames."""
-        from lxml import etree
-        
         tree = etree.parse(str(sample_cvat_video_xml))
         tracks = tree.findall(".//track")
         
         # Parse first track (person) - frame 2 is occluded
         annotations = parse_video_track(tracks[0], image_width=1920, image_height=1080)
         
-        # Frame 2 (index 2) should have visibility < 1
+        # Frame 2 (index 2) should have visibility 0.5 (occluded, not outside)
         frame_2_ann = [a for a in annotations if a.frame_number == 2][0]
-        assert frame_2_ann.visibility < 1.0
+        assert frame_2_ann.visibility == 0.5
+        assert not frame_2_ann.meta.get("outside")
+
+    def test_parse_track_with_outside(self, sample_cvat_video_xml):
+        """Test that outside frames are preserved with visibility 0.0."""
+        tree = etree.parse(str(sample_cvat_video_xml))
+        tracks = tree.findall(".//track")
+        
+        # Parse second track (car) - frame 3 has outside=1
+        annotations = parse_video_track(tracks[1], image_width=1920, image_height=1080)
+        
+        # Should still have 5 annotations (outside frames are kept)
+        assert len(annotations) == 5
+        
+        # Frame 3 should be outside
+        frame_3_ann = [a for a in annotations if a.frame_number == 3][0]
+        assert frame_3_ann.visibility == 0.0
+        assert frame_3_ann.meta.get("outside")
+        
+        # Other frames should not be outside
+        for ann in annotations:
+            if ann.frame_number != 3:
+                assert not ann.meta.get("outside")
+                assert ann.visibility > 0.0
 
     def test_parse_track_keyframe_metadata(self, sample_cvat_video_xml):
         """Test that keyframe info is preserved in metadata."""
-        from lxml import etree
-        
         tree = etree.parse(str(sample_cvat_video_xml))
         tracks = tree.findall(".//track")
         
@@ -60,6 +82,64 @@ class TestCVATVideoTrackParsing:
         # Frame 1 should not be keyframe
         frame_1_ann = [a for a in annotations if a.frame_number == 1][0]
         assert not frame_1_ann.meta.get("keyframe")
+
+
+class TestCVATVideoOutsideRoundtrip:
+    """Tests for outside attribute round-trip preservation."""
+
+    def test_outside_roundtrip(self):
+        """Test that outside=1 survives import -> export -> import."""
+        xml_str = b"""<?xml version="1.0" encoding="utf-8"?>
+<annotations>
+  <version>1.1</version>
+  <meta>
+    <task>
+      <size>5</size>
+      <mode>interpolation</mode>
+      <original_size><width>1920</width><height>1080</height></original_size>
+    </task>
+  </meta>
+  <track id="0" label="dog" source="manual">
+    <box frame="0" outside="0" occluded="0" keyframe="1"
+         xtl="10" ytl="20" xbr="110" ybr="120" z_order="0"/>
+    <box frame="1" outside="0" occluded="1" keyframe="0"
+         xtl="12" ytl="22" xbr="112" ybr="122" z_order="0"/>
+    <box frame="2" outside="1" occluded="0" keyframe="1"
+         xtl="14" ytl="24" xbr="114" ybr="124" z_order="0"/>
+    <box frame="3" outside="0" occluded="0" keyframe="1"
+         xtl="16" ytl="26" xbr="116" ybr="126" z_order="0"/>
+  </track>
+</annotations>"""
+        # Import
+        root = etree.fromstring(xml_str)
+        track = root.findall(".//track")[0]
+        annotations = parse_video_track(track, image_width=1920, image_height=1080)
+        
+        assert len(annotations) == 4
+        assert annotations[2].visibility == 0.0
+        assert annotations[2].meta["outside"]
+        assert annotations[1].visibility == 0.5  # occluded, not outside
+        assert not annotations[1].meta["outside"]
+        
+        # Export
+        exported_track = export_video_track_to_xml(0, annotations)
+        boxes = exported_track.findall("box")
+        
+        assert len(boxes) == 4
+        assert boxes[0].attrib["outside"] == "0"
+        assert boxes[1].attrib["outside"] == "0"
+        assert boxes[1].attrib["occluded"] == "1"
+        assert boxes[2].attrib["outside"] == "1"
+        assert boxes[2].attrib["occluded"] == "0"  # outside takes priority
+        assert boxes[3].attrib["outside"] == "0"
+        
+        # Re-import
+        reimported = parse_video_track(exported_track, image_width=1920, image_height=1080)
+        assert len(reimported) == 4
+        for orig, re in zip(annotations, reimported):
+            assert orig.frame_number == re.frame_number
+            assert orig.visibility == re.visibility
+            assert orig.meta.get("outside") == re.meta.get("outside")
 
 
 class TestCVATVideoFileImport:

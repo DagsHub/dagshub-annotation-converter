@@ -144,7 +144,7 @@ class MOTContext(ParentModel):
         
         if self.seq_name:
             seq["name"] = self.seq_name
-        seq["frameRate"] = str(int(self.frame_rate))
+        seq["frameRate"] = str(self.frame_rate)
         if self.seq_length:
             seq["seqLength"] = str(self.seq_length)
         if self.image_width:
