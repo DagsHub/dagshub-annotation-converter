@@ -78,9 +78,19 @@ class VideoRectangleAnnotation(AnnotationResultABC):
 
         annotations = []
         for seq_item in self.value.sequence:
+            if seq_item.frame < 1:
+                raise ValueError("Frame numbers must be 1-based (>= 1)")
+            if not (
+                0.0 <= seq_item.x <= 100.0 and
+                0.0 <= seq_item.y <= 100.0 and
+                0.0 <= seq_item.width <= 100.0 and
+                0.0 <= seq_item.height <= 100.0
+            ):
+                raise ValueError("Coordinates must be percentages in [0, 100]")
+            
             ann = IRVideoBBoxAnnotation(
                 track_id=track_id,
-                frame_number=seq_item.frame - 1,
+                frame_number=seq_item.frame - 1,  # Convert 1-based to 0-based
                 left=seq_item.x / 100.0,
                 top=seq_item.y / 100.0,
                 width=seq_item.width / 100.0,
@@ -107,6 +117,9 @@ class VideoRectangleAnnotation(AnnotationResultABC):
 
         first = ir_annotations[0]
         track_id = first.track_id
+        if any(ann.track_id != track_id for ann in ir_annotations):
+            raise ValueError("All annotations must share the same track_id")
+        
         ls_id = first.meta.get("ls_id", f"track_{track_id}") if first.meta else f"track_{track_id}"
         label = first.ensure_has_one_category()
 
@@ -116,9 +129,11 @@ class VideoRectangleAnnotation(AnnotationResultABC):
         for ann in sorted_anns:
             if ann.coordinate_style == CoordinateStyle.DENORMALIZED:
                 ann = ann.normalized()
-
+            
+            # Convert normalized (0-1) to percentage (0-100)
+            # IR uses 0-based frames, Label Studio uses 1-based
             seq_item = VideoRectangleSequenceItem(
-                frame=ann.frame_number + 1,
+                frame=ann.frame_number + 1,  # Convert 0-based to 1-based
                 x=ann.left * 100.0,
                 y=ann.top * 100.0,
                 width=ann.width * 100.0,

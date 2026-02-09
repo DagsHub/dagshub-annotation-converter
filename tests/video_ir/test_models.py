@@ -56,10 +56,10 @@ class TestIRVideoBBoxAnnotation:
         ann = IRVideoBBoxAnnotation(
             track_id=1,
             frame_number=0,
-            left=192,
-            top=108,
-            width=384,
-            height=216,
+            left=192,  # 192/1920 = 0.1
+            top=108,   # 108/1080 = 0.1
+            width=384,  # 384/1920 = 0.2
+            height=216,  # 216/1080 = 0.2
             image_width=1920,
             image_height=1080,
             categories={"person": 1.0},

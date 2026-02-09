@@ -10,7 +10,7 @@ class TestMOTLineExport:
     def test_export_basic_annotation(self, mot_context):
         ann = IRVideoBBoxAnnotation(
             track_id=1,
-            frame_number=0,
+            frame_number=0,  # 0-based IR frame
             left=100,
             top=150,
             width=50,
@@ -106,7 +106,7 @@ class TestMOTFileExport:
         annotations = [
             IRVideoBBoxAnnotation(
                 track_id=1,
-                frame_number=0,
+                frame_number=0,  # 0-based IR frame
                 left=100,
                 top=150,
                 width=50,
@@ -118,7 +118,7 @@ class TestMOTFileExport:
             ),
             IRVideoBBoxAnnotation(
                 track_id=2,
-                frame_number=0,
+                frame_number=0,  # 0-based IR frame
                 left=500,
                 top=200,
                 width=150,
@@ -130,7 +130,7 @@ class TestMOTFileExport:
             ),
             IRVideoBBoxAnnotation(
                 track_id=1,
-                frame_number=1,
+                frame_number=1,  # 0-based IR frame
                 left=110,
                 top=152,
                 width=50,
