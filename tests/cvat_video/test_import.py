@@ -1,5 +1,3 @@
-"""Tests for CVAT Video format import."""
-
 from lxml import etree
 
 from dagshub_annotation_converter.ir.video import CoordinateStyle
@@ -11,65 +9,51 @@ from dagshub_annotation_converter.converters.cvat import load_cvat_from_xml_file
 
 
 class TestCVATVideoTrackParsing:
-    """Tests for parsing CVAT video track elements."""
-
     def test_parse_track_basic(self, sample_cvat_video_xml):
-        """Test parsing a basic CVAT video track."""
         tree = etree.parse(str(sample_cvat_video_xml))
         tracks = tree.findall(".//track")
         
-        # Parse first track (person)
         annotations = parse_video_track(tracks[0], image_width=1920, image_height=1080)
         
-        assert len(annotations) == 5  # 5 frames
+        assert len(annotations) == 5
         
-        # Verify first annotation
         first_ann = annotations[0]
         assert first_ann.track_id == 0
         assert first_ann.frame_number == 0
         assert first_ann.left == 100
         assert first_ann.top == 150
-        assert first_ann.width == 50  # xbr - xtl = 150 - 100
-        assert first_ann.height == 120  # ybr - ytl = 270 - 150
+        assert first_ann.width == 50
+        assert first_ann.height == 120
         assert "person" in first_ann.categories
 
     def test_parse_track_with_occlusion(self, sample_cvat_video_xml):
-        """Test parsing track with occluded frames."""
         tree = etree.parse(str(sample_cvat_video_xml))
         tracks = tree.findall(".//track")
         
-        # Parse first track (person) - frame 2 is occluded
         annotations = parse_video_track(tracks[0], image_width=1920, image_height=1080)
         
-        # Frame 2 (index 2) should have visibility 0.5 (occluded, not outside)
         frame_2_ann = [a for a in annotations if a.frame_number == 2][0]
         assert frame_2_ann.visibility == 0.5
         assert not frame_2_ann.meta.get("outside")
 
     def test_parse_track_with_outside(self, sample_cvat_video_xml):
-        """Test that outside frames are preserved with visibility 0.0."""
         tree = etree.parse(str(sample_cvat_video_xml))
         tracks = tree.findall(".//track")
         
-        # Parse second track (car) - frame 3 has outside=1
         annotations = parse_video_track(tracks[1], image_width=1920, image_height=1080)
         
-        # Should still have 5 annotations (outside frames are kept)
         assert len(annotations) == 5
         
-        # Frame 3 should be outside
         frame_3_ann = [a for a in annotations if a.frame_number == 3][0]
         assert frame_3_ann.visibility == 0.0
         assert frame_3_ann.meta.get("outside")
         
-        # Other frames should not be outside
         for ann in annotations:
             if ann.frame_number != 3:
                 assert not ann.meta.get("outside")
                 assert ann.visibility > 0.0
 
     def test_parse_track_keyframe_metadata(self, sample_cvat_video_xml):
-        """Test that keyframe info is preserved in metadata."""
         tree = etree.parse(str(sample_cvat_video_xml))
         tracks = tree.findall(".//track")
         
@@ -85,8 +69,6 @@ class TestCVATVideoTrackParsing:
 
 
 class TestCVATVideoOutsideRoundtrip:
-    """Tests for outside attribute round-trip preservation."""
-
     def test_outside_roundtrip(self):
         """Test that outside=1 survives import -> export -> import."""
         xml_str = b"""<?xml version="1.0" encoding="utf-8"?>
@@ -110,7 +92,6 @@ class TestCVATVideoOutsideRoundtrip:
          xtl="16" ytl="26" xbr="116" ybr="126" z_order="0"/>
   </track>
 </annotations>"""
-        # Import
         root = etree.fromstring(xml_str)
         track = root.findall(".//track")[0]
         annotations = parse_video_track(track, image_width=1920, image_height=1080)
@@ -121,7 +102,6 @@ class TestCVATVideoOutsideRoundtrip:
         assert annotations[1].visibility == 0.5  # occluded, not outside
         assert not annotations[1].meta["outside"]
         
-        # Export
         exported_track = export_video_track_to_xml(0, annotations)
         boxes = exported_track.findall("box")
         
@@ -133,7 +113,6 @@ class TestCVATVideoOutsideRoundtrip:
         assert boxes[2].attrib["occluded"] == "0"  # outside takes priority
         assert boxes[3].attrib["outside"] == "0"
         
-        # Re-import
         reimported = parse_video_track(exported_track, image_width=1920, image_height=1080)
         assert len(reimported) == 4
         for orig, re in zip(annotations, reimported):
@@ -143,13 +122,9 @@ class TestCVATVideoOutsideRoundtrip:
 
 
 class TestCVATVideoFileImport:
-    """Tests for importing full CVAT video XML files."""
-
     def test_load_from_xml_file(self, sample_cvat_video_xml):
-        """Test loading annotations from a CVAT video XML file."""
         annotations = load_cvat_from_xml_file(sample_cvat_video_xml)
         
-        # Should have annotations grouped by frame (video mode detected)
         assert len(annotations) > 0
         
         # Frame 0 should have 2 annotations (person and car tracks)
@@ -157,7 +132,6 @@ class TestCVATVideoFileImport:
         assert len(frame_0_anns) == 2
 
     def test_load_extracts_image_dimensions(self, sample_cvat_video_xml):
-        """Test that image dimensions are extracted from meta."""
         annotations = load_cvat_from_xml_file(sample_cvat_video_xml)
         
         # All annotations should have correct image dimensions
@@ -167,10 +141,8 @@ class TestCVATVideoFileImport:
                 assert ann.image_height == 1080
 
     def test_track_ids_consistent(self, sample_cvat_video_xml):
-        """Test that track IDs are consistent across frames."""
         annotations = load_cvat_from_xml_file(sample_cvat_video_xml)
         
-        # Collect all track IDs
         all_track_ids = set()
         for frame_anns in annotations.values():
             for ann in frame_anns:
@@ -181,10 +153,8 @@ class TestCVATVideoFileImport:
         assert all_track_ids == {0, 1}
 
     def test_categories_from_labels(self, sample_cvat_video_xml):
-        """Test that categories are extracted from track labels."""
         annotations = load_cvat_from_xml_file(sample_cvat_video_xml)
         
-        # Collect categories by track
         categories_by_track = {}
         for frame_anns in annotations.values():
             for ann in frame_anns:
@@ -196,7 +166,6 @@ class TestCVATVideoFileImport:
         assert categories_by_track[1] == "car"
 
     def test_coordinate_style_denormalized(self, sample_cvat_video_xml):
-        """Test that CVAT imports as denormalized coordinates."""
         annotations = load_cvat_from_xml_file(sample_cvat_video_xml)
         
         for frame_anns in annotations.values():

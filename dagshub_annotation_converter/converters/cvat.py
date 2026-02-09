@@ -102,45 +102,33 @@ def _maybe_group_poses(annotations: List[IRImageAnnotationBase]) -> List[IRImage
 
 
 def _detect_cvat_mode(root_elem: lxml.etree.ElementBase) -> str:
-    """
-    Detect CVAT annotation mode from XML structure.
-    
-    Returns:
-        "image" for image/annotation mode, "video" for video/interpolation mode
-    """
-    # Check for explicit mode in meta
+    """Detect CVAT annotation mode: returns ``"image"`` or ``"video"``."""
     mode_elem = root_elem.find(".//meta/task/mode")
     if mode_elem is not None and mode_elem.text:
         if mode_elem.text == "interpolation":
             return "video"
         elif mode_elem.text == "annotation":
             return "image"
-    
-    # Fallback: detect by presence of elements
+
     has_tracks = len(root_elem.findall(".//track")) > 0
     has_images = len(root_elem.findall(".//image")) > 0
-    
+
     if has_tracks and not has_images:
         return "video"
     elif has_images and not has_tracks:
         return "image"
     elif has_tracks and has_images:
-        # Both present - prefer video mode as it's more specific
         logger.warning("CVAT XML contains both <track> and <image> elements, treating as video mode")
         return "video"
     else:
-        # Neither present - assume image mode (empty annotation file)
         return "image"
 
 
 def _parse_image_mode(root_elem: lxml.etree.ElementBase) -> CVATImageAnnotations:
-    """Parse CVAT image mode annotations."""
     annotations: CVATImageAnnotations = {}
-    
     for image_node in root_elem.xpath("//image"):
         image_info = parse_image_tag(image_node)
         annotations[image_info.name] = parse_image_annotations(image_node)
-    
     return annotations
 
 
@@ -149,8 +137,6 @@ def _parse_video_mode(
     image_width: Optional[int],
     image_height: Optional[int],
 ) -> CVATVideoAnnotations:
-    """Parse CVAT video mode annotations."""
-    # Try to get dimensions from meta if not provided
     if image_width is None or image_height is None:
         meta_elem = root_elem.find("meta")
         if meta_elem is not None:
@@ -159,15 +145,14 @@ def _parse_video_mode(
                 image_width = meta_width
             if image_height is None:
                 image_height = meta_height
-    
-    # Warn and raise if dimensions still not available
+
     if image_width is None or image_height is None:
         missing = []
         if image_width is None:
             missing.append("image_width")
         if image_height is None:
             missing.append("image_height")
-        
+
         warnings.warn(
             f"CVAT video XML does not contain frame dimensions in metadata. "
             f"Missing: {', '.join(missing)}. "
@@ -179,18 +164,15 @@ def _parse_video_mode(
             f"The XML metadata does not contain 'original_size'. "
             f"Please provide {', '.join(missing)} parameter(s) explicitly."
         )
-    
-    # Parse all tracks
+
     all_annotations: Dict[int, List[IRVideoBBoxAnnotation]] = {}
-    
     for track_elem in root_elem.findall(".//track"):
         track_annotations = parse_video_track(track_elem, image_width, image_height)
-        
         for ann in track_annotations:
             if ann.frame_number not in all_annotations:
                 all_annotations[ann.frame_number] = []
             all_annotations[ann.frame_number].append(ann)
-    
+
     return all_annotations
 
 
@@ -199,24 +181,10 @@ def load_cvat_from_xml_string(
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
 ) -> CVATAnnotations:
-    """
-    Load CVAT annotations from XML string, auto-detecting image or video mode.
-    
-    Args:
-        xml_text: XML content as bytes
-        image_width: Frame width (required for video mode if not in XML metadata)
-        image_height: Frame height (required for video mode if not in XML metadata)
-        
-    Returns:
-        For image mode: Dict[str, Sequence[IRImageAnnotationBase]] - filename to annotations
-        For video mode: Dict[int, Sequence[IRVideoBBoxAnnotation]] - frame number to annotations
-        
-    Raises:
-        ValueError: If video mode is detected but frame dimensions cannot be determined
-    """
+    """Load CVAT annotations from XML string, auto-detecting image or video mode."""
     root_elem = lxml.etree.XML(xml_text)
     mode = _detect_cvat_mode(root_elem)
-    
+
     if mode == "video":
         return _parse_video_mode(root_elem, image_width, image_height)
     else:
@@ -228,18 +196,7 @@ def load_cvat_from_xml_file(
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
 ) -> CVATAnnotations:
-    """
-    Load CVAT annotations from XML file, auto-detecting image or video mode.
-    
-    Args:
-        xml_file: Path to CVAT XML file
-        image_width: Frame width (required for video mode if not in XML metadata)
-        image_height: Frame height (required for video mode if not in XML metadata)
-        
-    Returns:
-        For image mode: Dict[str, Sequence[IRImageAnnotationBase]] - filename to annotations
-        For video mode: Dict[int, Sequence[IRVideoBBoxAnnotation]] - frame number to annotations
-    """
+    """Load CVAT annotations from XML file, auto-detecting image or video mode."""
     with open(xml_file, "rb") as f:
         return load_cvat_from_xml_string(f.read(), image_width, image_height)
 
@@ -249,24 +206,10 @@ def load_cvat_from_zip(
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
 ) -> CVATAnnotations:
-    """
-    Load CVAT annotations from ZIP archive, auto-detecting image or video mode.
-    
-    Args:
-        zip_path: Path to CVAT ZIP archive
-        image_width: Frame width (required for video mode if not in XML metadata)
-        image_height: Frame height (required for video mode if not in XML metadata)
-        
-    Returns:
-        For image mode: Dict[str, Sequence[IRImageAnnotationBase]] - filename to annotations
-        For video mode: Dict[int, Sequence[IRVideoBBoxAnnotation]] - frame number to annotations
-    """
+    """Load CVAT annotations from ZIP archive, auto-detecting image or video mode."""
     with ZipFile(zip_path) as proj_zip:
         with proj_zip.open("annotations.xml") as f:
             return load_cvat_from_xml_string(f.read(), image_width, image_height)
-
-
-# ========== CVAT Video Export Functions ==========
 
 
 def export_cvat_video_to_xml_string(
@@ -276,19 +219,6 @@ def export_cvat_video_to_xml_string(
     image_height: Optional[int] = None,
     seq_length: Optional[int] = None,
 ) -> bytes:
-    """
-    Export video annotations to CVAT video XML format.
-    
-    Args:
-        annotations: List of video bbox annotations
-        video_name: Name of the video file
-        image_width: Frame width (inferred from annotations if not provided)
-        image_height: Frame height (inferred from annotations if not provided)
-        seq_length: Total number of frames (inferred from annotations if not provided)
-        
-    Returns:
-        XML content as bytes
-    """
     return cvat_video_xml_to_string(annotations, video_name, image_width, image_height, seq_length)
 
 
@@ -300,30 +230,16 @@ def export_cvat_video_to_file(
     image_height: Optional[int] = None,
     seq_length: Optional[int] = None,
 ) -> Path:
-    """
-    Export video annotations to a CVAT video XML file.
-    
-    Args:
-        annotations: List of video bbox annotations
-        output_path: Path to output XML file
-        video_name: Name of the video file
-        image_width: Frame width (inferred from annotations if not provided)
-        image_height: Frame height (inferred from annotations if not provided)
-        seq_length: Total number of frames (inferred from annotations if not provided)
-        
-    Returns:
-        Path to the written file
-    """
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     xml_content = export_cvat_video_to_xml_string(
         annotations, video_name, image_width, image_height, seq_length
     )
-    
+
     with open(output_path, "wb") as f:
         f.write(xml_content)
-    
+
     logger.info(f"Exported {len(annotations)} CVAT video annotations to {output_path}")
     return output_path
 
@@ -336,32 +252,16 @@ def export_cvat_video_to_zip(
     image_height: Optional[int] = None,
     seq_length: Optional[int] = None,
 ) -> Path:
-    """
-    Export video annotations to a CVAT-compatible ZIP archive.
-    
-    The ZIP archive will contain:
-    - annotations.xml: CVAT video format XML
-    
-    Args:
-        annotations: List of video bbox annotations
-        output_path: Path to output ZIP file
-        video_name: Name of the video file
-        image_width: Frame width (inferred from annotations if not provided)
-        image_height: Frame height (inferred from annotations if not provided)
-        seq_length: Total number of frames (inferred from annotations if not provided)
-        
-    Returns:
-        Path to the written ZIP file
-    """
+    """Export video annotations to a CVAT-compatible ZIP containing ``annotations.xml``."""
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     xml_content = export_cvat_video_to_xml_string(
         annotations, video_name, image_width, image_height, seq_length
     )
-    
+
     with ZipFile(output_path, "w") as z:
         z.writestr("annotations.xml", xml_content)
-    
+
     logger.info(f"Exported CVAT video annotations to {output_path}")
     return output_path

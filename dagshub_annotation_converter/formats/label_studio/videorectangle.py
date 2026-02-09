@@ -1,5 +1,3 @@
-"""Label Studio VideoRectangle format for video object tracking."""
-
 import hashlib
 import uuid
 from typing import List, Optional, Dict, Any, Sequence
@@ -14,96 +12,51 @@ from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 
 class VideoRectangleSequenceItem(ParentModel):
-    """A single frame in a VideoRectangle sequence."""
-    
     frame: int
     """Frame number (1-based)."""
-    
     x: float
     """X coordinate as percentage (0-100)."""
-    
     y: float
     """Y coordinate as percentage (0-100)."""
-    
     width: float
     """Width as percentage (0-100)."""
-    
     height: float
     """Height as percentage (0-100)."""
-    
     enabled: bool = True
-    """Whether the frame is active."""
-    
     time: Optional[float] = None
-    """Timestamp in seconds."""
-    
     rotation: float = 0.0
-    """Rotation in degrees."""
 
 
 class VideoRectangleValue(ParentModel):
-    """Value object for VideoRectangle annotation."""
-    
     sequence: List[VideoRectangleSequenceItem]
-    """List of keyframes defining the track."""
-    
     labels: List[str]
-    """Object class labels."""
-    
     framesCount: Optional[int] = None
-    """Total number of frames in the video."""
-    
     duration: Optional[float] = None
-    """Duration of the video in seconds."""
 
 
 class VideoRectangleAnnotation(AnnotationResultABC):
     """
     Label Studio VideoRectangle annotation for video object tracking.
-    
+
     Each VideoRectangle represents a single tracked object across multiple frames.
     Coordinates are stored as percentages (0-100).
     """
-    
+
     id: str = Field(default_factory=lambda: f"track_{uuid.uuid4().hex[:8]}")
-    """Unique track identifier."""
-    
     type: str = "videorectangle"
-    """Annotation type (always 'videorectangle')."""
-    
     value: VideoRectangleValue
-    """Annotation value containing sequence and labels."""
-    
     original_width: int
-    """Video frame width in pixels."""
-    
     original_height: int
-    """Video frame height in pixels."""
-    
     from_name: str = "box"
-    """Name of the control tag."""
-    
     to_name: str = "video"
-    """Name of the video element."""
-    
     origin: str = "manual"
-    """Annotation origin."""
-    
     meta: Optional[Dict[str, Any]] = None
-    """Additional metadata."""
 
     def to_ir_annotation(self) -> Sequence[IRAnnotationBase]:
-        """
-        ABC implementation - delegates to to_ir_annotations().
-        """
         return self.to_ir_annotations()
 
     @staticmethod
     def from_ir_annotation(ir_annotation: IRImageAnnotationBase) -> Sequence["VideoRectangleAnnotation"]:
-        """
-        ABC implementation - not directly applicable for video annotations.
-        Use from_ir_annotations() with a list of video annotations instead.
-        """
         raise NotImplementedError(
             "VideoRectangleAnnotation requires multiple IR annotations per track. "
             "Use from_ir_annotations() instead."
@@ -111,30 +64,23 @@ class VideoRectangleAnnotation(AnnotationResultABC):
 
     def to_ir_annotations(self) -> List[IRVideoBBoxAnnotation]:
         """
-        Convert VideoRectangle to a list of IR video annotations.
-        
-        Each sequence item becomes a separate IRVideoBBoxAnnotation.
-        Label Studio uses 1-based frame numbering, so we convert to 0-based for IR.
-        
-        Returns:
-            List of IRVideoBBoxAnnotation, one per frame in the sequence
+        Convert VideoRectangle to IR video annotations.
+
+        Label Studio uses 1-based frame numbering, IR uses 0-based.
         """
-        # Try to extract original track_id from meta, otherwise derive from id
         if self.meta and "original_track_id" in self.meta:
             track_id = self.meta["original_track_id"]
         else:
             # Deterministic track_id from id (hash() is randomized per PYTHONHASHSEED)
             track_id = int(hashlib.md5(self.id.encode("utf-8")).hexdigest()[:8], 16) % (2**31)
-        
+
         label = self.value.labels[0] if self.value.labels else "object"
-        
+
         annotations = []
         for seq_item in self.value.sequence:
-            # Convert percentage (0-100) to normalized (0-1)
-            # Label Studio uses 1-based frames, IR uses 0-based
             ann = IRVideoBBoxAnnotation(
                 track_id=track_id,
-                frame_number=seq_item.frame - 1,  # Convert 1-based to 0-based
+                frame_number=seq_item.frame - 1,
                 left=seq_item.x / 100.0,
                 top=seq_item.y / 100.0,
                 width=seq_item.width / 100.0,
@@ -150,49 +96,29 @@ class VideoRectangleAnnotation(AnnotationResultABC):
             )
             ann.imported_id = self.id
             annotations.append(ann)
-        
+
         return annotations
 
     @staticmethod
     def from_ir_annotations(ir_annotations: List[IRVideoBBoxAnnotation]) -> "VideoRectangleAnnotation":
-        """
-        Create a VideoRectangleAnnotation from a list of IR video annotations.
-        
-        All annotations should belong to the same track (same track_id).
-        
-        Args:
-            ir_annotations: List of video bbox annotations for a single track
-            
-        Returns:
-            VideoRectangleAnnotation combining all frames
-        """
+        """Create a VideoRectangleAnnotation from IR video annotations for a single track."""
         if not ir_annotations:
             raise ValueError("Cannot create VideoRectangleAnnotation from empty list")
-        
-        # Use first annotation for common fields
+
         first = ir_annotations[0]
-        
-        # Get track ID for the annotation ID
         track_id = first.track_id
-        ls_id = first.meta.get("ls_id", f"track_{track_id}")
-        
-        # Get label
+        ls_id = first.meta.get("ls_id", f"track_{track_id}") if first.meta else f"track_{track_id}"
         label = first.ensure_has_one_category()
-        
-        # Sort by frame number
+
         sorted_anns = sorted(ir_annotations, key=lambda a: a.frame_number)
-        
-        # Build sequence
+
         sequence = []
         for ann in sorted_anns:
-            # Normalize if needed
             if ann.coordinate_style == CoordinateStyle.DENORMALIZED:
                 ann = ann.normalized()
-            
-            # Convert normalized (0-1) to percentage (0-100)
-            # IR uses 0-based frames, Label Studio uses 1-based
+
             seq_item = VideoRectangleSequenceItem(
-                frame=ann.frame_number + 1,  # Convert 0-based to 1-based
+                frame=ann.frame_number + 1,
                 x=ann.left * 100.0,
                 y=ann.top * 100.0,
                 width=ann.width * 100.0,
@@ -202,8 +128,7 @@ class VideoRectangleAnnotation(AnnotationResultABC):
                 time=ann.timestamp,
             )
             sequence.append(seq_item)
-        
-        # Store original track_id in meta for roundtrip preservation
+
         return VideoRectangleAnnotation(
             id=ls_id,
             original_width=first.image_width,
