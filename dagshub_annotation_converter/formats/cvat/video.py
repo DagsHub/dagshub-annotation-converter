@@ -39,11 +39,6 @@ def parse_video_track(
         xbr = float(box_elem.attrib["xbr"])
         ybr = float(box_elem.attrib["ybr"])
 
-        left = xtl
-        top = ytl
-        width = xbr - xtl
-        height = ybr - ytl
-
         # Visibility: 0.0 for outside (track terminated), 0.5 for occluded, 1.0 otherwise
         if outside == 1:
             visibility = 0.0
@@ -61,10 +56,10 @@ def parse_video_track(
         ann = IRVideoBBoxAnnotation(
             track_id=track_id,
             frame_number=frame_number,
-            left=left,
-            top=top,
-            width=width,
-            height=height,
+            left=xtl,
+            top=ytl,
+            width=xbr - xtl,
+            height=ybr - ytl,
             image_width=image_width,
             image_height=image_height,
             categories={label: 1.0},

@@ -1,5 +1,4 @@
 import logging
-import warnings
 from collections import defaultdict
 from os import PathLike
 from pathlib import Path
@@ -152,17 +151,10 @@ def _parse_video_mode(
             missing.append("image_width")
         if image_height is None:
             missing.append("image_height")
-
-        warnings.warn(
-            f"CVAT video XML does not contain frame dimensions in metadata. "
-            f"Missing: {', '.join(missing)}. "
-            f"Please provide {', '.join(missing)} explicitly.",
-            UserWarning,
-        )
         raise ValueError(
             f"Cannot determine frame dimensions for CVAT video annotations. "
-            f"The XML metadata does not contain 'original_size'. "
-            f"Please provide {', '.join(missing)} parameter(s) explicitly."
+            f"Missing: {', '.join(missing)}. "
+            f"Provide {', '.join(missing)} explicitly."
         )
 
     all_annotations: Dict[int, List[IRVideoBBoxAnnotation]] = {}

@@ -5,6 +5,7 @@ from zipfile import ZipFile
 
 from dagshub_annotation_converter.formats.mot import MOTContext, import_bbox_from_line, export_bbox_to_line
 from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation
+from dagshub_annotation_converter.util.video import find_video_sibling, get_video_dimensions
 
 logger = logging.getLogger(__name__)
 
@@ -47,10 +48,68 @@ def load_mot_from_file(
     return annotations
 
 
+def _try_fill_dimensions_from_video(
+    context: MOTContext,
+    source_path: Path,
+    video_file: Optional[Union[str, Path]],
+) -> None:
+    """Try to fill missing context dimensions from a video file.
+
+    Looks for a video at *video_file* (if given), then falls back to a
+    sibling of *source_path* with the same stem and a common video extension.
+    """
+    if context.image_width is not None and context.image_height is not None:
+        return
+
+    candidates: List[Path] = []
+    if video_file is not None:
+        vf = Path(video_file)
+        if vf.is_file():
+            candidates.append(vf)
+        else:
+            sibling = source_path.parent / vf.name if not vf.is_absolute() else vf
+            if sibling.is_file():
+                candidates.append(sibling)
+
+    sibling = find_video_sibling(source_path)
+    if sibling is not None:
+        candidates.append(sibling)
+
+    for candidate in candidates:
+        try:
+            width, height, fps = get_video_dimensions(candidate)
+            if context.image_width is None:
+                context.image_width = width
+            if context.image_height is None:
+                context.image_height = height
+            if context.frame_rate == 30.0 and fps > 0:
+                context.frame_rate = fps
+            logger.info(f"Inferred dimensions {width}x{height} from {candidate}")
+            return
+        except (ImportError, ValueError) as e:
+            logger.debug(f"Could not read video {candidate}: {e}")
+
+
+def _validate_context_dimensions(context: MOTContext, source: str) -> None:
+    if context.image_width is None or context.image_height is None:
+        missing = []
+        if context.image_width is None:
+            missing.append("image_width")
+        if context.image_height is None:
+            missing.append("image_height")
+        raise ValueError(
+            f"MOT annotations from {source} require frame dimensions, but "
+            f"{', '.join(missing)} could not be determined. "
+            f"Provide {', '.join(missing)} explicitly, or place a video file "
+            f"with the same name next to the annotation source."
+        )
+
+
 def load_mot_from_dir(
     mot_dir: Union[str, Path],
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
+    video_file: Optional[Union[str, Path]] = None,
 ) -> Tuple[Dict[int, Sequence[IRVideoBBoxAnnotation]], MOTContext]:
     """
     Load MOT annotations from a directory structure.
@@ -62,6 +121,10 @@ def load_mot_from_dir(
             gt.txt
             labels.txt (optional)
           seqinfo.ini (optional)
+
+    If dimensions are missing from seqinfo.ini and not provided explicitly,
+    falls back to probing *video_file* (if given) or a video with the same
+    name as *mot_dir* located next to it.
     """
     mot_dir = Path(mot_dir)
     gt_dir = mot_dir / "gt"
@@ -86,6 +149,8 @@ def load_mot_from_dir(
     if not gt_path.exists():
         raise FileNotFoundError(f"Could not find gt.txt in {gt_dir}")
 
+    _try_fill_dimensions_from_video(context, mot_dir, video_file)
+    _validate_context_dimensions(context, str(mot_dir))
     annotations = load_mot_from_file(gt_path, context)
     return annotations, context
 
@@ -107,6 +172,7 @@ def load_mot_from_zip(
     zip_path: Union[str, Path],
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
+    video_file: Optional[Union[str, Path]] = None,
 ) -> Tuple[Dict[int, Sequence[IRVideoBBoxAnnotation]], MOTContext]:
     """
     Load MOT annotations from a ZIP archive (no extraction, avoids Zip Slip).
@@ -119,6 +185,10 @@ def load_mot_from_zip(
         seqinfo.ini (optional)
 
     Or nested: ``seqname/gt/gt.txt``, ``seqname/seqinfo.ini``, etc.
+
+    If dimensions are missing and not provided explicitly, falls back to
+    probing *video_file* (if given) or a video with the same stem as the
+    zip located in the same directory.
     """
     zip_path = Path(zip_path)
     with ZipFile(zip_path) as z:
@@ -145,6 +215,9 @@ def load_mot_from_zip(
         if labels_key in z.namelist() and _is_safe_zip_path(labels_key):
             with z.open(labels_key) as f:
                 context.categories = MOTContext.load_labels_from_string(f.read().decode("utf-8"))
+
+        _try_fill_dimensions_from_video(context, zip_path, video_file)
+        _validate_context_dimensions(context, str(zip_path))
 
         with z.open(gt_key) as f:
             gt_content = f.read().decode("utf-8")

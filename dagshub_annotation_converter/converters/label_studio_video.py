@@ -81,8 +81,5 @@ def video_ir_to_ls_video_json(
 
 def ls_video_json_to_video_ir(json_str: str) -> List[IRVideoBBoxAnnotation]:
     """Convert Label Studio Video JSON to Video IR annotations."""
-    from dagshub_annotation_converter.formats.label_studio.task import task_lookup
-    task_lookup["videorectangle"] = VideoRectangleAnnotation
-
     task = LabelStudioTask.model_validate_json(json_str)
     return ls_video_task_to_video_ir(task)
