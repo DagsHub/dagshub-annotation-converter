@@ -41,7 +41,7 @@ def _consume_annotation_id(
     return assigned_id, next_annotation_id + 1
 
 
-def _load_coco_dict(coco: Dict[str, Any]) -> Tuple[Dict[str, Sequence[IRImageAnnotationBase]], CocoContext]:
+def _load_coco_dict(coco: Dict[str, Any]) -> Tuple[Dict[str, List[IRImageAnnotationBase]], CocoContext]:
     context = CocoContext()
     for category in coco.get("categories", []):
         context.categories[int(category["id"])] = str(category["name"])
@@ -74,13 +74,13 @@ def _load_coco_dict(coco: Dict[str, Any]) -> Tuple[Dict[str, Sequence[IRImageAnn
     return grouped, context
 
 
-def load_coco_from_file(path: Union[str, Path]) -> Tuple[Dict[str, Sequence[IRImageAnnotationBase]], CocoContext]:
+def load_coco_from_file(path: Union[str, Path]) -> Tuple[Dict[str, List[IRImageAnnotationBase]], CocoContext]:
     with open(path, "r") as f:
         coco = json.load(f)
     return _load_coco_dict(coco)
 
 
-def load_coco_from_json_string(json_str: str) -> Tuple[Dict[str, Sequence[IRImageAnnotationBase]], CocoContext]:
+def load_coco_from_json_string(json_str: str) -> Tuple[Dict[str, List[IRImageAnnotationBase]], CocoContext]:
     return _load_coco_dict(json.loads(json_str))
 
 
