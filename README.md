@@ -17,7 +17,7 @@ pip install dagshub-annotation-converter
 
 ## Importers (Image):
 - YOLO [BBox](https://docs.ultralytics.com/datasets/detect/), [Segmentation](https://docs.ultralytics.com/datasets/segment/) and [Poses](https://docs.ultralytics.com/datasets/pose/): [`load_yolo_from_fs`](dagshub_annotation_converter/converters/yolo.py)
-- [COCO BBox + Segmentation](dagshub_annotation_converter/converters/coco.py)
+- COCO [BBox Object Detection and Stuff Segmentation](https://cocodataset.org/#format-data): [`load_coco_from_file`](dagshub_annotation_converter/converters/coco.py)
 - [Label Studio](https://labelstud.io/guide/task_format): [`parse_ls_task`](dagshub_annotation_converter/formats/label_studio/task.py) (Only reading JSON tasks from the filesystem is implemented, importing from a project is left up to user):
 ```python
 from dagshub_annotation_converter.formats.label_studio.task import LabelStudioTask
@@ -29,7 +29,7 @@ annotations = task_obj.to_ir_annotations()
 
 ## Exporters (Image):
 - YOLO [BBox](https://docs.ultralytics.com/datasets/detect/), [Segmentation](https://docs.ultralytics.com/datasets/segment/) and [Poses](https://docs.ultralytics.com/datasets/pose/): [`export_to_fs`](dagshub_annotation_converter/converters/yolo.py)
-- [COCO BBox + Segmentation](dagshub_annotation_converter/converters/coco.py)
+- COCO [BBox Object Detection and Stuff Segmentation](https://cocodataset.org/#format-data): [`export_to_coco_file`](dagshub_annotation_converter/converters/coco.py)
 - [Label Studio](https://labelstud.io/guide/task_format): [`task.model_dump_json()`](dagshub_annotation_converter/formats/label_studio/task.py) (Again, only to JSON files, uploading the task to the project is left to the user)
 
 ## Experimental Features:
