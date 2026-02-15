@@ -1,7 +1,7 @@
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, Set
 
 from dagshub_annotation_converter.converters.common import group_annotations_by_filename
 from dagshub_annotation_converter.formats.coco import (
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 def _consume_annotation_id(
     imported_id: Optional[str],
-    used_ids: set,
+    used_ids: Set[int],
     next_annotation_id: int,
 ) -> Tuple[int, int]:
     if imported_id is not None:
@@ -94,7 +94,7 @@ def _build_coco_dict(
     images: List[Dict[str, Any]] = []
     coco_annotations: List[Dict[str, Any]] = []
     annotation_id = 1
-    used_annotation_ids = set()
+    used_annotation_ids: Set[int] = set()
 
     for image_id, (filename, anns) in enumerate(grouped.items(), start=1):
         first = anns[0]
