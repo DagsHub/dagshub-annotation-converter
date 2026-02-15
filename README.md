@@ -25,7 +25,7 @@ task_obj = LabelStudioTask.from_json("path/to/label_studio_task.json")
 
 annotations = task_obj.to_ir_annotations()
 ```
-- [CVAT Image](dagshub_annotation_converter/converters/cvat.py#L46)
+- [CVAT for image (BBox, Segmentation, Poses)](https://docs.cvat.ai/docs/dataset_management/formats/format-cvat/): [`load_cvat_from_zip`](dagshub_annotation_converter/converters/cvat.py)
 
 ## Exporters (Image):
 - YOLO [BBox](https://docs.ultralytics.com/datasets/detect/), [Segmentation](https://docs.ultralytics.com/datasets/segment/) and [Poses](https://docs.ultralytics.com/datasets/pose/): [`export_to_fs`](dagshub_annotation_converter/converters/yolo.py)
