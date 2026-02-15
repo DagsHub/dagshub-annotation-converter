@@ -16,7 +16,7 @@ pip install dagshub-annotation-converter
 ```
 
 ## Importers (Image):
-- [YOLO BBox, Segmentation, Poses](dagshub_annotation_converter/converters/yolo.py#L81)
+- YOLO [BBox](https://docs.ultralytics.com/datasets/detect/), [Segmentation](https://docs.ultralytics.com/datasets/segment/) and [Poses](https://docs.ultralytics.com/datasets/pose/): [`load_yolo_from_fs`](dagshub_annotation_converter/converters/yolo.py)
 - [COCO BBox + Segmentation](dagshub_annotation_converter/converters/coco.py)
 - [Label Studio](dagshub_annotation_converter/formats/label_studio/task.py#L72) (Only task schema implemented, importing from a project is left up to user):
 ```python
@@ -28,7 +28,7 @@ annotations = task_obj.to_ir_annotations()
 - [CVAT Image](dagshub_annotation_converter/converters/cvat.py#L46)
 
 ## Exporters (Image):
-- [YOLO BBox, Segmentation, Poses](dagshub_annotation_converter/converters/yolo.py#L126)
+- YOLO [BBox](https://docs.ultralytics.com/datasets/detect/), [Segmentation](https://docs.ultralytics.com/datasets/segment/) and [Poses](https://docs.ultralytics.com/datasets/pose/): [`export_to_fs`](dagshub_annotation_converter/converters/yolo.py)
 - [COCO BBox + Segmentation](dagshub_annotation_converter/converters/coco.py)
 - [Label Studio](dagshub_annotation_converter/formats/label_studio/task.py#L225) (Again, only task schema, uploading the task to the project is left to the user)
 
