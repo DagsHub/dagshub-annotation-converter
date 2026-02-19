@@ -2,11 +2,12 @@ from pathlib import Path
 import tempfile
 import math
 import configparser
+from zipfile import ZipFile
 import pytest
 
 from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
 from dagshub_annotation_converter.formats.mot.bbox import export_bbox_to_line
-from dagshub_annotation_converter.converters.mot import export_to_mot, export_mot_to_dir
+from dagshub_annotation_converter.converters.mot import export_to_mot, export_mot_to_dir, export_mot_sequences_to_dirs
 from dagshub_annotation_converter.formats.mot.context import MOTContext
 
 
@@ -242,3 +243,83 @@ class TestMOTFileExport:
         output_path = tmp_path / "gt.txt"
         with pytest.raises(ValueError, match="Cannot determine frame dimensions for MOT export"):
             export_to_mot(annotations, context, output_path)
+
+    def test_export_sequences_to_dirs_groups_by_filename(self, tmp_path):
+        context = MOTContext(frame_rate=30.0, image_width=1920, image_height=1080, seq_name="default")
+        context.categories = {1: "person"}
+        ann_a = IRVideoBBoxAnnotation(
+            track_id=1,
+            frame_number=0,
+            left=100,
+            top=150,
+            width=50,
+            height=120,
+            image_width=1920,
+            image_height=1080,
+            categories={"person": 1.0},
+            coordinate_style=CoordinateStyle.DENORMALIZED,
+            filename="earth-space-small.mp4",
+        )
+        ann_b = IRVideoBBoxAnnotation(
+            track_id=2,
+            frame_number=0,
+            left=500,
+            top=200,
+            width=150,
+            height=100,
+            image_width=1920,
+            image_height=1080,
+            categories={"person": 1.0},
+            coordinate_style=CoordinateStyle.DENORMALIZED,
+            filename="jelly.mp4",
+        )
+
+        outputs = export_mot_sequences_to_dirs([ann_a, ann_b], context, tmp_path)
+        assert set(outputs.keys()) == {"earth-space-small.mp4", "jelly.mp4"}
+        assert (tmp_path / "earth-space-small.mp4.zip").exists()
+        assert (tmp_path / "jelly.mp4.zip").exists()
+        with ZipFile(tmp_path / "earth-space-small.mp4.zip") as z:
+            assert "gt/gt.txt" in z.namelist()
+            assert "gt/labels.txt" in z.namelist()
+            assert "seqinfo.ini" in z.namelist()
+        with ZipFile(tmp_path / "jelly.mp4.zip") as z:
+            assert "gt/gt.txt" in z.namelist()
+            assert "gt/labels.txt" in z.namelist()
+            assert "seqinfo.ini" in z.namelist()
+
+    def test_export_sequences_to_dirs_accepts_stem_video_file_keys(self, tmp_path, monkeypatch):
+        context = MOTContext(frame_rate=30.0, image_width=None, image_height=None, seq_name="default")
+        context.categories = {1: "person"}
+        ann = IRVideoBBoxAnnotation(
+            track_id=1,
+            frame_number=0,
+            left=100,
+            top=150,
+            width=50,
+            height=120,
+            image_width=None,
+            image_height=None,
+            categories={"person": 1.0},
+            coordinate_style=CoordinateStyle.DENORMALIZED,
+            filename="earth-space-small.mp4",
+        )
+
+        monkeypatch.setattr(
+            "dagshub_annotation_converter.converters.mot.get_video_dimensions",
+            lambda _: (1280, 720, 25.0),
+        )
+
+        outputs = export_mot_sequences_to_dirs(
+            [ann],
+            context,
+            tmp_path,
+            video_files={"earth-space-small": "local_video.mp4"},
+        )
+        assert "earth-space-small.mp4" in outputs
+        with ZipFile(tmp_path / "earth-space-small.mp4.zip") as z:
+            seqinfo_text = z.read("seqinfo.ini").decode("utf-8")
+        seqinfo = configparser.ConfigParser()
+        seqinfo.read_string(seqinfo_text)
+        seq = seqinfo["Sequence"]
+        assert seq["imWidth"] == "1280"
+        assert seq["imHeight"] == "720"

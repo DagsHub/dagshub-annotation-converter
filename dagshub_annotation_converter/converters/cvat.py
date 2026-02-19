@@ -233,6 +233,26 @@ def load_cvat_from_zip(
             return load_cvat_from_xml_string(f.read(), image_width, image_height)
 
 
+def load_cvat_from_fs(
+    import_dir: Union[str, PathLike],
+    image_width: Optional[int] = None,
+    image_height: Optional[int] = None,
+) -> Dict[str, CVATAnnotations]:
+    """Load CVAT annotations from all XML/ZIP files under a directory."""
+    import_dir = Path(import_dir)
+    results: Dict[str, CVATAnnotations] = {}
+
+    for xml_path in sorted(import_dir.rglob("*.xml")):
+        rel = str(xml_path.relative_to(import_dir))
+        results[rel] = load_cvat_from_xml_file(xml_path, image_width, image_height)
+
+    for zip_path in sorted(import_dir.rglob("*.zip")):
+        rel = str(zip_path.relative_to(import_dir))
+        results[rel] = load_cvat_from_zip(zip_path, image_width, image_height)
+
+    return results
+
+
 def export_cvat_video_to_xml_string(
     annotations: Sequence[IRVideoBBoxAnnotation],
     video_name: str = "video.mp4",
@@ -359,19 +379,35 @@ def export_cvat_videos_to_zips(
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
     seq_length: Optional[int] = None,
+    video_files: Optional[Dict[str, Union[str, PathLike]]] = None,
 ) -> List[Path]:
-    """
-    Export multiple videos to separate CVAT zip files.
+    """Export grouped video annotations to one CVAT zip per source video."""
+    def resolve_video_file(video_name: str) -> Optional[Union[str, PathLike]]:
+        if video_files is None:
+            return None
+        if video_name in video_files:
+            return video_files[video_name]
+        video_stem = Path(video_name).stem
+        if video_stem in video_files:
+            return video_files[video_stem]
+        video_basename = Path(video_name).name
+        if video_basename in video_files:
+            return video_files[video_basename]
+        for key, value in video_files.items():
+            key_path = Path(key)
+            if key_path.name == video_name or key_path.name == video_basename:
+                return value
+            if key_path.stem == video_stem:
+                return value
+        return None
 
-    Groups annotations by filename and writes one ``<video_stem>.zip`` per group.
-    """
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     grouped = _group_annotations_by_video_name(annotations, "video.mp4")
     outputs: List[Path] = []
     for video_name, group_annotations in sorted(grouped.items()):
-        zip_name = f"{Path(video_name).stem}.zip"
+        zip_name = f"{video_name}.zip"
         output_path = output_dir / zip_name
         export_cvat_video_to_zip(
             group_annotations,
@@ -380,6 +416,7 @@ def export_cvat_videos_to_zips(
             image_width=image_width,
             image_height=image_height,
             seq_length=seq_length,
+            video_file=resolve_video_file(video_name),
         )
         outputs.append(output_path)
     return outputs

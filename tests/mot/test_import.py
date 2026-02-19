@@ -2,6 +2,7 @@ import tempfile
 from pathlib import Path
 from zipfile import ZipFile
 import math
+import shutil
 
 from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
 from dagshub_annotation_converter.formats.mot.bbox import import_bbox_from_line
@@ -9,6 +10,7 @@ from dagshub_annotation_converter.converters.mot import (
     load_mot_from_file,
     load_mot_from_dir,
     load_mot_from_zip,
+    load_mot_from_fs,
 )
 
 
@@ -151,6 +153,14 @@ class TestMOTDirectoryImport:
         assert context.seq_name == "test_sequence"
         
         assert context.categories == {1: "person", 2: "car"}
+
+    def test_load_from_fs_multiple_sequences(self, sample_mot_dir, tmp_path):
+        shutil.copytree(sample_mot_dir, tmp_path / "seq_a")
+        shutil.copytree(sample_mot_dir, tmp_path / "seq_b")
+
+        loaded = load_mot_from_fs(tmp_path)
+        assert set(loaded.keys()) == {"seq_a", "seq_b"}
+        assert all(len(anns) > 0 for anns, _ in loaded.values())
 
 
 class TestMOTFrameNumberConversion:

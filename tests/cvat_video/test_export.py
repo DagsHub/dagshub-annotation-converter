@@ -102,11 +102,52 @@ class TestCVATVideoExport:
 
         outputs = export_cvat_videos_to_zips([ann_a, ann_b], tmp_path)
         out_names = sorted([p.name for p in outputs])
-        assert out_names == ["earth-space-small.zip", "jelly.zip"]
+        assert out_names == ["earth-space-small.mp4.zip", "jelly.mp4.zip"]
 
-        with ZipFile(tmp_path / "earth-space-small.zip") as z:
+        with ZipFile(tmp_path / "earth-space-small.mp4.zip") as z:
             xml = z.read("annotations.xml").decode("utf-8")
             assert "<source>earth-space-small.mp4</source>" in xml
-        with ZipFile(tmp_path / "jelly.zip") as z:
+        with ZipFile(tmp_path / "jelly.mp4.zip") as z:
             xml = z.read("annotations.xml").decode("utf-8")
+            assert "<source>jelly.mp4</source>" in xml
+
+    def test_multi_export_uses_video_files_for_missing_dimensions(self, tmp_path, monkeypatch):
+        ann_a = _make_annotation(image_width=0, image_height=0)
+        ann_a.track_id = 1
+        ann_a.filename = "earth-space-small.mp4"
+        ann_b = _make_annotation(image_width=0, image_height=0)
+        ann_b.track_id = 2
+        ann_b.filename = "jelly.mp4"
+
+        def fake_dimensions(path):
+            name = path.name
+            if name == "earth-space-small.mp4":
+                return 1920, 1080, 24.0
+            if name == "jelly.mp4":
+                return 640, 360, 25.0
+            raise AssertionError(f"Unexpected probe path: {path}")
+
+        monkeypatch.setattr("dagshub_annotation_converter.converters.cvat.get_video_dimensions", fake_dimensions)
+
+        outputs = export_cvat_videos_to_zips(
+            [ann_a, ann_b],
+            tmp_path,
+            video_files={
+                "earth-space-small": "/tmp/earth-space-small.mp4",
+                "assets/jelly.mp4": "/tmp/jelly.mp4",
+            },
+        )
+        out_names = sorted([p.name for p in outputs])
+        assert out_names == ["earth-space-small.mp4.zip", "jelly.mp4.zip"]
+
+        with ZipFile(tmp_path / "earth-space-small.mp4.zip") as z:
+            xml = z.read("annotations.xml").decode("utf-8")
+            assert "<width>1920</width>" in xml
+            assert "<height>1080</height>" in xml
+            assert "<source>earth-space-small.mp4</source>" in xml
+
+        with ZipFile(tmp_path / "jelly.mp4.zip") as z:
+            xml = z.read("annotations.xml").decode("utf-8")
+            assert "<width>640</width>" in xml
+            assert "<height>360</height>" in xml
             assert "<source>jelly.mp4</source>" in xml

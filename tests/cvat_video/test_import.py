@@ -1,11 +1,12 @@
 from lxml import etree
+import shutil
 
 from dagshub_annotation_converter.ir.video import CoordinateStyle
 from dagshub_annotation_converter.formats.cvat.video import (
     parse_video_track,
     export_video_track_to_xml,
 )
-from dagshub_annotation_converter.converters.cvat import load_cvat_from_xml_file
+from dagshub_annotation_converter.converters.cvat import load_cvat_from_xml_file, load_cvat_from_fs
 
 
 class TestCVATVideoTrackParsing:
@@ -171,3 +172,11 @@ class TestCVATVideoFileImport:
         for frame_anns in annotations.values():
             for ann in frame_anns:
                 assert ann.coordinate_style == CoordinateStyle.DENORMALIZED
+
+    def test_load_from_fs_multiple_files(self, sample_cvat_video_xml, tmp_path):
+        shutil.copy(sample_cvat_video_xml, tmp_path / "a.xml")
+        shutil.copy(sample_cvat_video_xml, tmp_path / "b.xml")
+
+        loaded = load_cvat_from_fs(tmp_path)
+        assert set(loaded.keys()) == {"a.xml", "b.xml"}
+        assert all(len(anns) > 0 for anns in loaded.values())

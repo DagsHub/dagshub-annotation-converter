@@ -1,5 +1,7 @@
 import logging
+from collections import defaultdict
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 from zipfile import ZipFile
 
@@ -226,6 +228,34 @@ def load_mot_from_zip(
     return annotations, context
 
 
+def load_mot_from_fs(
+    import_dir: Union[str, Path],
+    image_width: Optional[int] = None,
+    image_height: Optional[int] = None,
+    video_files: Optional[Dict[str, Union[str, Path]]] = None,
+) -> Dict[str, Tuple[Dict[int, Sequence[IRVideoBBoxAnnotation]], MOTContext]]:
+    """Load MOT annotations from all sequence directories/ZIPs under a directory."""
+    import_dir = Path(import_dir)
+    results: Dict[str, Tuple[Dict[int, Sequence[IRVideoBBoxAnnotation]], MOTContext]] = {}
+
+    seq_roots = {
+        gt_path.parent.parent
+        for gt_path in import_dir.rglob("gt.txt")
+        if gt_path.parent.name == "gt"
+    }
+    for seq_root in sorted(seq_roots):
+        key = str(seq_root.relative_to(import_dir))
+        video_file = video_files.get(key) if video_files is not None else None
+        results[key] = load_mot_from_dir(seq_root, image_width, image_height, video_file)
+
+    for zip_path in sorted(import_dir.rglob("*.zip")):
+        key = str(zip_path.relative_to(import_dir))
+        video_file = video_files.get(key) if video_files is not None else None
+        results[key] = load_mot_from_zip(zip_path, image_width, image_height, video_file)
+
+    return results
+
+
 def export_to_mot(
     annotations: List[IRVideoBBoxAnnotation],
     context: MOTContext,
@@ -305,3 +335,68 @@ def export_mot_to_dir(
 
     logger.info(f"Exported MOT sequence to {output_dir}")
     return output_dir
+
+
+def export_mot_to_zip(
+    annotations: List[IRVideoBBoxAnnotation],
+    context: MOTContext,
+    output_path: Union[str, Path],
+    video_file: Optional[Union[str, Path]] = None,
+) -> Path:
+    """Export annotations to a MOT zip with gt/gt.txt, gt/labels.txt, seqinfo.ini."""
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with TemporaryDirectory() as tmp:
+        tmp_dir = Path(tmp) / "sequence"
+        export_mot_to_dir(annotations, context, tmp_dir, video_file=video_file)
+        with ZipFile(output_path, "w") as z:
+            for file_path in sorted(tmp_dir.rglob("*")):
+                if file_path.is_file():
+                    z.write(file_path, arcname=str(file_path.relative_to(tmp_dir)))
+
+    logger.info(f"Exported MOT sequence zip to {output_path}")
+    return output_path
+
+
+def export_mot_sequences_to_dirs(
+    annotations: List[IRVideoBBoxAnnotation],
+    context: MOTContext,
+    output_dir: Union[str, Path],
+    video_files: Optional[Dict[str, Union[str, Path]]] = None,
+) -> Dict[str, Path]:
+    """Export multiple MOT sequences to one zip per source filename."""
+    def resolve_video_file(sequence_name: str) -> Optional[Union[str, Path]]:
+        if video_files is None:
+            return None
+        if sequence_name in video_files:
+            return video_files[sequence_name]
+        sequence_stem = Path(sequence_name).stem
+        if sequence_stem in video_files:
+            return video_files[sequence_stem]
+        sequence_basename = Path(sequence_name).name
+        if sequence_basename in video_files:
+            return video_files[sequence_basename]
+        return None
+
+    grouped: Dict[str, List[IRVideoBBoxAnnotation]] = defaultdict(list)
+    for ann in annotations:
+        if ann.filename:
+            sequence_name = Path(ann.filename).name
+        else:
+            sequence_name = context.seq_name or "sequence"
+        grouped[sequence_name].append(ann)
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    outputs: Dict[str, Path] = {}
+    for sequence_name, seq_annotations in sorted(grouped.items()):
+        seq_context = context.model_copy(deep=True)
+        seq_context.seq_name = sequence_name
+        outputs[sequence_name] = export_mot_to_zip(
+            seq_annotations,
+            seq_context,
+            output_dir / f"{sequence_name}.zip",
+            video_file=resolve_video_file(sequence_name),
+        )
+    return outputs
