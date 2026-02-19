@@ -45,8 +45,8 @@ class VideoRectangleAnnotation(AnnotationResultABC):
     id: str = Field(default_factory=lambda: f"track_{uuid.uuid4().hex[:8]}")
     type: str = "videorectangle"
     value: VideoRectangleValue
-    original_width: int
-    original_height: int
+    original_width: Optional[int] = None
+    original_height: Optional[int] = None
     from_name: str = "box"
     to_name: str = "video"
     origin: str = "manual"

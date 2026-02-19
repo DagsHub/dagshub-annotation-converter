@@ -1,10 +1,13 @@
 from pathlib import Path
 import tempfile
 import math
+import configparser
+import pytest
 
 from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
 from dagshub_annotation_converter.formats.mot.bbox import export_bbox_to_line
-from dagshub_annotation_converter.converters.mot import export_to_mot
+from dagshub_annotation_converter.converters.mot import export_to_mot, export_mot_to_dir
+from dagshub_annotation_converter.formats.mot.context import MOTContext
 
 
 class TestMOTLineExport:
@@ -184,3 +187,58 @@ class TestMOTFileExport:
                 
         finally:
             output_path.unlink()
+
+    def test_export_to_dir_uses_probed_dimensions_for_seqinfo(self, tmp_path, monkeypatch):
+        context = MOTContext(frame_rate=30.0, image_width=None, image_height=None, seq_name="test_sequence")
+        context.categories = {1: "person"}
+        annotations = [
+            IRVideoBBoxAnnotation(
+                track_id=1,
+                frame_number=0,
+                left=100,
+                top=150,
+                width=50,
+                height=120,
+                image_width=0,
+                image_height=0,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.DENORMALIZED,
+            )
+        ]
+
+        monkeypatch.setattr(
+            "dagshub_annotation_converter.converters.mot.get_video_dimensions",
+            lambda _: (1280, 720, 25.0),
+        )
+
+        out_dir = tmp_path / "mot_out"
+        export_mot_to_dir(annotations, context, out_dir, video_file="local_video.mp4")
+
+        seqinfo = configparser.ConfigParser()
+        seqinfo.read(out_dir / "seqinfo.ini")
+        seq = seqinfo["Sequence"]
+        assert seq["imWidth"] == "1280"
+        assert seq["imHeight"] == "720"
+        assert seq["frameRate"] == "25.0"
+
+    def test_export_raises_without_dimensions_or_video_file(self, tmp_path):
+        context = MOTContext(frame_rate=30.0, image_width=None, image_height=None)
+        context.categories = {1: "person"}
+        annotations = [
+            IRVideoBBoxAnnotation(
+                track_id=1,
+                frame_number=0,
+                left=100,
+                top=150,
+                width=50,
+                height=120,
+                image_width=0,
+                image_height=0,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.DENORMALIZED,
+            )
+        ]
+
+        output_path = tmp_path / "gt.txt"
+        with pytest.raises(ValueError, match="Cannot determine frame dimensions for MOT export"):
+            export_to_mot(annotations, context, output_path)

@@ -57,6 +57,15 @@ def export_bbox_to_line(ann: IRVideoBBoxAnnotation, context: MOTContext) -> str:
     MOT uses 1-based frame numbering; IR uses 0-based.
     """
     if ann.coordinate_style == CoordinateStyle.NORMALIZED:
+        if (
+            (ann.image_width is None and context.image_width is not None)
+            or (ann.image_height is None and context.image_height is not None)
+        ):
+            ann = ann.model_copy()
+            if ann.image_width is None and context.image_width is not None:
+                ann.image_width = context.image_width
+            if ann.image_height is None and context.image_height is not None:
+                ann.image_height = context.image_height
         ann = ann.denormalized()
 
     category_name = ann.ensure_has_one_category()

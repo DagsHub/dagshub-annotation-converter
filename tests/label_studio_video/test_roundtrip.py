@@ -2,6 +2,7 @@ import pytest
 from pathlib import Path
 import tempfile
 import math
+import copy
 
 from dagshub_annotation_converter.formats.mot import MOTContext
 from dagshub_annotation_converter.converters.mot import load_mot_from_file, export_to_mot
@@ -10,6 +11,7 @@ from dagshub_annotation_converter.converters.label_studio_video import (
     video_ir_to_ls_video_tasks,
     ls_video_task_to_video_ir,
 )
+from dagshub_annotation_converter.formats.label_studio.task import LabelStudioTask
 
 
 class TestMOTToLabelStudioRoundtrip:
@@ -248,3 +250,45 @@ class TestCrossFormatConversion:
             
         finally:
             output_path.unlink()
+
+
+class TestLabelStudioVideoLocalProbeFallback:
+    def test_task_to_ir_succeeds_without_dimensions_or_video_file(self, sample_ls_video_task_data):
+        task_data = copy.deepcopy(sample_ls_video_task_data)
+        for result in task_data["annotations"][0]["result"]:
+            result.pop("original_width", None)
+            result.pop("original_height", None)
+
+        task = LabelStudioTask.model_validate(task_data)
+        annotations = task.to_ir_annotations(filename="repo/remote/path/video.mp4")
+        assert len(annotations) == 10
+        assert all(ann.image_width is None for ann in annotations)
+        assert all(ann.image_height is None for ann in annotations)
+
+    def test_task_to_ir_uses_video_file_argument_for_probing(
+        self,
+        sample_ls_video_task_data,
+        tmp_path,
+        monkeypatch,
+    ):
+        task_data = copy.deepcopy(sample_ls_video_task_data)
+        for result in task_data["annotations"][0]["result"]:
+            result.pop("original_width", None)
+            result.pop("original_height", None)
+
+        local_video = tmp_path / "video.mp4"
+        local_video.write_text("stub")
+
+        monkeypatch.setattr(
+            "dagshub_annotation_converter.formats.label_studio.task.get_video_dimensions",
+            lambda _: (1920, 1080, 30.0),
+        )
+
+        task = LabelStudioTask.model_validate(task_data)
+        annotations = task.to_ir_annotations(
+            filename="repo/remote/path/video.mp4",
+            video_file=str(local_video),
+        )
+        assert len(annotations) == 10
+        assert all(ann.image_width == 1920 for ann in annotations)
+        assert all(ann.image_height == 1080 for ann in annotations)

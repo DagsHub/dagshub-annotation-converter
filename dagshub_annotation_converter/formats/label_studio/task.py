@@ -1,6 +1,7 @@
 import datetime
 import logging
 import random
+from pathlib import Path
 from typing import Any, Sequence, Type, Optional, Union, cast, List, Dict
 
 from typing_extensions import Annotated
@@ -21,6 +22,7 @@ from dagshub_annotation_converter.ir.image import (
     IRSegmentationImageAnnotation,
     IREllipseImageAnnotation,
 )
+from dagshub_annotation_converter.util.video import get_video_dimensions
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 task_lookup: Dict[str, Type[AnnotationResultABC]] = {
@@ -111,10 +113,35 @@ class LabelStudioTask(ParentModel):
         self.data[PoseBBoxLookupKey].append(bbox.id)
         self.data[PosePointsLookupKey].append([point.id for point in keypoints])
 
-    def to_ir_annotations(self, filename: Optional[str] = None) -> Sequence[IRImageAnnotationBase]:
+    def to_ir_annotations(
+        self,
+        filename: Optional[str] = None,
+        video_file: Optional[Union[str, Path]] = None,
+    ) -> Sequence[IRImageAnnotationBase]:
+        """Convert task annotations to IR; probe video dims from local ``video_file`` if provided."""
         res: List[IRImageAnnotationBase] = []
+        probed_width: Optional[int] = None
+        probed_height: Optional[int] = None
+        did_probe = False
         for anns in self.annotations:
             for ann in anns.result:
+                if getattr(ann, "type", None) == "videorectangle":
+                    if (
+                        not did_probe
+                        and video_file is not None
+                        and (ann.original_width is None or ann.original_height is None)
+                    ):
+                        did_probe = True
+                        try:
+                            probed_width, probed_height, _ = get_video_dimensions(Path(video_file))
+                        except Exception:
+                            # If probing fails, keep dimensions unset and defer failure to
+                            # dimension-dependent conversion/export operations.
+                            pass
+                    if ann.original_width is None and probed_width is not None:
+                        ann.original_width = probed_width
+                    if ann.original_height is None and probed_height is not None:
+                        ann.original_height = probed_height
                 to_add = ann.to_ir_annotation()
                 for a in to_add:
                     # Carry over extra values from the annotation

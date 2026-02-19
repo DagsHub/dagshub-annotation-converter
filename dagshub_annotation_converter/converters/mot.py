@@ -230,8 +230,34 @@ def export_to_mot(
     annotations: List[IRVideoBBoxAnnotation],
     context: MOTContext,
     output_path: Union[str, Path],
+    video_file: Optional[Union[str, Path]] = None,
 ) -> Path:
-    """Export annotations to MOT gt.txt format."""
+    """Export annotations to MOT gt.txt format, resolving missing dimensions from annotations/video_file."""
+    if context.image_width is None or context.image_height is None:
+        for ann in annotations:
+            if context.image_width is None and ann.image_width is not None and ann.image_width > 0:
+                context.image_width = ann.image_width
+            if context.image_height is None and ann.image_height is not None and ann.image_height > 0:
+                context.image_height = ann.image_height
+            if context.image_width is not None and context.image_height is not None:
+                break
+
+    if (context.image_width is None or context.image_height is None) and video_file is not None:
+        width, height, fps = get_video_dimensions(Path(video_file))
+        if context.image_width is None:
+            context.image_width = width
+        if context.image_height is None:
+            context.image_height = height
+        if context.frame_rate == 30.0 and fps > 0:
+            context.frame_rate = fps
+
+    if context.image_width is None or context.image_height is None:
+        raise ValueError(
+            "Cannot determine frame dimensions for MOT export. "
+            "Provide context.image_width/context.image_height, use annotations with valid dimensions, "
+            "or provide video_file for probing."
+        )
+
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -251,6 +277,7 @@ def export_mot_to_dir(
     annotations: List[IRVideoBBoxAnnotation],
     context: MOTContext,
     output_dir: Union[str, Path],
+    video_file: Optional[Union[str, Path]] = None,
 ) -> Path:
     """
     Export annotations to MOT directory structure.
@@ -262,12 +289,14 @@ def export_mot_to_dir(
             gt.txt
             labels.txt
           seqinfo.ini
+
+    Missing dimensions are resolved with the same fallback as ``export_to_mot``.
     """
     output_dir = Path(output_dir)
     gt_dir = output_dir / "gt"
     gt_dir.mkdir(parents=True, exist_ok=True)
 
-    export_to_mot(annotations, context, gt_dir / "gt.txt")
+    export_to_mot(annotations, context, gt_dir / "gt.txt", video_file=video_file)
 
     if context.seq_length is None and annotations:
         context.seq_length = max(ann.frame_number for ann in annotations) + 1

@@ -16,6 +16,7 @@ from dagshub_annotation_converter.formats.cvat.video import (
 )
 from dagshub_annotation_converter.ir.image import IRImageAnnotationBase, IRBBoxImageAnnotation, IRPoseImageAnnotation
 from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation
+from dagshub_annotation_converter.util.video import get_video_dimensions
 from dagshub_annotation_converter.features import ConverterFeatures
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,34 @@ logger = logging.getLogger(__name__)
 CVATImageAnnotations = Dict[str, Sequence[IRImageAnnotationBase]]
 CVATVideoAnnotations = Dict[int, Sequence[IRVideoBBoxAnnotation]]
 CVATAnnotations = Union[CVATImageAnnotations, CVATVideoAnnotations]
+
+
+def _group_annotations_by_video_name(
+    annotations: Sequence[IRVideoBBoxAnnotation],
+    default_video_name: str,
+) -> Dict[str, List[IRVideoBBoxAnnotation]]:
+    grouped: Dict[str, List[IRVideoBBoxAnnotation]] = defaultdict(list)
+    for ann in annotations:
+        if ann.filename:
+            grouped[Path(ann.filename).name].append(ann)
+        else:
+            grouped[default_video_name].append(ann)
+    return grouped
+
+
+def _resolve_video_name_for_export(
+    annotations: Sequence[IRVideoBBoxAnnotation],
+    video_name: str,
+) -> str:
+    source_names = sorted({Path(ann.filename).name for ann in annotations if ann.filename})
+    if len(source_names) > 1:
+        raise ValueError(
+            "CVAT video export supports a single source video per export. "
+            f"Found multiple annotation filenames: {', '.join(source_names)}"
+        )
+    if video_name == "video.mp4" and len(source_names) == 1:
+        return source_names[0]
+    return video_name
 
 
 def parse_image_annotations(img: lxml.etree.ElementBase) -> Sequence[IRImageAnnotationBase]:
@@ -210,8 +239,50 @@ def export_cvat_video_to_xml_string(
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
     seq_length: Optional[int] = None,
+    video_file: Optional[Union[str, PathLike]] = None,
 ) -> bytes:
-    return cvat_video_xml_to_string(annotations, video_name, image_width, image_height, seq_length)
+    """Export video annotations to CVAT XML bytes, resolving dimensions from args/annotations/video_file."""
+    resolved_video_name = _resolve_video_name_for_export(annotations, video_name)
+
+    resolved_width = image_width if image_width is not None and image_width > 0 else None
+    resolved_height = image_height if image_height is not None and image_height > 0 else None
+
+    if resolved_width is None or resolved_height is None:
+        for ann in annotations:
+            if resolved_width is None and ann.image_width is not None and ann.image_width > 0:
+                resolved_width = ann.image_width
+            if resolved_height is None and ann.image_height is not None and ann.image_height > 0:
+                resolved_height = ann.image_height
+            if resolved_width is not None and resolved_height is not None:
+                break
+
+    if (resolved_width is None or resolved_height is None) and video_file is not None:
+        probed_width, probed_height, _ = get_video_dimensions(Path(video_file))
+        if resolved_width is None:
+            resolved_width = probed_width
+        if resolved_height is None:
+            resolved_height = probed_height
+
+    if resolved_width is None or resolved_height is None:
+        raise ValueError(
+            "Cannot determine frame dimensions for CVAT video export. "
+            "Provide image_width/image_height, use annotations with valid dimensions, "
+            "or provide video_file for probing."
+        )
+
+    prepared_annotations = []
+    for ann in annotations:
+        prepared = ann
+        if prepared.image_width is None or prepared.image_width <= 0:
+            prepared = prepared.model_copy()
+            prepared.image_width = resolved_width
+        if prepared.image_height is None or prepared.image_height <= 0:
+            if prepared is ann:
+                prepared = prepared.model_copy()
+            prepared.image_height = resolved_height
+        prepared_annotations.append(prepared)
+
+    return cvat_video_xml_to_string(prepared_annotations, resolved_video_name, resolved_width, resolved_height, seq_length)
 
 
 def export_cvat_video_to_file(
@@ -221,12 +292,14 @@ def export_cvat_video_to_file(
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
     seq_length: Optional[int] = None,
+    video_file: Optional[Union[str, PathLike]] = None,
 ) -> Path:
+    """Export video annotations to a CVAT XML file."""
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     xml_content = export_cvat_video_to_xml_string(
-        annotations, video_name, image_width, image_height, seq_length
+        annotations, video_name, image_width, image_height, seq_length, video_file
     )
 
     with open(output_path, "wb") as f:
@@ -243,17 +316,70 @@ def export_cvat_video_to_zip(
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
     seq_length: Optional[int] = None,
+    video_file: Optional[Union[str, PathLike]] = None,
 ) -> Path:
     """Export video annotations to a CVAT-compatible ZIP containing ``annotations.xml``."""
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    xml_content = export_cvat_video_to_xml_string(
-        annotations, video_name, image_width, image_height, seq_length
-    )
-
     with ZipFile(output_path, "w") as z:
-        z.writestr("annotations.xml", xml_content)
+        grouped = _group_annotations_by_video_name(annotations, video_name)
+
+        # Single-video behavior remains identical and fully CVAT-compatible.
+        if len(grouped) == 1:
+            xml_content = export_cvat_video_to_xml_string(
+                annotations, video_name, image_width, image_height, seq_length, video_file
+            )
+            z.writestr("annotations.xml", xml_content)
+        else:
+            if video_file is not None:
+                raise ValueError(
+                    "video_file is ambiguous for multi-video CVAT zip export. "
+                    "Provide explicit dimensions or export per video."
+                )
+            for group_video_name, group_annotations in sorted(grouped.items()):
+                xml_content = export_cvat_video_to_xml_string(
+                    group_annotations,
+                    group_video_name,
+                    image_width,
+                    image_height,
+                    seq_length,
+                    None,
+                )
+                # Store one XML per source video under its own folder.
+                z.writestr(f"{group_video_name}/annotations.xml", xml_content)
 
     logger.info(f"Exported CVAT video annotations to {output_path}")
     return output_path
+
+
+def export_cvat_videos_to_zips(
+    annotations: Sequence[IRVideoBBoxAnnotation],
+    output_dir: Union[str, PathLike],
+    image_width: Optional[int] = None,
+    image_height: Optional[int] = None,
+    seq_length: Optional[int] = None,
+) -> List[Path]:
+    """
+    Export multiple videos to separate CVAT zip files.
+
+    Groups annotations by filename and writes one ``<video_stem>.zip`` per group.
+    """
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    grouped = _group_annotations_by_video_name(annotations, "video.mp4")
+    outputs: List[Path] = []
+    for video_name, group_annotations in sorted(grouped.items()):
+        zip_name = f"{Path(video_name).stem}.zip"
+        output_path = output_dir / zip_name
+        export_cvat_video_to_zip(
+            group_annotations,
+            output_path,
+            video_name=video_name,
+            image_width=image_width,
+            image_height=image_height,
+            seq_length=seq_length,
+        )
+        outputs.append(output_path)
+    return outputs

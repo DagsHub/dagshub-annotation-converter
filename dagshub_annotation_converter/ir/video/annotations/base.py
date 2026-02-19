@@ -19,6 +19,8 @@ class IRVideoAnnotationBase(IRImageAnnotationBase):
     """0-based frame index."""
     timestamp: Optional[float] = None
     video_path: Optional[str] = None
+    image_width: Optional[int] = None
+    image_height: Optional[int] = None
 
     @abstractmethod
     def _normalize(self):
