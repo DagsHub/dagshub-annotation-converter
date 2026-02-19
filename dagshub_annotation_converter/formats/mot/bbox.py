@@ -43,7 +43,6 @@ def import_bbox_from_line(line: str, context: MOTContext) -> IRVideoBBoxAnnotati
         categories={category_name: 1.0},
         coordinate_style=CoordinateStyle.DENORMALIZED,
         visibility=visibility,
-        confidence=1.0,
         meta=meta,
     )
 

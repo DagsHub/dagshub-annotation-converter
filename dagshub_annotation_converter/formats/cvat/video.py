@@ -65,7 +65,6 @@ def parse_video_track(
             categories={label: 1.0},
             coordinate_style=CoordinateStyle.DENORMALIZED,
             visibility=visibility,
-            confidence=1.0,
             meta=meta,
         )
 

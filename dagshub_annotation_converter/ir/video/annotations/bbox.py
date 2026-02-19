@@ -14,8 +14,6 @@ class IRVideoBBoxAnnotation(IRVideoAnnotationBase):
     height: float
     rotation: float = 0.0
     """Rotation in degrees (pivot point: top-left)."""
-    confidence: float = 1.0
-    """Detection confidence score (0-1). Default: 1.0 for ground truth."""
     visibility: float = 1.0
     """Visibility/occlusion ratio (0-1). 1.0 = fully visible."""
 
