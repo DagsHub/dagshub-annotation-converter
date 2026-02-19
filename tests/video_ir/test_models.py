@@ -1,15 +1,9 @@
 import math
 
-import pytest
 from dagshub_annotation_converter.ir.video import (
     IRVideoBBoxAnnotation,
     CoordinateStyle,
 )
-
-
-@pytest.fixture
-def epsilon():
-    return 1e-6
 
 
 def test_normalize_coordinates(epsilon):
