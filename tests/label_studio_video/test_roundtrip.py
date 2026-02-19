@@ -1,6 +1,7 @@
 import pytest
 from pathlib import Path
 import tempfile
+import math
 
 from dagshub_annotation_converter.formats.mot import MOTContext
 from dagshub_annotation_converter.converters.mot import load_mot_from_file, export_to_mot
@@ -110,8 +111,8 @@ class TestMOTToLabelStudioRoundtrip:
                 for orig, final in zip(orig_frame, final_frame):
                     assert orig.track_id == final.track_id
                     # Allow 1 pixel tolerance due to float conversion
-                    assert abs(orig.left - final.left) <= 1
-                    assert abs(orig.top - final.top) <= 1
+                    assert math.isclose(orig.left, final.left, abs_tol=1)
+                    assert math.isclose(orig.top, final.top, abs_tol=1)
                     
         finally:
             output_path.unlink()
@@ -154,7 +155,7 @@ class TestCVATVideoToLabelStudioRoundtrip:
         assert "person" in labels
         assert "car" in labels
 
-    def test_cvat_to_ls_coordinate_conversion(self, sample_cvat_video_xml):
+    def test_cvat_to_ls_coordinate_conversion(self, sample_cvat_video_xml, epsilon):
         cvat_annotations = load_cvat_from_xml_file(sample_cvat_video_xml)
         
         all_annotations = []
@@ -175,8 +176,8 @@ class TestCVATVideoToLabelStudioRoundtrip:
         
         # CVAT coords (100, 150, 50x120) on 1920x1080 -> x=100/1920*100, y=150/1080*100
         first_seq = person_result.value.sequence[0]
-        assert abs(first_seq.x - 5.208333) < 0.01
-        assert abs(first_seq.y - 13.888889) < 0.01
+        assert math.isclose(first_seq.x, 5.208333, abs_tol=epsilon)
+        assert math.isclose(first_seq.y, 13.888889, abs_tol=epsilon)
 
 
 class TestCrossFormatConversion:

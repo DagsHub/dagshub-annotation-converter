@@ -1,3 +1,5 @@
+import math
+
 from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
 from dagshub_annotation_converter.formats.label_studio.videorectangle import (
     VideoRectangleAnnotation,
@@ -56,7 +58,7 @@ class TestVideoRectangleAnnotation:
         for ir_ann in ir_annotations:
             assert "person" in ir_ann.categories
 
-    def test_to_ir_annotations_coordinate_conversion(self, sample_ls_video_task_data):
+    def test_to_ir_annotations_coordinate_conversion(self, sample_ls_video_task_data, epsilon):
         result = sample_ls_video_task_data["annotations"][0]["result"][0]
         ann = VideoRectangleAnnotation.model_validate(result)
         
@@ -67,8 +69,8 @@ class TestVideoRectangleAnnotation:
         first = ir_annotations[0]
         
         assert first.coordinate_style == CoordinateStyle.NORMALIZED
-        assert abs(first.left - 0.05208333) < 1e-6
-        assert abs(first.top - 0.13888889) < 1e-6
+        assert math.isclose(first.left, 0.05208333, abs_tol=epsilon)
+        assert math.isclose(first.top, 0.13888889, abs_tol=epsilon)
 
     def test_to_ir_annotations_frame_numbers(self, sample_ls_video_task_data):
         """Test that frame numbers are correctly converted from 1-based (LS) to 0-based (IR)."""
@@ -80,7 +82,7 @@ class TestVideoRectangleAnnotation:
         frame_numbers = sorted([a.frame_number for a in ir_annotations])
         assert frame_numbers == [0, 1, 2, 3, 4]
 
-    def test_to_ir_annotations_timestamps(self, sample_ls_video_task_data):
+    def test_to_ir_annotations_timestamps(self, sample_ls_video_task_data, epsilon):
         result = sample_ls_video_task_data["annotations"][0]["result"][0]
         ann = VideoRectangleAnnotation.model_validate(result)
         
@@ -88,7 +90,7 @@ class TestVideoRectangleAnnotation:
         
         # First frame (LS frame 1 -> IR frame 0) should have timestamp 0.033
         first = [a for a in ir_annotations if a.frame_number == 0][0]
-        assert abs(first.timestamp - 0.033) < 1e-6
+        assert math.isclose(first.timestamp, 0.033, abs_tol=epsilon)
 
     def test_from_ir_annotations(self):
         ir_annotations = [
@@ -131,7 +133,7 @@ class TestVideoRectangleAnnotation:
         assert ls_ann.value.sequence[0].frame == 1
         assert ls_ann.value.sequence[1].frame == 2
 
-    def test_from_ir_annotations_coordinate_conversion(self):
+    def test_from_ir_annotations_coordinate_conversion(self, epsilon):
         ir_annotations = [
             IRVideoBBoxAnnotation(
                 track_id=1,
@@ -150,11 +152,11 @@ class TestVideoRectangleAnnotation:
         ls_ann = VideoRectangleAnnotation.from_ir_annotations(ir_annotations)
         
         seq_item = ls_ann.value.sequence[0]
-        assert abs(seq_item.x - 10.0) < 1e-6
-        assert abs(seq_item.y - 20.0) < 1e-6
+        assert math.isclose(seq_item.x, 10.0, abs_tol=epsilon)
+        assert math.isclose(seq_item.y, 20.0, abs_tol=epsilon)
         assert seq_item.frame == 1  # Should be 1-based in LS
 
-    def test_from_ir_annotations_denormalized(self):
+    def test_from_ir_annotations_denormalized(self, epsilon):
         ir_annotations = [
             IRVideoBBoxAnnotation(
                 track_id=1,
@@ -173,8 +175,8 @@ class TestVideoRectangleAnnotation:
         ls_ann = VideoRectangleAnnotation.from_ir_annotations(ir_annotations)
         
         seq_item = ls_ann.value.sequence[0]
-        assert abs(seq_item.x - 10.0) < 1e-6
-        assert abs(seq_item.y - 20.0) < 1e-6
+        assert math.isclose(seq_item.x, 10.0, abs_tol=epsilon)
+        assert math.isclose(seq_item.y, 20.0, abs_tol=epsilon)
         assert seq_item.frame == 1  # Should be 1-based in LS
 
 
@@ -272,7 +274,7 @@ class TestVideoRectangleFrameNumberConversion:
 
 
 class TestVideoRectangleRoundtrip:
-    def test_roundtrip_single_track(self, sample_ls_video_task_data):
+    def test_roundtrip_single_track(self, sample_ls_video_task_data, epsilon):
         result = sample_ls_video_task_data["annotations"][0]["result"][0]
         original = VideoRectangleAnnotation.model_validate(result)
         
@@ -286,7 +288,7 @@ class TestVideoRectangleRoundtrip:
         
         for orig_item, recon_item in zip(original.value.sequence, reconstructed.value.sequence):
             assert orig_item.frame == recon_item.frame
-            assert abs(orig_item.x - recon_item.x) < 0.001
-            assert abs(orig_item.y - recon_item.y) < 0.001
-            assert abs(orig_item.width - recon_item.width) < 0.001
-            assert abs(orig_item.height - recon_item.height) < 0.001
+            assert math.isclose(orig_item.x, recon_item.x, abs_tol=epsilon)
+            assert math.isclose(orig_item.y, recon_item.y, abs_tol=epsilon)
+            assert math.isclose(orig_item.width, recon_item.width, abs_tol=epsilon)
+            assert math.isclose(orig_item.height, recon_item.height, abs_tol=epsilon)

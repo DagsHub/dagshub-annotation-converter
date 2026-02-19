@@ -1,6 +1,7 @@
 import tempfile
 from pathlib import Path
 from zipfile import ZipFile
+import math
 
 from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
 from dagshub_annotation_converter.formats.mot.bbox import import_bbox_from_line
@@ -30,18 +31,18 @@ class TestMOTLineImport:
         assert "person" in ann.categories
         assert ann.coordinate_style == CoordinateStyle.DENORMALIZED
 
-    def test_parse_line_with_float_coords(self, mot_context):
+    def test_parse_line_with_float_coords(self, mot_context, epsilon):
         line = "1,3,794.27,247.59,71.245,174.88,1,1,0.86014"
         
         ann = import_bbox_from_line(line, mot_context)
         
         assert ann.frame_number == 0  # MOT frame 1 -> IR frame 0
         assert ann.track_id == 3
-        assert abs(ann.left - 794.27) < 0.01
-        assert abs(ann.top - 247.59) < 0.01
-        assert abs(ann.width - 71.245) < 0.01
-        assert abs(ann.height - 174.88) < 0.01
-        assert abs(ann.visibility - 0.86014) < 0.0001
+        assert math.isclose(ann.left, 794.27, abs_tol=epsilon)
+        assert math.isclose(ann.top, 247.59, abs_tol=epsilon)
+        assert math.isclose(ann.width, 71.245, abs_tol=epsilon)
+        assert math.isclose(ann.height, 174.88, abs_tol=epsilon)
+        assert math.isclose(ann.visibility, 0.86014, abs_tol=epsilon)
 
     def test_parse_line_with_class_id(self, mot_context):
         line = "1,2,500,200,150,100,1,2,1.0"

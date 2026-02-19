@@ -1,5 +1,6 @@
 from pathlib import Path
 import tempfile
+import math
 
 from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
 from dagshub_annotation_converter.formats.mot.bbox import export_bbox_to_line
@@ -55,8 +56,8 @@ class TestMOTLineExport:
         line = export_bbox_to_line(ann, mot_context)
         parts = line.split(",")
         
-        assert abs(float(parts[2]) - 192) < 1
-        assert abs(float(parts[3]) - 108) < 1
+        assert math.isclose(float(parts[2]), 192, abs_tol=1)
+        assert math.isclose(float(parts[3]), 108, abs_tol=1)
 
     def test_export_with_partial_visibility(self, mot_context):
         ann = IRVideoBBoxAnnotation(
