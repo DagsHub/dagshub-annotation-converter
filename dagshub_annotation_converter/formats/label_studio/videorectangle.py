@@ -189,6 +189,10 @@ class VideoRectangleAnnotation(AnnotationResultABC):
         for idx, ann in enumerate(sorted_anns):
             is_outside = _coerce_bool_like(ann.meta.get("outside", ann.visibility <= 0.0))
             if ann.coordinate_style == CoordinateStyle.DENORMALIZED:
+                if ann.image_width is None or ann.image_height is None:
+                    raise ValueError(
+                        f"Cannot normalize annotation at frame {ann.frame_number} without image dimensions"
+                    )
                 ann = ann.normalized()
 
             if is_outside:

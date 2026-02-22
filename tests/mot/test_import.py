@@ -182,7 +182,7 @@ class TestMOTDirectoryImport:
         zip_path = labels_dir / "earth-space-small.mp4.zip"
         with ZipFile(zip_path, "w") as z:
             z.writestr("gt/gt.txt", "1,1,100,150,50,120,1,1,1.0\n")
-            z.writestr("gt/labels.txt", "1 person\n")
+            z.writestr("gt/labels.txt", "person\n")
 
         probed_paths = []
 

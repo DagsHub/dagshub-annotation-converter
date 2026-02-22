@@ -419,18 +419,24 @@ def export_to_mot(
                 break
 
     if (context.image_width is None or context.image_height is None) and video_file is not None:
-        width, height, fps = get_video_dimensions(Path(video_file))
-        if context.image_width is None:
-            context.image_width = width
-        if context.image_height is None:
-            context.image_height = height
-        if context.frame_rate == 30.0 and fps > 0:
-            context.frame_rate = fps
+        try:
+            width, height, fps = get_video_dimensions(Path(video_file))
+            if context.image_width is None:
+                context.image_width = width
+            if context.image_height is None:
+                context.image_height = height
+            if context.frame_rate == 30.0 and fps > 0:
+                context.frame_rate = fps
+        except (ImportError, ValueError) as e:
+            logger.warning(f"Could not probe video dimensions from {video_file}: {e}")
 
     if context.seq_length is None and video_file is not None:
-        frame_count = get_video_frame_count(Path(video_file))
-        if frame_count is not None and frame_count > 0:
-            context.seq_length = frame_count
+        try:
+            frame_count = get_video_frame_count(Path(video_file))
+            if frame_count is not None and frame_count > 0:
+                context.seq_length = frame_count
+        except (ImportError, ValueError) as e:
+            logger.warning(f"Could not probe video frame count from {video_file}: {e}")
 
     if context.image_width is None or context.image_height is None:
         raise ValueError(

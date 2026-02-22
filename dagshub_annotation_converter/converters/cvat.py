@@ -277,16 +277,22 @@ def export_cvat_video_to_xml_string(
                 break
 
     if (resolved_width is None or resolved_height is None) and video_file is not None:
-        probed_width, probed_height, _ = get_video_dimensions(Path(video_file))
-        if resolved_width is None:
-            resolved_width = probed_width
-        if resolved_height is None:
-            resolved_height = probed_height
+        try:
+            probed_width, probed_height, _ = get_video_dimensions(Path(video_file))
+            if resolved_width is None:
+                resolved_width = probed_width
+            if resolved_height is None:
+                resolved_height = probed_height
+        except (ImportError, ValueError) as e:
+            logger.warning(f"Could not probe video dimensions from {video_file}: {e}")
 
     if seq_length is None and video_file is not None:
-        frame_count = get_video_frame_count(Path(video_file))
-        if frame_count is not None and frame_count > 0:
-            seq_length = frame_count
+        try:
+            frame_count = get_video_frame_count(Path(video_file))
+            if frame_count is not None and frame_count > 0:
+                seq_length = frame_count
+        except (ImportError, ValueError) as e:
+            logger.warning(f"Could not probe video frame count from {video_file}: {e}")
 
     if resolved_width is None or resolved_height is None:
         raise ValueError(
