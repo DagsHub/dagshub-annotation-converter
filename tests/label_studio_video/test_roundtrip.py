@@ -436,7 +436,6 @@ class TestCrossFormatConversion:
 
     def test_all_formats_same_annotation_count(self, sample_cvat_video_xml, mot_context):
         cvat_annotations = load_cvat_from_xml_file(sample_cvat_video_xml)
-        cvat_total = sum(len(anns) for anns in cvat_annotations.values())
         cvat_visible_total = sum(
             1 for anns in cvat_annotations.values() for ann in anns if not ann.meta.get("outside", False)
         )

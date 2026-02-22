@@ -182,7 +182,6 @@ def _interpolate_track_for_mot(
             interpolated.width = _lerp(curr.width, nxt.width, t)
             interpolated.height = _lerp(curr.height, nxt.height, t)
             interpolated.rotation = _lerp(curr.rotation, nxt.rotation, t)
-            interpolated.confidence = _lerp(curr.confidence, nxt.confidence, t)
             interpolated.visibility = _lerp(curr.visibility, nxt.visibility, t)
             if curr.timestamp is not None and nxt.timestamp is not None:
                 interpolated.timestamp = _lerp(curr.timestamp, nxt.timestamp, t)

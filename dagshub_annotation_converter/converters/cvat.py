@@ -307,7 +307,13 @@ def export_cvat_video_to_xml_string(
             prepared.image_height = resolved_height
         prepared_annotations.append(prepared)
 
-    return cvat_video_xml_to_string(prepared_annotations, resolved_video_name, resolved_width, resolved_height, seq_length)
+    return cvat_video_xml_to_string(
+        prepared_annotations, 
+        resolved_video_name, 
+        resolved_width, 
+        resolved_height, 
+        seq_length
+        )
 
 
 def export_cvat_video_to_file(
