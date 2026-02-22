@@ -39,6 +39,10 @@ class TestCVATVideoExport:
             "dagshub_annotation_converter.converters.cvat.get_video_dimensions",
             lambda _: (1280, 720, 24.0),
         )
+        monkeypatch.setattr(
+            "dagshub_annotation_converter.converters.cvat.get_video_frame_count",
+            lambda _: 100,
+        )
 
         xml_bytes = export_cvat_video_to_xml_string([ann], video_file="local_video.mp4")
         xml_text = xml_bytes.decode("utf-8")
@@ -147,6 +151,10 @@ class TestCVATVideoExport:
             raise AssertionError(f"Unexpected probe path: {path}")
 
         monkeypatch.setattr("dagshub_annotation_converter.converters.cvat.get_video_dimensions", fake_dimensions)
+        monkeypatch.setattr(
+            "dagshub_annotation_converter.converters.cvat.get_video_frame_count",
+            lambda _: 100,
+        )
 
         outputs = export_cvat_videos_to_zips(
             [ann_a, ann_b],

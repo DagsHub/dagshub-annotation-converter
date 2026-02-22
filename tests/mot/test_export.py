@@ -365,6 +365,10 @@ class TestMOTFileExport:
             "dagshub_annotation_converter.converters.mot.get_video_dimensions",
             lambda _: (1280, 720, 25.0),
         )
+        monkeypatch.setattr(
+            "dagshub_annotation_converter.converters.mot.get_video_frame_count",
+            lambda _: 100,
+        )
 
         out_dir = tmp_path / "mot_out"
         export_mot_to_dir(
@@ -537,6 +541,10 @@ class TestMOTFileExport:
         monkeypatch.setattr(
             "dagshub_annotation_converter.converters.mot.get_video_dimensions",
             lambda _: (1280, 720, 25.0),
+        )
+        monkeypatch.setattr(
+            "dagshub_annotation_converter.converters.mot.get_video_frame_count",
+            lambda _: 100,
         )
 
         outputs = export_mot_sequences_to_dirs(
