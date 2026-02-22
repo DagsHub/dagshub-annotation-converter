@@ -62,11 +62,11 @@ class TestCVATVideoTrackParsing:
         
         # Frame 0 should be keyframe
         frame_0_ann = [a for a in annotations if a.frame_number == 0][0]
-        assert frame_0_ann.meta.get("keyframe")
+        assert frame_0_ann.keyframe
         
         # Frame 1 should not be keyframe
         frame_1_ann = [a for a in annotations if a.frame_number == 1][0]
-        assert not frame_1_ann.meta.get("keyframe")
+        assert not frame_1_ann.keyframe
 
 
 class TestCVATVideoOutsideRoundtrip:
@@ -108,11 +108,15 @@ class TestCVATVideoOutsideRoundtrip:
         
         assert len(boxes) == 4
         assert boxes[0].attrib["outside"] == "0"
+        assert boxes[0].attrib["keyframe"] == "1"
         assert boxes[1].attrib["outside"] == "0"
         assert boxes[1].attrib["occluded"] == "1"
+        assert boxes[1].attrib["keyframe"] == "0"
         assert boxes[2].attrib["outside"] == "1"
         assert boxes[2].attrib["occluded"] == "0"  # outside takes priority
+        assert boxes[2].attrib["keyframe"] == "1"
         assert boxes[3].attrib["outside"] == "0"
+        assert boxes[3].attrib["keyframe"] == "1"
         
         reimported = parse_video_track(exported_track, image_width=1920, image_height=1080)
         assert len(reimported) == 4

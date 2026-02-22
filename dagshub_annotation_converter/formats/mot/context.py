@@ -113,12 +113,13 @@ class MOTContext(ParentModel):
 
     def write_seqinfo(self, seqinfo_path: Path):
         config = configparser.ConfigParser()
+        config.optionxform = str
         config["Sequence"] = {}
         seq = config["Sequence"]
 
         if self.seq_name:
             seq["name"] = self.seq_name
-        seq["frameRate"] = str(self.frame_rate)
+        seq["frameRate"] = str(int(round(self.frame_rate)))
         if self.seq_length:
             seq["seqLength"] = str(self.seq_length)
         if self.image_width:

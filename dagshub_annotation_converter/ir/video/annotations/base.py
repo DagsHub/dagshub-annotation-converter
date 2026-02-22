@@ -17,6 +17,8 @@ class IRVideoAnnotationBase(IRImageAnnotationBase):
     track_id: int
     frame_number: int
     """0-based frame index."""
+    keyframe: bool = True
+    """Whether this annotation is an explicit keyframe in tracked formats."""
     timestamp: Optional[float] = None
     video_path: Optional[str] = None
     image_width: Optional[int] = None

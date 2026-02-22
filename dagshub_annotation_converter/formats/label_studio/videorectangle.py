@@ -11,6 +11,31 @@ from dagshub_annotation_converter.ir.image import IRImageAnnotationBase
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 
+def _coerce_bool_like(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes", "y", "t"}:
+            return True
+        if normalized in {"false", "0", "no", "n", "f", ""}:
+            return False
+    return bool(value)
+
+
+def _coerce_float_like(value: Any) -> Optional[float]:
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value.strip())
+        except ValueError:
+            return None
+    return None
+
+
 class VideoRectangleSequenceItem(ParentModel):
     frame: int
     """Frame number (1-based)."""
@@ -23,6 +48,7 @@ class VideoRectangleSequenceItem(ParentModel):
     height: float
     """Height as percentage (0-100)."""
     enabled: bool = True
+    """Whether interpolation is enabled from this keyframe onward in Label Studio."""
     time: Optional[float] = None
     rotation: float = 0.0
 
@@ -76,9 +102,13 @@ class VideoRectangleAnnotation(AnnotationResultABC):
 
         label = self.value.labels[0] if self.value.labels else "object"
 
+        frame_base = 0 if any(item.frame == 0 for item in self.value.sequence) else 1
+
         annotations = []
         for seq_item in self.value.sequence:
-            if seq_item.frame < 1:
+            if seq_item.frame < frame_base:
+                if frame_base == 0:
+                    raise ValueError("Frame numbers must be 0-based (>= 0)")
                 raise ValueError("Frame numbers must be 1-based (>= 1)")
             if not (
                 0.0 <= seq_item.x <= 100.0 and
@@ -87,10 +117,25 @@ class VideoRectangleAnnotation(AnnotationResultABC):
                 0.0 <= seq_item.height <= 100.0
             ):
                 raise ValueError("Coordinates must be percentages in [0, 100]")
-            
+
+            extra = seq_item.__pydantic_extra__ or {}
+            outside_extra = extra.get("outside")
+            visibility_extra = extra.get("visibility")
+
+            outside = _coerce_bool_like(outside_extra) if outside_extra is not None else False
+            visibility = 0.0 if outside else 1.0
+            parsed_visibility = _coerce_float_like(visibility_extra)
+            if parsed_visibility is not None:
+                visibility = parsed_visibility
+
+            meta = {"ls_id": self.id, "outside": outside, "ls_enabled": bool(seq_item.enabled)}
+            if self.value.framesCount is not None and self.value.framesCount > 0:
+                meta["ls_frames_count"] = self.value.framesCount
+
             ann = IRVideoBBoxAnnotation(
                 track_id=track_id,
-                frame_number=seq_item.frame - 1,  # Convert 1-based to 0-based
+                frame_number=seq_item.frame - frame_base,
+                keyframe=True,
                 left=seq_item.x / 100.0,
                 top=seq_item.y / 100.0,
                 width=seq_item.width / 100.0,
@@ -101,8 +146,8 @@ class VideoRectangleAnnotation(AnnotationResultABC):
                 categories={label: 1.0},
                 coordinate_style=CoordinateStyle.NORMALIZED,
                 timestamp=seq_item.time,
-                visibility=1.0 if seq_item.enabled else 0.0,
-                meta={"ls_id": self.id},
+                visibility=visibility,
+                meta=meta,
             )
             ann.imported_id = self.id
             annotations.append(ann)
@@ -126,10 +171,68 @@ class VideoRectangleAnnotation(AnnotationResultABC):
         sorted_anns = sorted(ir_annotations, key=lambda a: a.frame_number)
 
         sequence = []
-        for ann in sorted_anns:
+        is_mot_source = any(
+            ann.meta.get("source_format") == "mot"
+            for ann in sorted_anns
+        )
+        is_cvat_source = any(
+            ann.meta.get("source_format") == "cvat"
+            for ann in sorted_anns
+        )
+        seen_visible = False
+        frames_count_values = {
+            int(ann.meta["ls_frames_count"])
+            for ann in sorted_anns
+            if isinstance(ann.meta.get("ls_frames_count"), int)
+        }
+        frames_count = max(frames_count_values) if frames_count_values else None
+        for idx, ann in enumerate(sorted_anns):
+            is_outside = _coerce_bool_like(ann.meta.get("outside", ann.visibility <= 0.0))
             if ann.coordinate_style == CoordinateStyle.DENORMALIZED:
                 ann = ann.normalized()
-            
+
+            if is_outside:
+                if is_cvat_source and seen_visible:
+                    continue
+                seq_item = VideoRectangleSequenceItem(
+                    frame=ann.frame_number + 1,
+                    x=ann.left * 100.0,
+                    y=ann.top * 100.0,
+                    width=ann.width * 100.0,
+                    height=ann.height * 100.0,
+                    rotation=ann.rotation,
+                    enabled=False,
+                    time=ann.timestamp,
+                    outside=True,
+                    visibility=ann.visibility,
+                )
+                sequence.append(seq_item)
+                continue
+
+            seen_visible = True
+            if "ls_enabled" in ann.meta:
+                enabled = _coerce_bool_like(ann.meta["ls_enabled"])
+            elif is_mot_source:
+                enabled = False
+            else:
+                enabled = True if is_cvat_source else False
+                next_ann = next(iter(sorted_anns[idx + 1:]), None)
+                if next_ann is not None:
+                    next_is_outside = _coerce_bool_like(next_ann.meta.get("outside", next_ann.visibility <= 0.0))
+                    if is_cvat_source:
+                        if next_is_outside:
+                            enabled = False
+                        elif (
+                            next_ann.frame_number == ann.frame_number + 1
+                            and ann.keyframe
+                            and next_ann.keyframe
+                        ):
+                            enabled = False
+                        else:
+                            enabled = True
+                    else:
+                        enabled = not next_is_outside
+
             # Convert normalized (0-1) to percentage (0-100)
             # IR uses 0-based frames, Label Studio uses 1-based
             seq_item = VideoRectangleSequenceItem(
@@ -139,7 +242,7 @@ class VideoRectangleAnnotation(AnnotationResultABC):
                 width=ann.width * 100.0,
                 height=ann.height * 100.0,
                 rotation=ann.rotation,
-                enabled=ann.visibility > 0.5,
+                enabled=enabled,
                 time=ann.timestamp,
             )
             sequence.append(seq_item)
@@ -151,6 +254,7 @@ class VideoRectangleAnnotation(AnnotationResultABC):
             value=VideoRectangleValue(
                 sequence=sequence,
                 labels=[label],
+                framesCount=frames_count,
             ),
             meta={"original_track_id": track_id},
         )

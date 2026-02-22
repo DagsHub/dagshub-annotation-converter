@@ -27,13 +27,16 @@ def import_bbox_from_line(line: str, context: MOTContext) -> IRVideoBBoxAnnotati
 
     category_name = context.get_category_name(class_id)
 
-    meta = {}
+    meta = {"source_format": "mot"}
     if not_ignored == 0:
         meta["ignored"] = True
+    if visibility <= 0.0:
+        meta["outside"] = True
 
     return IRVideoBBoxAnnotation(
         track_id=track_id,
         frame_number=frame_id - 1,
+        keyframe=True,
         left=x,
         top=y,
         width=w,

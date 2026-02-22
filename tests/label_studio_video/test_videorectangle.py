@@ -57,6 +57,135 @@ class TestVideoRectangleAnnotation:
         # All should have "person" category
         for ir_ann in ir_annotations:
             assert "person" in ir_ann.categories
+            assert ir_ann.keyframe
+            assert ir_ann.visibility == 1.0
+
+    def test_to_ir_annotations_enabled_controls_interpolation_state(self):
+        from dagshub_annotation_converter.formats.label_studio.videorectangle import (
+            VideoRectangleValue,
+            VideoRectangleSequenceItem,
+        )
+
+        ann = VideoRectangleAnnotation(
+            original_width=1920,
+            original_height=1080,
+            value=VideoRectangleValue(
+                sequence=[
+                    VideoRectangleSequenceItem(
+                        frame=1,
+                        x=10.0,
+                        y=20.0,
+                        width=5.0,
+                        height=10.0,
+                        enabled=False,
+                        visibility=0.75,
+                    ),
+                ],
+                labels=["person"],
+            ),
+            meta={"original_track_id": 1},
+        )
+
+        ir_annotations = ann.to_ir_annotations()
+        assert len(ir_annotations) == 1
+        assert ir_annotations[0].keyframe
+        assert ir_annotations[0].meta.get("ls_enabled") is False
+        assert not ir_annotations[0].meta.get("outside")
+        assert ir_annotations[0].visibility == 0.75
+
+    def test_to_ir_annotations_disabled_without_visibility_stays_visible(self):
+        from dagshub_annotation_converter.formats.label_studio.videorectangle import (
+            VideoRectangleValue,
+            VideoRectangleSequenceItem,
+        )
+
+        ann = VideoRectangleAnnotation(
+            original_width=1920,
+            original_height=1080,
+            value=VideoRectangleValue(
+                sequence=[
+                    VideoRectangleSequenceItem(
+                        frame=11,
+                        x=10.0,
+                        y=20.0,
+                        width=5.0,
+                        height=10.0,
+                        enabled=False,
+                    ),
+                ],
+                labels=["person"],
+            ),
+            meta={"original_track_id": 1},
+        )
+
+        ir_annotations = ann.to_ir_annotations()
+        assert len(ir_annotations) == 1
+        assert ir_annotations[0].meta.get("ls_enabled") is False
+        assert not ir_annotations[0].meta.get("outside")
+        assert ir_annotations[0].visibility == 1.0
+
+    def test_to_ir_annotations_preserves_outside_flag(self):
+        from dagshub_annotation_converter.formats.label_studio.videorectangle import (
+            VideoRectangleValue,
+            VideoRectangleSequenceItem,
+        )
+
+        ann = VideoRectangleAnnotation(
+            original_width=1920,
+            original_height=1080,
+            value=VideoRectangleValue(
+                sequence=[
+                    VideoRectangleSequenceItem(
+                        frame=4,
+                        x=10.0,
+                        y=20.0,
+                        width=5.0,
+                        height=10.0,
+                        enabled=True,
+                        outside=True,
+                        visibility=0.0,
+                    ),
+                ],
+                labels=["person"],
+            ),
+            meta={"original_track_id": 1},
+        )
+
+        ir_annotations = ann.to_ir_annotations()
+        assert len(ir_annotations) == 1
+        assert ir_annotations[0].meta.get("outside") is True
+
+    def test_to_ir_annotations_parses_string_outside_false_as_visible(self):
+        from dagshub_annotation_converter.formats.label_studio.videorectangle import (
+            VideoRectangleValue,
+            VideoRectangleSequenceItem,
+        )
+
+        ann = VideoRectangleAnnotation(
+            original_width=1920,
+            original_height=1080,
+            value=VideoRectangleValue(
+                sequence=[
+                    VideoRectangleSequenceItem(
+                        frame=9,
+                        x=10.0,
+                        y=20.0,
+                        width=5.0,
+                        height=10.0,
+                        enabled=False,
+                        outside="false",
+                        visibility="1",
+                    ),
+                ],
+                labels=["person"],
+            ),
+            meta={"original_track_id": 1},
+        )
+
+        ir_annotations = ann.to_ir_annotations()
+        assert len(ir_annotations) == 1
+        assert ir_annotations[0].meta.get("outside") is False
+        assert ir_annotations[0].visibility == 1.0
 
     def test_to_ir_annotations_coordinate_conversion(self, sample_ls_video_task_data, epsilon):
         result = sample_ls_video_task_data["annotations"][0]["result"][0]
@@ -97,6 +226,7 @@ class TestVideoRectangleAnnotation:
             IRVideoBBoxAnnotation(
                 track_id=1,
                 frame_number=0,  # 0-based (IR format)
+                keyframe=False,
                 left=0.05208333,
                 top=0.13888889,
                 width=0.02604167,
@@ -132,6 +262,84 @@ class TestVideoRectangleAnnotation:
         # Frame numbers should be 1-based in LS format
         assert ls_ann.value.sequence[0].frame == 1
         assert ls_ann.value.sequence[1].frame == 2
+        assert ls_ann.value.sequence[0].enabled
+        assert not ls_ann.value.sequence[1].enabled
+
+    def test_from_ir_annotations_sparse_keyframes_keep_interpolation(self):
+        ir_annotations = [
+            IRVideoBBoxAnnotation(
+                track_id=1,
+                frame_number=0,
+                keyframe=True,
+                left=0.1,
+                top=0.2,
+                width=0.05,
+                height=0.1,
+                image_width=1920,
+                image_height=1080,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.NORMALIZED,
+                visibility=1.0,
+            ),
+            IRVideoBBoxAnnotation(
+                track_id=1,
+                frame_number=9,
+                keyframe=True,
+                left=0.2,
+                top=0.2,
+                width=0.05,
+                height=0.1,
+                image_width=1920,
+                image_height=1080,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.NORMALIZED,
+                visibility=1.0,
+            ),
+        ]
+
+        ls_ann = VideoRectangleAnnotation.from_ir_annotations(ir_annotations)
+        assert ls_ann.value.sequence[0].enabled
+        assert not ls_ann.value.sequence[1].enabled
+
+    def test_from_ir_annotations_outside_row_disables_previous_visible_keyframe(self):
+        ir_annotations = [
+            IRVideoBBoxAnnotation(
+                track_id=1,
+                frame_number=2,
+                keyframe=True,
+                left=0.05,
+                top=0.13,
+                width=0.03,
+                height=0.11,
+                image_width=1920,
+                image_height=1080,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.NORMALIZED,
+                visibility=1.0,
+            ),
+            IRVideoBBoxAnnotation(
+                track_id=1,
+                frame_number=3,
+                keyframe=True,
+                left=0.05,
+                top=0.13,
+                width=0.03,
+                height=0.11,
+                image_width=1920,
+                image_height=1080,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.NORMALIZED,
+                visibility=0.0,
+                meta={"outside": True},
+            ),
+        ]
+
+        ls_ann = VideoRectangleAnnotation.from_ir_annotations(ir_annotations)
+        assert len(ls_ann.value.sequence) == 2
+        assert ls_ann.value.sequence[0].frame == 3
+        assert not ls_ann.value.sequence[0].enabled
+        assert ls_ann.value.sequence[1].frame == 4
+        assert not ls_ann.value.sequence[1].enabled
 
     def test_from_ir_annotations_coordinate_conversion(self, epsilon):
         ir_annotations = [
@@ -179,6 +387,29 @@ class TestVideoRectangleAnnotation:
         assert math.isclose(seq_item.y, 20.0, abs_tol=epsilon)
         assert seq_item.frame == 1  # Should be 1-based in LS
 
+    def test_from_ir_annotations_uses_ls_standard_sequence_keys(self):
+        ir_annotations = [
+            IRVideoBBoxAnnotation(
+                track_id=1,
+                frame_number=0,
+                keyframe=True,
+                left=0.1,
+                top=0.2,
+                width=0.05,
+                height=0.1,
+                image_width=1920,
+                image_height=1080,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.NORMALIZED,
+                visibility=0.25,
+                meta={"outside": False},
+            ),
+        ]
+
+        ls_ann = VideoRectangleAnnotation.from_ir_annotations(ir_annotations)
+        seq_dump = ls_ann.model_dump()["value"]["sequence"][0]
+        assert set(seq_dump.keys()) == {"frame", "x", "y", "width", "height", "enabled", "time", "rotation"}
+
 
 class TestVideoRectangleFrameNumberConversion:
     def test_ls_to_ir_frame_conversion(self):
@@ -206,6 +437,32 @@ class TestVideoRectangleFrameNumberConversion:
         
         frame_numbers = sorted([a.frame_number for a in ir_annotations])
         assert frame_numbers == [0, 1, 9]  # LS 1,2,10 -> IR 0,1,9
+
+    def test_ls_to_ir_frame_conversion_supports_zero_based_sequences(self):
+        from dagshub_annotation_converter.formats.label_studio.videorectangle import (
+            VideoRectangleAnnotation,
+            VideoRectangleValue,
+            VideoRectangleSequenceItem,
+        )
+
+        ls_ann = VideoRectangleAnnotation(
+            original_width=1920,
+            original_height=1080,
+            value=VideoRectangleValue(
+                sequence=[
+                    VideoRectangleSequenceItem(frame=0, x=10.0, y=20.0, width=5.0, height=10.0),
+                    VideoRectangleSequenceItem(frame=1, x=11.0, y=21.0, width=5.0, height=10.0),
+                    VideoRectangleSequenceItem(frame=9, x=15.0, y=25.0, width=5.0, height=10.0),
+                ],
+                labels=["object"],
+            ),
+            meta={"original_track_id": 1},
+        )
+
+        ir_annotations = ls_ann.to_ir_annotations()
+
+        frame_numbers = sorted([a.frame_number for a in ir_annotations])
+        assert frame_numbers == [0, 1, 9]
 
     def test_ir_to_ls_frame_conversion(self):
         ir_annotations = [

@@ -33,6 +33,28 @@ def get_video_dimensions(video_path: Path) -> Tuple[int, int, float]:
     )
 
 
+def get_video_frame_count(video_path: Path) -> Optional[int]:
+    """Read total video frame count if available.
+
+    Returns ``None`` when frame count cannot be determined.
+    """
+    try:
+        count = _probe_ffprobe_frame_count(video_path)
+        if count is not None and count > 0:
+            return count
+    except (FileNotFoundError, ValueError, subprocess.SubprocessError):
+        pass
+
+    try:
+        count = _probe_cv2_frame_count(video_path)
+        if count is not None and count > 0:
+            return count
+    except ImportError:
+        pass
+
+    return None
+
+
 def _probe_ffprobe(video_path: Path) -> Tuple[int, int, float]:
     result = subprocess.run(
         [
@@ -71,6 +93,42 @@ def _probe_ffprobe(video_path: Path) -> Tuple[int, int, float]:
     return width, height, fps
 
 
+def _probe_ffprobe_frame_count(video_path: Path) -> Optional[int]:
+    result = subprocess.run(
+        [
+            "ffprobe", "-v", "quiet",
+            "-count_frames",
+            "-select_streams", "v:0",
+            "-print_format", "json",
+            "-show_entries", "stream=nb_read_frames,nb_frames",
+            str(video_path),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    if result.returncode != 0:
+        raise ValueError(f"ffprobe failed on {video_path}")
+
+    info = json.loads(result.stdout)
+    streams = info.get("streams", [])
+    if not streams:
+        return None
+
+    stream = streams[0]
+    for field in ("nb_read_frames", "nb_frames"):
+        raw_value = stream.get(field)
+        if raw_value is None:
+            continue
+        value = str(raw_value).strip()
+        if value.isdigit():
+            count = int(value)
+            if count > 0:
+                return count
+
+    return None
+
+
 def _probe_cv2(video_path: Path) -> Tuple[int, int, float]:
     import cv2
 
@@ -87,6 +145,21 @@ def _probe_cv2(video_path: Path) -> Tuple[int, int, float]:
         raise ValueError(f"Could not determine dimensions for {video_path}")
 
     return width, height, fps
+
+
+def _probe_cv2_frame_count(video_path: Path) -> Optional[int]:
+    import cv2
+
+    cap = cv2.VideoCapture(str(video_path))
+    if not cap.isOpened():
+        raise ValueError(f"Could not open video file: {video_path}")
+
+    count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cap.release()
+
+    if count <= 0:
+        return None
+    return count
 
 
 def find_video_sibling(reference_path: Path, name_stem: Optional[str] = None) -> Optional[Path]:

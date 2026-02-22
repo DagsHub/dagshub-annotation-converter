@@ -189,6 +189,160 @@ class TestMOTFileExport:
         finally:
             output_path.unlink()
 
+    def test_export_interpolates_between_sparse_keyframes(self, mot_context):
+        annotations = [
+            IRVideoBBoxAnnotation(
+                track_id=1,
+                frame_number=0,
+                keyframe=True,
+                left=100,
+                top=150,
+                width=50,
+                height=120,
+                image_width=1920,
+                image_height=1080,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.DENORMALIZED,
+                visibility=1.0,
+            ),
+            IRVideoBBoxAnnotation(
+                track_id=1,
+                frame_number=4,
+                keyframe=True,
+                left=140,
+                top=158,
+                width=50,
+                height=120,
+                image_width=1920,
+                image_height=1080,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.DENORMALIZED,
+                visibility=1.0,
+            ),
+        ]
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            output_path = Path(f.name)
+
+        try:
+            export_to_mot(annotations, mot_context, output_path)
+            lines = [line for line in output_path.read_text().splitlines() if line and not line.startswith("#")]
+
+            # Frames should be densified from 0..4 (MOT 1..5)
+            assert len(lines) == 5
+            mot_frames = [int(line.split(",")[0]) for line in lines]
+            assert mot_frames == [1, 2, 3, 4, 5]
+        finally:
+            output_path.unlink()
+
+    def test_export_hides_outside_ranges_between_keyframes(self, mot_context):
+        annotations = [
+            IRVideoBBoxAnnotation(
+                track_id=1,
+                frame_number=0,
+                keyframe=True,
+                left=100,
+                top=150,
+                width=50,
+                height=120,
+                image_width=1920,
+                image_height=1080,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.DENORMALIZED,
+                visibility=1.0,
+                meta={"outside": False},
+            ),
+            IRVideoBBoxAnnotation(
+                track_id=1,
+                frame_number=3,
+                keyframe=True,
+                left=130,
+                top=156,
+                width=50,
+                height=120,
+                image_width=1920,
+                image_height=1080,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.DENORMALIZED,
+                visibility=0.0,
+                meta={"outside": True},
+            ),
+            IRVideoBBoxAnnotation(
+                track_id=1,
+                frame_number=5,
+                keyframe=True,
+                left=150,
+                top=160,
+                width=50,
+                height=120,
+                image_width=1920,
+                image_height=1080,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.DENORMALIZED,
+                visibility=1.0,
+                meta={"outside": False},
+            ),
+        ]
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            output_path = Path(f.name)
+
+        try:
+            export_to_mot(annotations, mot_context, output_path)
+            lines = [line for line in output_path.read_text().splitlines() if line and not line.startswith("#")]
+
+            # Frame 3 is emitted as a hidden boundary marker, frame 4 remains hidden until re-appearance at frame 5.
+            mot_frames = [int(line.split(",")[0]) for line in lines]
+            assert mot_frames == [1, 2, 3, 4, 6]
+            assert float(lines[3].split(",")[8]) == 0.0
+        finally:
+            output_path.unlink()
+
+    def test_export_extends_last_visible_segment_to_seq_length(self):
+        context = MOTContext(frame_rate=30.0, image_width=1920, image_height=1080, seq_length=12)
+        context.categories = {1: "person"}
+        annotations = [
+            IRVideoBBoxAnnotation(
+                track_id=1,
+                frame_number=0,
+                keyframe=True,
+                left=100,
+                top=150,
+                width=50,
+                height=120,
+                image_width=1920,
+                image_height=1080,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.DENORMALIZED,
+                visibility=1.0,
+            ),
+            IRVideoBBoxAnnotation(
+                track_id=1,
+                frame_number=3,
+                keyframe=True,
+                left=130,
+                top=156,
+                width=50,
+                height=120,
+                image_width=1920,
+                image_height=1080,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.DENORMALIZED,
+                visibility=1.0,
+            ),
+        ]
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            output_path = Path(f.name)
+
+        try:
+            export_to_mot(annotations, context, output_path)
+            lines = [line for line in output_path.read_text().splitlines() if line and not line.startswith("#")]
+            mot_frames = [int(line.split(",")[0]) for line in lines]
+            assert mot_frames == list(range(1, 13))
+        finally:
+            output_path.unlink()
+
     def test_export_to_dir_uses_probed_dimensions_for_seqinfo(self, tmp_path, monkeypatch):
         context = MOTContext(frame_rate=30.0, image_width=None, image_height=None, seq_name="test_sequence")
         context.categories = {1: "person"}
@@ -213,14 +367,90 @@ class TestMOTFileExport:
         )
 
         out_dir = tmp_path / "mot_out"
-        export_mot_to_dir(annotations, context, out_dir, video_file="local_video.mp4")
+        export_mot_to_dir(
+            annotations,
+            context,
+            out_dir,
+            video_file="local_video.mp4",
+            create_seqinfo=True,
+        )
 
         seqinfo = configparser.ConfigParser()
         seqinfo.read(out_dir / "seqinfo.ini")
         seq = seqinfo["Sequence"]
         assert seq["imWidth"] == "1280"
         assert seq["imHeight"] == "720"
-        assert seq["frameRate"] == "25.0"
+        assert seq["frameRate"] == "25"
+
+    def test_export_to_dir_skips_seqinfo_by_default(self, tmp_path):
+        context = MOTContext(frame_rate=30.0, image_width=1280, image_height=720, seq_name="test_sequence")
+        context.categories = {1: "person"}
+        annotations = [
+            IRVideoBBoxAnnotation(
+                track_id=1,
+                frame_number=0,
+                left=100,
+                top=150,
+                width=50,
+                height=120,
+                image_width=1280,
+                image_height=720,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.DENORMALIZED,
+            )
+        ]
+
+        out_dir = tmp_path / "mot_out"
+        export_mot_to_dir(annotations, context, out_dir)
+
+        assert (out_dir / "gt" / "gt.txt").exists()
+        assert (out_dir / "gt" / "labels.txt").exists()
+        assert not (out_dir / "seqinfo.ini").exists()
+
+    def test_export_to_dir_uses_probed_frame_count_for_seqinfo(self, tmp_path, monkeypatch):
+        context = MOTContext(frame_rate=30.0, image_width=None, image_height=None, seq_name="test_sequence")
+        context.categories = {1: "person"}
+        annotations = [
+            IRVideoBBoxAnnotation(
+                track_id=1,
+                frame_number=0,
+                left=100,
+                top=150,
+                width=50,
+                height=120,
+                image_width=0,
+                image_height=0,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.DENORMALIZED,
+            )
+        ]
+
+        monkeypatch.setattr(
+            "dagshub_annotation_converter.converters.mot.get_video_dimensions",
+            lambda _: (1280, 720, 25.0),
+        )
+        monkeypatch.setattr(
+            "dagshub_annotation_converter.converters.mot.get_video_frame_count",
+            lambda _: 40,
+        )
+
+        out_dir = tmp_path / "mot_out"
+        export_mot_to_dir(
+            annotations,
+            context,
+            out_dir,
+            video_file="local_video.mp4",
+            create_seqinfo=True,
+        )
+
+        seqinfo = configparser.ConfigParser()
+        seqinfo.read(out_dir / "seqinfo.ini")
+        seq = seqinfo["Sequence"]
+        assert seq["seqLength"] == "40"
+
+        gt_lines = [line for line in (out_dir / "gt" / "gt.txt").read_text().splitlines() if line]
+        max_gt_frame = max(int(line.split(",")[0]) for line in gt_lines)
+        assert max_gt_frame == 40
 
     def test_export_raises_without_dimensions_or_video_file(self, tmp_path):
         context = MOTContext(frame_rate=30.0, image_width=None, image_height=None)
@@ -281,11 +511,11 @@ class TestMOTFileExport:
         with ZipFile(tmp_path / "earth-space-small.mp4.zip") as z:
             assert "gt/gt.txt" in z.namelist()
             assert "gt/labels.txt" in z.namelist()
-            assert "seqinfo.ini" in z.namelist()
+            assert "seqinfo.ini" not in z.namelist()
         with ZipFile(tmp_path / "jelly.mp4.zip") as z:
             assert "gt/gt.txt" in z.namelist()
             assert "gt/labels.txt" in z.namelist()
-            assert "seqinfo.ini" in z.namelist()
+            assert "seqinfo.ini" not in z.namelist()
 
     def test_export_sequences_to_dirs_accepts_stem_video_file_keys(self, tmp_path, monkeypatch):
         context = MOTContext(frame_rate=30.0, image_width=None, image_height=None, seq_name="default")
@@ -314,6 +544,7 @@ class TestMOTFileExport:
             context,
             tmp_path,
             video_files={"earth-space-small": "local_video.mp4"},
+            create_seqinfo=True,
         )
         assert "earth-space-small.mp4" in outputs
         with ZipFile(tmp_path / "earth-space-small.mp4.zip") as z:
@@ -323,3 +554,48 @@ class TestMOTFileExport:
         seq = seqinfo["Sequence"]
         assert seq["imWidth"] == "1280"
         assert seq["imHeight"] == "720"
+        assert seq["frameRate"] == "25"
+
+    def test_export_to_dir_seq_length_matches_exported_gt(self, tmp_path):
+        context = MOTContext(frame_rate=30.0, image_width=720, image_height=480, seq_name="test_sequence")
+        context.categories = {1: "person", 2: "woman"}
+        annotations = [
+            IRVideoBBoxAnnotation(
+                track_id=1,
+                frame_number=377,
+                left=576,
+                top=209,
+                width=40,
+                height=34,
+                image_width=720,
+                image_height=480,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.DENORMALIZED,
+                meta={"ls_enabled": True, "ls_frames_count": 381},
+            ),
+            IRVideoBBoxAnnotation(
+                track_id=2,
+                frame_number=366,
+                left=200,
+                top=84,
+                width=232,
+                height=148,
+                image_width=720,
+                image_height=480,
+                categories={"woman": 1.0},
+                coordinate_style=CoordinateStyle.DENORMALIZED,
+                meta={"ls_enabled": True, "ls_frames_count": 381},
+            ),
+        ]
+
+        out_dir = tmp_path / "mot_out"
+        export_mot_to_dir(annotations, context, out_dir, create_seqinfo=True)
+
+        seqinfo = configparser.ConfigParser()
+        seqinfo.read(out_dir / "seqinfo.ini")
+        seq = seqinfo["Sequence"]
+        assert seq["seqLength"] == "381"
+
+        gt_lines = [line for line in (out_dir / "gt" / "gt.txt").read_text().splitlines() if line]
+        max_gt_frame = max(int(line.split(",")[0]) for line in gt_lines)
+        assert max_gt_frame == 381

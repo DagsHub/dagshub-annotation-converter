@@ -16,7 +16,7 @@ from dagshub_annotation_converter.formats.cvat.video import (
 )
 from dagshub_annotation_converter.ir.image import IRImageAnnotationBase, IRBBoxImageAnnotation, IRPoseImageAnnotation
 from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation
-from dagshub_annotation_converter.util.video import get_video_dimensions
+from dagshub_annotation_converter.util.video import get_video_dimensions, get_video_frame_count
 from dagshub_annotation_converter.features import ConverterFeatures
 
 logger = logging.getLogger(__name__)
@@ -282,6 +282,11 @@ def export_cvat_video_to_xml_string(
             resolved_width = probed_width
         if resolved_height is None:
             resolved_height = probed_height
+
+    if seq_length is None and video_file is not None:
+        frame_count = get_video_frame_count(Path(video_file))
+        if frame_count is not None and frame_count > 0:
+            seq_length = frame_count
 
     if resolved_width is None or resolved_height is None:
         raise ValueError(

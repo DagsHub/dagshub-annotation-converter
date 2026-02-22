@@ -29,6 +29,7 @@ class TestMOTLineImport:
         assert ann.top == 150
         assert ann.width == 50
         assert ann.height == 120
+        assert ann.keyframe
         assert ann.visibility == 1.0
         assert "person" in ann.categories
         assert ann.coordinate_style == CoordinateStyle.DENORMALIZED
@@ -68,6 +69,15 @@ class TestMOTLineImport:
         
         assert ann.frame_number == 2  # MOT frame 3 -> IR frame 2
         assert ann.visibility == 0.5
+
+    def test_parse_line_with_zero_visibility_marks_outside(self, mot_context):
+        line = "11,1,120,154,50,120,1,1,0.0"
+
+        ann = import_bbox_from_line(line, mot_context)
+
+        assert ann.frame_number == 10
+        assert ann.visibility == 0.0
+        assert ann.meta.get("outside") is True
 
 
 class TestMOTFileImport:
@@ -161,6 +171,39 @@ class TestMOTDirectoryImport:
         loaded = load_mot_from_fs(tmp_path)
         assert set(loaded.keys()) == {"seq_a", "seq_b"}
         assert all(len(anns) > 0 for anns, _ in loaded.values())
+
+    def test_load_from_fs_uses_datasource_path_layout(self, tmp_path, monkeypatch):
+        labels_dir = tmp_path / "labels"
+        labels_dir.mkdir()
+        video_path = tmp_path / "data" / "data" / "videos" / "earth-space-small.mp4"
+        video_path.parent.mkdir(parents=True, exist_ok=True)
+        video_path.write_bytes(b"fake-video")
+
+        zip_path = labels_dir / "earth-space-small.mp4.zip"
+        with ZipFile(zip_path, "w") as z:
+            z.writestr("gt/gt.txt", "1,1,100,150,50,120,1,1,1.0\n")
+            z.writestr("gt/labels.txt", "1 person\n")
+
+        probed_paths = []
+
+        def fake_dimensions(path):
+            probed_paths.append(Path(path))
+            return 720, 480, 24.0
+
+        monkeypatch.setattr("dagshub_annotation_converter.converters.mot.get_video_dimensions", fake_dimensions)
+        monkeypatch.setattr(
+            "dagshub_annotation_converter.converters.mot.get_video_frame_count",
+            lambda _: 400,
+        )
+
+        loaded = load_mot_from_fs(labels_dir, datasource_path="data/videos")
+        anns, context = loaded["earth-space-small.mp4.zip"]
+
+        assert context.image_width == 720
+        assert context.image_height == 480
+        assert context.seq_length == 400
+        assert 0 in anns
+        assert probed_paths == [video_path]
 
 
 class TestMOTFrameNumberConversion:

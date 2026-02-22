@@ -6,8 +6,12 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union
 from zipfile import ZipFile
 
 from dagshub_annotation_converter.formats.mot import MOTContext, import_bbox_from_line, export_bbox_to_line
-from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation
-from dagshub_annotation_converter.util.video import find_video_sibling, get_video_dimensions
+from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
+from dagshub_annotation_converter.util.video import (
+    find_video_sibling,
+    get_video_dimensions,
+    get_video_frame_count,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +90,10 @@ def _try_fill_dimensions_from_video(
                 context.image_height = height
             if context.frame_rate == 30.0 and fps > 0:
                 context.frame_rate = fps
+            if context.seq_length is None:
+                frame_count = get_video_frame_count(candidate)
+                if frame_count is not None and frame_count > 0:
+                    context.seq_length = frame_count
             logger.info(f"Inferred dimensions {width}x{height} from {candidate}")
             return
         except (ImportError, ValueError) as e:
@@ -105,6 +113,99 @@ def _validate_context_dimensions(context: MOTContext, source: str) -> None:
             f"Provide {', '.join(missing)} explicitly, or place a video file "
             f"with the same name next to the annotation source."
         )
+
+
+def _to_denormalized_for_mot(ann: IRVideoBBoxAnnotation, context: MOTContext) -> IRVideoBBoxAnnotation:
+    if ann.coordinate_style == CoordinateStyle.NORMALIZED:
+        if (
+            (ann.image_width is None and context.image_width is not None)
+            or (ann.image_height is None and context.image_height is not None)
+        ):
+            ann = ann.model_copy()
+            if ann.image_width is None and context.image_width is not None:
+                ann.image_width = context.image_width
+            if ann.image_height is None and context.image_height is not None:
+                ann.image_height = context.image_height
+        ann = ann.denormalized()
+    return ann
+
+
+def _lerp(start: float, end: float, t: float) -> float:
+    return start + (end - start) * t
+
+
+def _is_outside(ann: IRVideoBBoxAnnotation) -> bool:
+    return bool(ann.meta.get("outside", False))
+
+
+def _interpolation_enabled(ann: IRVideoBBoxAnnotation) -> bool:
+    return bool(ann.meta.get("ls_enabled", True))
+
+
+def _interpolate_track_for_mot(
+    track_annotations: Sequence[IRVideoBBoxAnnotation],
+    context: MOTContext,
+    end_frame: Optional[int] = None,
+) -> List[IRVideoBBoxAnnotation]:
+    if not track_annotations:
+        return []
+
+    by_frame: Dict[int, IRVideoBBoxAnnotation] = {}
+    for ann in sorted(track_annotations, key=lambda a: a.frame_number):
+        by_frame[ann.frame_number] = _to_denormalized_for_mot(ann, context)
+
+    ordered = [by_frame[frame] for frame in sorted(by_frame)]
+    dense: List[IRVideoBBoxAnnotation] = []
+
+    for idx, curr in enumerate(ordered):
+        curr_outside = _is_outside(curr)
+        dense.append(curr)
+
+        if idx == len(ordered) - 1:
+            continue
+
+        nxt = ordered[idx + 1]
+        gap = nxt.frame_number - curr.frame_number - 1
+        if gap <= 0 or curr_outside or not _interpolation_enabled(curr):
+            continue
+
+        curr_ignored = bool(curr.meta.get("ignored", False))
+        nxt_ignored = bool(nxt.meta.get("ignored", False))
+
+        for step in range(1, gap + 1):
+            t = step / (gap + 1)
+            interpolated = curr.model_copy(deep=True)
+            interpolated.frame_number = curr.frame_number + step
+            interpolated.keyframe = False
+            interpolated.left = _lerp(curr.left, nxt.left, t)
+            interpolated.top = _lerp(curr.top, nxt.top, t)
+            interpolated.width = _lerp(curr.width, nxt.width, t)
+            interpolated.height = _lerp(curr.height, nxt.height, t)
+            interpolated.rotation = _lerp(curr.rotation, nxt.rotation, t)
+            interpolated.confidence = _lerp(curr.confidence, nxt.confidence, t)
+            interpolated.visibility = _lerp(curr.visibility, nxt.visibility, t)
+            if curr.timestamp is not None and nxt.timestamp is not None:
+                interpolated.timestamp = _lerp(curr.timestamp, nxt.timestamp, t)
+            else:
+                interpolated.timestamp = None
+            interpolated.meta.pop("outside", None)
+            if curr_ignored and nxt_ignored:
+                interpolated.meta["ignored"] = True
+            else:
+                interpolated.meta.pop("ignored", None)
+            dense.append(interpolated)
+
+    if end_frame is not None:
+        last = ordered[-1]
+        if not _is_outside(last) and _interpolation_enabled(last) and last.frame_number < end_frame:
+            for frame_number in range(last.frame_number + 1, end_frame + 1):
+                extrapolated = last.model_copy(deep=True)
+                extrapolated.frame_number = frame_number
+                extrapolated.keyframe = False
+                extrapolated.meta.pop("outside", None)
+                dense.append(extrapolated)
+
+    return dense
 
 
 def load_mot_from_dir(
@@ -233,10 +334,56 @@ def load_mot_from_fs(
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
     video_files: Optional[Dict[str, Union[str, Path]]] = None,
+    datasource_path: Optional[Union[str, Path]] = None,
 ) -> Dict[str, Tuple[Dict[int, Sequence[IRVideoBBoxAnnotation]], MOTContext]]:
     """Load MOT annotations from all sequence directories/ZIPs under a directory."""
     import_dir = Path(import_dir)
     results: Dict[str, Tuple[Dict[int, Sequence[IRVideoBBoxAnnotation]], MOTContext]] = {}
+    normalized_datasource_path: Optional[Path] = None
+    if datasource_path is not None:
+        normalized_datasource_path = Path(str(datasource_path).lstrip("/"))
+
+    def _sequence_lookup_keys(sequence_key: str) -> List[str]:
+        seq_path = Path(sequence_key)
+        keys = [sequence_key, seq_path.as_posix(), seq_path.name, seq_path.stem]
+        second_stem = Path(seq_path.stem).stem
+        if second_stem not in keys:
+            keys.append(second_stem)
+        return [key for key in keys if key]
+
+    def _sequence_video_filename(sequence_key: str) -> str:
+        name = Path(sequence_key).name
+        if name.lower().endswith(".zip"):
+            return Path(name).stem
+        return name
+
+    def _resolve_video_file(sequence_key: str) -> Optional[Path]:
+        lookup_keys = _sequence_lookup_keys(sequence_key)
+
+        if video_files is not None:
+            for key in lookup_keys:
+                if key in video_files:
+                    return Path(video_files[key])
+
+            for raw_key, raw_value in video_files.items():
+                key_path = Path(str(raw_key))
+                candidates = [
+                    str(raw_key),
+                    key_path.as_posix(),
+                    key_path.name,
+                    key_path.stem,
+                    Path(key_path.stem).stem,
+                ]
+                if any(candidate in lookup_keys for candidate in candidates if candidate):
+                    return Path(raw_value)
+
+        if normalized_datasource_path is not None:
+            video_filename = _sequence_video_filename(sequence_key)
+            candidate = import_dir.parent / "data" / normalized_datasource_path / video_filename
+            if candidate.is_file():
+                return candidate
+
+        return None
 
     seq_roots = {
         gt_path.parent.parent
@@ -245,12 +392,12 @@ def load_mot_from_fs(
     }
     for seq_root in sorted(seq_roots):
         key = str(seq_root.relative_to(import_dir))
-        video_file = video_files.get(key) if video_files is not None else None
+        video_file = _resolve_video_file(key)
         results[key] = load_mot_from_dir(seq_root, image_width, image_height, video_file)
 
     for zip_path in sorted(import_dir.rglob("*.zip")):
         key = str(zip_path.relative_to(import_dir))
-        video_file = video_files.get(key) if video_files is not None else None
+        video_file = _resolve_video_file(key)
         results[key] = load_mot_from_zip(zip_path, image_width, image_height, video_file)
 
     return results
@@ -281,6 +428,11 @@ def export_to_mot(
         if context.frame_rate == 30.0 and fps > 0:
             context.frame_rate = fps
 
+    if context.seq_length is None and video_file is not None:
+        frame_count = get_video_frame_count(Path(video_file))
+        if frame_count is not None and frame_count > 0:
+            context.seq_length = frame_count
+
     if context.image_width is None or context.image_height is None:
         raise ValueError(
             "Cannot determine frame dimensions for MOT export. "
@@ -291,7 +443,29 @@ def export_to_mot(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    sorted_anns = sorted(annotations, key=lambda a: (a.frame_number, a.track_id))
+    tracks: Dict[int, List[IRVideoBBoxAnnotation]] = defaultdict(list)
+    for ann in annotations:
+        tracks[ann.track_id].append(ann)
+
+    context_end_frame = context.seq_length - 1 if context.seq_length is not None and context.seq_length > 0 else None
+    expanded_annotations: List[IRVideoBBoxAnnotation] = []
+    for _, track_annotations in sorted(tracks.items()):
+        track_end_candidates: List[int] = []
+        if context_end_frame is not None:
+            track_end_candidates.append(context_end_frame)
+        for ann in track_annotations:
+            frames_count = ann.meta.get("ls_frames_count")
+            if isinstance(frames_count, int) and frames_count > 0:
+                track_end_candidates.append(frames_count - 1)
+
+        track_end_frame = max(track_end_candidates) if track_end_candidates else None
+        expanded_annotations.extend(_interpolate_track_for_mot(track_annotations, context, end_frame=track_end_frame))
+
+    sorted_anns = sorted(expanded_annotations, key=lambda a: (a.frame_number, a.track_id))
+    if sorted_anns:
+        exported_seq_length = max(ann.frame_number for ann in sorted_anns) + 1
+        if context.seq_length is None or context.seq_length < exported_seq_length:
+            context.seq_length = exported_seq_length
     lines = [export_bbox_to_line(ann, context) for ann in sorted_anns]
 
     with open(output_path, "w") as f:
@@ -308,6 +482,7 @@ def export_mot_to_dir(
     context: MOTContext,
     output_dir: Union[str, Path],
     video_file: Optional[Union[str, Path]] = None,
+    create_seqinfo: bool = False,
 ) -> Path:
     """
     Export annotations to MOT directory structure.
@@ -318,19 +493,23 @@ def export_mot_to_dir(
           gt/
             gt.txt
             labels.txt
-          seqinfo.ini
+          seqinfo.ini (optional)
 
     Missing dimensions are resolved with the same fallback as ``export_to_mot``.
     """
     output_dir = Path(output_dir)
     gt_dir = output_dir / "gt"
     gt_dir.mkdir(parents=True, exist_ok=True)
+    seqinfo_path = output_dir / "seqinfo.ini"
 
     export_to_mot(annotations, context, gt_dir / "gt.txt", video_file=video_file)
 
-    if context.seq_length is None and annotations:
-        context.seq_length = max(ann.frame_number for ann in annotations) + 1
-    context.write_seqinfo(output_dir / "seqinfo.ini")
+    if create_seqinfo:
+        if context.seq_length is None and annotations:
+            context.seq_length = max(ann.frame_number for ann in annotations) + 1
+        context.write_seqinfo(seqinfo_path)
+    elif seqinfo_path.exists():
+        seqinfo_path.unlink()
     context.write_labels(gt_dir / "labels.txt")
 
     logger.info(f"Exported MOT sequence to {output_dir}")
@@ -342,14 +521,21 @@ def export_mot_to_zip(
     context: MOTContext,
     output_path: Union[str, Path],
     video_file: Optional[Union[str, Path]] = None,
+    create_seqinfo: bool = False,
 ) -> Path:
-    """Export annotations to a MOT zip with gt/gt.txt, gt/labels.txt, seqinfo.ini."""
+    """Export annotations to a MOT zip with gt/gt.txt, gt/labels.txt, and optional seqinfo.ini."""
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     with TemporaryDirectory() as tmp:
         tmp_dir = Path(tmp) / "sequence"
-        export_mot_to_dir(annotations, context, tmp_dir, video_file=video_file)
+        export_mot_to_dir(
+            annotations,
+            context,
+            tmp_dir,
+            video_file=video_file,
+            create_seqinfo=create_seqinfo,
+        )
         with ZipFile(output_path, "w") as z:
             for file_path in sorted(tmp_dir.rglob("*")):
                 if file_path.is_file():
@@ -364,6 +550,7 @@ def export_mot_sequences_to_dirs(
     context: MOTContext,
     output_dir: Union[str, Path],
     video_files: Optional[Dict[str, Union[str, Path]]] = None,
+    create_seqinfo: bool = False,
 ) -> Dict[str, Path]:
     """Export multiple MOT sequences to one zip per source filename."""
     def resolve_video_file(sequence_name: str) -> Optional[Union[str, Path]]:
@@ -398,5 +585,6 @@ def export_mot_sequences_to_dirs(
             seq_context,
             output_dir / f"{sequence_name}.zip",
             video_file=resolve_video_file(sequence_name),
+            create_seqinfo=create_seqinfo,
         )
     return outputs

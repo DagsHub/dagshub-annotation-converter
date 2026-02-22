@@ -1,10 +1,18 @@
 import pytest
 from zipfile import ZipFile
+from lxml import etree
 
 from dagshub_annotation_converter.converters.cvat import (
     export_cvat_video_to_xml_string,
     export_cvat_video_to_zip,
     export_cvat_videos_to_zips,
+)
+from dagshub_annotation_converter.converters.label_studio_video import ls_video_task_to_video_ir
+from dagshub_annotation_converter.formats.label_studio.task import LabelStudioTask, AnnotationsContainer
+from dagshub_annotation_converter.formats.label_studio.videorectangle import (
+    VideoRectangleAnnotation,
+    VideoRectangleValue,
+    VideoRectangleSequenceItem,
 )
 from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
 
@@ -36,6 +44,17 @@ class TestCVATVideoExport:
         xml_text = xml_bytes.decode("utf-8")
         assert "<width>1280</width>" in xml_text
         assert "<height>720</height>" in xml_text
+
+    def test_export_uses_probed_frame_count_when_seq_length_missing(self, monkeypatch):
+        ann = _make_annotation(image_width=1920, image_height=1080)
+        monkeypatch.setattr(
+            "dagshub_annotation_converter.converters.cvat.get_video_frame_count",
+            lambda _: 400,
+        )
+
+        xml_bytes = export_cvat_video_to_xml_string([ann], video_file="local_video.mp4")
+        xml_text = xml_bytes.decode("utf-8")
+        assert "<size>400</size>" in xml_text
 
     def test_export_raises_without_dimensions_or_video_file(self):
         ann = _make_annotation(image_width=0, image_height=0)
@@ -151,3 +170,81 @@ class TestCVATVideoExport:
             assert "<width>640</width>" in xml
             assert "<height>360</height>" in xml
             assert "<source>jelly.mp4</source>" in xml
+
+    def test_export_ls_segments_with_string_outside_false(self):
+        video_rect = VideoRectangleAnnotation(
+            id="track_1",
+            original_width=1920,
+            original_height=1080,
+            value=VideoRectangleValue(
+                sequence=[
+                    VideoRectangleSequenceItem(
+                        frame=1,
+                        x=10.0,
+                        y=10.0,
+                        width=5.0,
+                        height=10.0,
+                        enabled=True,
+                        outside="false",
+                    ),
+                    VideoRectangleSequenceItem(
+                        frame=9,
+                        x=20.0,
+                        y=10.0,
+                        width=5.0,
+                        height=10.0,
+                        enabled=False,
+                        outside="false",
+                    ),
+                    VideoRectangleSequenceItem(
+                        frame=13,
+                        x=30.0,
+                        y=10.0,
+                        width=5.0,
+                        height=10.0,
+                        enabled=False,
+                        outside="false",
+                    ),
+                    VideoRectangleSequenceItem(
+                        frame=14,
+                        x=31.0,
+                        y=10.0,
+                        width=5.0,
+                        height=10.0,
+                        enabled=False,
+                        outside="false",
+                    ),
+                    VideoRectangleSequenceItem(
+                        frame=15,
+                        x=32.0,
+                        y=10.0,
+                        width=5.0,
+                        height=10.0,
+                        enabled=False,
+                        outside="false",
+                    ),
+                ],
+                labels=["person"],
+                framesCount=200,
+            ),
+        )
+        task = LabelStudioTask(data={"video": "/data/video.mp4"})
+        task.annotations = [
+            AnnotationsContainer.model_construct(completed_by=None, result=[video_rect], ground_truth=False),
+        ]
+
+        annotations = ls_video_task_to_video_ir(task)
+        xml_bytes = export_cvat_video_to_xml_string(annotations)
+
+        root = etree.fromstring(xml_bytes)
+        assert int(root.findtext(".//meta/task/size")) == 200
+
+        boxes = root.findall(".//track/box")
+        by_frame = {int(box.attrib["frame"]): box for box in boxes}
+
+        assert by_frame[8].attrib["outside"] == "0"
+        assert by_frame[9].attrib["outside"] == "1"
+        assert by_frame[12].attrib["outside"] == "0"
+        assert by_frame[13].attrib["outside"] == "0"
+        assert by_frame[14].attrib["outside"] == "0"
+        assert 15 not in by_frame
