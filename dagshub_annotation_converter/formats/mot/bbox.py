@@ -1,3 +1,5 @@
+from typing import Dict, Any
+
 from dagshub_annotation_converter.formats.mot.context import MOTContext
 from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
 
@@ -27,7 +29,7 @@ def import_bbox_from_line(line: str, context: MOTContext) -> IRVideoBBoxAnnotati
 
     category_name = context.get_category_name(class_id)
 
-    meta = {"source_format": "mot"}
+    meta: Dict[str, Any] = {"source_format": "mot"}
     if not_ignored == 0:
         meta["ignored"] = True
     if visibility <= 0.0:

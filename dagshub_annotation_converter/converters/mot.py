@@ -306,8 +306,8 @@ def load_mot_from_zip(
             with z.open(seqinfo_key) as f:
                 context = MOTContext.from_seqinfo_string(f.read().decode("utf-8"))
         else:
-            context = MOTContext()
             logger.warning("seqinfo.ini not found in zip, using default context")
+            context = MOTContext()
 
         if image_width is not None:
             context.image_width = image_width
