@@ -132,10 +132,13 @@ class VideoRectangleAnnotation(AnnotationResultABC):
             if self.value.framesCount is not None and self.value.framesCount > 0:
                 meta["ls_frames_count"] = self.value.framesCount
 
+            # enabled=True in LS means interpolate from this frame → keyframe in IR
+            keyframe = bool(seq_item.enabled)
+
             ann = IRVideoBBoxAnnotation(
                 track_id=track_id,
                 frame_number=seq_item.frame - frame_base,
-                keyframe=True,
+                keyframe=keyframe,
                 left=seq_item.x / 100.0,
                 top=seq_item.y / 100.0,
                 width=seq_item.width / 100.0,
@@ -170,22 +173,14 @@ class VideoRectangleAnnotation(AnnotationResultABC):
 
         sorted_anns = sorted(ir_annotations, key=lambda a: a.frame_number)
 
-        sequence = []
-        is_mot_source = any(
-            ann.meta.get("source_format") == "mot"
-            for ann in sorted_anns
-        )
-        is_cvat_source = any(
-            ann.meta.get("source_format") == "cvat"
-            for ann in sorted_anns
-        )
-        seen_visible = False
         frames_count_values = {
             int(ann.meta["ls_frames_count"])
             for ann in sorted_anns
             if isinstance(ann.meta.get("ls_frames_count"), int)
         }
         frames_count = max(frames_count_values) if frames_count_values else None
+
+        sequence = []
         for idx, ann in enumerate(sorted_anns):
             is_outside = _coerce_bool_like(ann.meta.get("outside", ann.visibility <= 0.0))
             if ann.coordinate_style == CoordinateStyle.DENORMALIZED:
@@ -196,7 +191,7 @@ class VideoRectangleAnnotation(AnnotationResultABC):
                 ann = ann.normalized()
 
             if is_outside:
-                if is_cvat_source and seen_visible:
+                if ann.meta.get("trailing_outside"):
                     continue
                 seq_item = VideoRectangleSequenceItem(
                     frame=ann.frame_number + 1,
@@ -213,32 +208,28 @@ class VideoRectangleAnnotation(AnnotationResultABC):
                 sequence.append(seq_item)
                 continue
 
-            seen_visible = True
             if "ls_enabled" in ann.meta:
                 enabled = _coerce_bool_like(ann.meta["ls_enabled"])
-            elif is_mot_source:
+            elif not ann.keyframe:
                 enabled = False
             else:
-                enabled = True if is_cvat_source else False
                 next_ann = next(iter(sorted_anns[idx + 1:]), None)
-                if next_ann is not None:
-                    next_is_outside = _coerce_bool_like(next_ann.meta.get("outside", next_ann.visibility <= 0.0))
-                    if is_cvat_source:
-                        if next_is_outside:
-                            enabled = False
-                        elif (
-                            next_ann.frame_number == ann.frame_number + 1
-                            and ann.keyframe
-                            and next_ann.keyframe
-                        ):
-                            enabled = False
-                        else:
-                            enabled = True
+                if next_ann is None:
+                    enabled = False
+                else:
+                    next_is_outside = _coerce_bool_like(
+                        next_ann.meta.get("outside", next_ann.visibility <= 0.0)
+                    )
+                    if next_is_outside:
+                        enabled = False
+                    elif (
+                        next_ann.frame_number == ann.frame_number + 1
+                        and next_ann.keyframe
+                    ):
+                        enabled = False
                     else:
-                        enabled = not next_is_outside
+                        enabled = True
 
-            # Convert normalized (0-1) to percentage (0-100)
-            # IR uses 0-based frames, Label Studio uses 1-based
             seq_item = VideoRectangleSequenceItem(
                 frame=ann.frame_number + 1,  # Convert 0-based to 1-based
                 x=ann.left * 100.0,

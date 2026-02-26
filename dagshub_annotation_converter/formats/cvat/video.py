@@ -41,6 +41,7 @@ def parse_video_track(
     label = track_elem.attrib["label"]
 
     annotations = []
+    seen_visible_in_track = False
 
     for box_elem in track_elem.findall("box"):
         frame_number = int(box_elem.attrib["frame"])
@@ -64,8 +65,12 @@ def parse_video_track(
         meta = {
             "z_order": int(box_elem.attrib.get("z_order", 0)),
             "outside": outside == 1,
-            "source_format": "cvat",
         }
+        if outside == 1 and seen_visible_in_track:
+            meta["trailing_outside"] = True
+
+        if outside != 1:
+            seen_visible_in_track = True
 
         ann = IRVideoBBoxAnnotation(
             track_id=track_id,

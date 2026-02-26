@@ -29,7 +29,7 @@ class TestMOTLineImport:
         assert ann.top == 150
         assert ann.width == 50
         assert ann.height == 120
-        assert ann.keyframe
+        assert ann.keyframe is False  # MOT is dense per-frame, no interpolation
         assert ann.visibility == 1.0
         assert "person" in ann.categories
         assert ann.coordinate_style == CoordinateStyle.DENORMALIZED

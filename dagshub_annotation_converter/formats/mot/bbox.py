@@ -29,16 +29,17 @@ def import_bbox_from_line(line: str, context: MOTContext) -> IRVideoBBoxAnnotati
 
     category_name = context.get_category_name(class_id)
 
-    meta: Dict[str, Any] = {"source_format": "mot"}
+    meta: Dict[str, Any] = {}
     if not_ignored == 0:
         meta["ignored"] = True
     if visibility <= 0.0:
         meta["outside"] = True
 
+    # MOT is dense per-frame; no keyframe concept, so no interpolation in LS
     return IRVideoBBoxAnnotation(
         track_id=track_id,
         frame_number=frame_id - 1,
-        keyframe=True,
+        keyframe=False,
         left=x,
         top=y,
         width=w,

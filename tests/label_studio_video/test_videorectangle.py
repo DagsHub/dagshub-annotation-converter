@@ -88,7 +88,7 @@ class TestVideoRectangleAnnotation:
 
         ir_annotations = ann.to_ir_annotations()
         assert len(ir_annotations) == 1
-        assert ir_annotations[0].keyframe
+        assert ir_annotations[0].keyframe is False  # enabled=False → no interpolation from this frame
         assert ir_annotations[0].meta.get("ls_enabled") is False
         assert not ir_annotations[0].meta.get("outside")
         assert ir_annotations[0].visibility == 0.75
@@ -262,7 +262,8 @@ class TestVideoRectangleAnnotation:
         # Frame numbers should be 1-based in LS format
         assert ls_ann.value.sequence[0].frame == 1
         assert ls_ann.value.sequence[1].frame == 2
-        assert ls_ann.value.sequence[0].enabled
+        # First has keyframe=False => no interpolation from this frame; last frame => enabled=False
+        assert not ls_ann.value.sequence[0].enabled
         assert not ls_ann.value.sequence[1].enabled
 
     def test_from_ir_annotations_sparse_keyframes_keep_interpolation(self):
