@@ -154,7 +154,10 @@ class LabelStudioTask(ParentModel):
         res = self._reimport_poses(res)
         return res
 
-    def _reimport_poses(self, annotations: Sequence[Union[IRImageAnnotationBase, IRVideoAnnotationBase]]) -> Sequence[Union[IRImageAnnotationBase, IRVideoAnnotationBase]]:
+    def _reimport_poses(
+        self, 
+        annotations: Sequence[Union[IRImageAnnotationBase, IRVideoAnnotationBase]]
+    ) -> Sequence[Union[IRImageAnnotationBase, IRVideoAnnotationBase]]:
         if PosePointsLookupKey not in self.data or PoseBBoxLookupKey not in self.data:
             return annotations
 
