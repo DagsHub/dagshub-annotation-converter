@@ -113,7 +113,8 @@ class MOTContext(ParentModel):
 
     def write_seqinfo(self, seqinfo_path: Path):
         config = configparser.ConfigParser()
-        config.optionxform = str
+        # Preserve case for all values on writing
+        config.optionxform = str  # type: ignore
         config["Sequence"] = {}
         seq = config["Sequence"]
 
