@@ -4,8 +4,6 @@ from dagshub_annotation_converter.ir.video.annotations.base import IRVideoAnnota
 class IRVideoBBoxAnnotation(IRVideoAnnotationBase):
     """
     Bounding box annotation for video object tracking.
-
-    Coordinate format: (left, top, width, height).
     """
 
     left: float
@@ -19,12 +17,10 @@ class IRVideoBBoxAnnotation(IRVideoAnnotationBase):
 
     def _require_dimensions_for_coordinate_conversion(self):
         if self.video_width is None or self.video_height is None:
-            raise ValueError("Cannot normalize/denormalize video annotation without image_width/image_height")
+            raise ValueError("Cannot normalize/denormalize video annotation without video_width/video_height")
 
     def _normalize(self):
         self._require_dimensions_for_coordinate_conversion()
-        assert self.video_width is not None
-        assert self.video_height is not None
         self.left = self.left / self.video_width
         self.top = self.top / self.video_height
         self.width = self.width / self.video_width
@@ -32,8 +28,6 @@ class IRVideoBBoxAnnotation(IRVideoAnnotationBase):
 
     def _denormalize(self):
         self._require_dimensions_for_coordinate_conversion()
-        assert self.video_width is not None
-        assert self.video_height is not None
         self.left = self.left * self.video_width
         self.top = self.top * self.video_height
         self.width = self.width * self.video_width
