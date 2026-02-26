@@ -13,7 +13,14 @@ def test_coco_import():
     annotation_file = Path(__file__).parent / "res" / "annotations.json"
     annotations, context = load_coco_from_file(annotation_file)
 
-    assert context.categories == {1: "cat", 2: "dog"}
+    cat_category = context.categories["cat"]
+    assert cat_category.name == "cat"
+    assert cat_category.id == 1
+
+    dog_category = context.categories["dog"]
+    assert dog_category.name == "dog"
+    assert dog_category.id == 2
+
     assert set(annotations.keys()) == {"images/a.jpg", "images/b.jpg"}
 
     assert annotations["images/a.jpg"] == [

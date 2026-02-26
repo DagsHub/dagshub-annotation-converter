@@ -7,11 +7,12 @@ from dagshub_annotation_converter.ir.image.annotations.bbox import IRBBoxImageAn
 
 def import_bbox(annotation: Dict[str, Any], image: Dict[str, Any], context: CocoContext) -> IRBBoxImageAnnotation:
     category_id = int(annotation["category_id"])
+    category = context.categories[category_id]
     x, y, width, height = annotation["bbox"]
 
     return IRBBoxImageAnnotation(
         imported_id=str(annotation["id"]),
-        categories={context.get_category_name(category_id): 1.0},
+        categories={category.name: 1.0},
         top=float(y),
         left=float(x),
         width=float(width),
@@ -30,7 +31,7 @@ def export_bbox(
 ) -> Dict[str, Any]:
     denormalized = annotation.denormalized()
     category_name = denormalized.ensure_has_one_category()
-    category_id = context.get_category_id(category_name)
+    category_id = context.categories.get_or_create(category_name).id
 
     return {
         "id": annotation_id,

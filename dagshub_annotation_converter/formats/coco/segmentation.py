@@ -34,6 +34,7 @@ def import_segmentation(
         return []
 
     category_id = int(annotation["category_id"])
+    category_name = context.categories[category_id].name
     imported_id = str(annotation["id"])
     parsed: List[IRSegmentationImageAnnotation] = []
 
@@ -49,7 +50,7 @@ def import_segmentation(
         parsed.append(
             IRSegmentationImageAnnotation(
                 imported_id=imported_id,
-                categories={context.get_category_name(category_id): 1.0},
+                categories={category_name: 1.0},
                 points=points,
                 image_width=int(image["width"]),
                 image_height=int(image["height"]),
@@ -68,7 +69,7 @@ def export_segmentation(
 ) -> Dict[str, Any]:
     denormalized = annotation.denormalized()
     category_name = denormalized.ensure_has_one_category()
-    category_id = context.get_category_id(category_name)
+    category_id = context.categories.get_or_create(category_name).id
 
     segmentation = []
     for point in denormalized.points:
@@ -95,7 +96,7 @@ def export_segmentation_group(
 
     first = annotations[0].denormalized()
     category_name = first.ensure_has_one_category()
-    category_id = context.get_category_id(category_name)
+    category_id = context.categories.get_or_create(category_name).id
 
     segmentation: List[List[float]] = []
     area = 0.0

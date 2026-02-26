@@ -44,7 +44,7 @@ def _consume_annotation_id(
 def _load_coco_dict(coco: Dict[str, Any]) -> Tuple[Dict[str, List[IRImageAnnotationBase]], CocoContext]:
     context = CocoContext()
     for category in coco.get("categories", []):
-        context.categories[int(category["id"])] = str(category["name"])
+        context.categories.add(str(category["name"]), int(category["id"]))
 
     image_lookup: Dict[int, Dict[str, Any]] = {}
     for image in coco.get("images", []):
@@ -141,7 +141,7 @@ def _build_coco_dict(
             ann_id, annotation_id = _consume_annotation_id(group_imported_id, used_annotation_ids, annotation_id)
             coco_annotations.append(export_segmentation_group(group, export_context, image_id, ann_id))
 
-    categories = [{"id": category_id, "name": name} for category_id, name in sorted(export_context.categories.items())]
+    categories = [{"id": category.id, "name": category.name} for category in export_context.categories]
 
     return {
         "categories": categories,
