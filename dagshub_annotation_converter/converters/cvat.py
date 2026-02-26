@@ -15,7 +15,7 @@ from dagshub_annotation_converter.formats.cvat.video import (
     cvat_video_xml_to_string,
 )
 from dagshub_annotation_converter.ir.image import IRImageAnnotationBase, IRBBoxImageAnnotation, IRPoseImageAnnotation
-from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation
+from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, IRVideoAnnotationBase
 from dagshub_annotation_converter.util.video import get_video_dimensions, get_video_frame_count
 from dagshub_annotation_converter.features import ConverterFeatures
 
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 # Type aliases for clarity
 CVATImageAnnotations = Dict[str, Sequence[IRImageAnnotationBase]]
-CVATVideoAnnotations = Dict[int, Sequence[IRVideoBBoxAnnotation]]
+CVATVideoAnnotations = Dict[int, Sequence[IRVideoAnnotationBase]]
 CVATAnnotations = Union[CVATImageAnnotations, CVATVideoAnnotations]
 
 
@@ -269,10 +269,10 @@ def export_cvat_video_to_xml_string(
 
     if resolved_width is None or resolved_height is None:
         for ann in annotations:
-            if resolved_width is None and ann.image_width is not None and ann.image_width > 0:
-                resolved_width = ann.image_width
-            if resolved_height is None and ann.image_height is not None and ann.image_height > 0:
-                resolved_height = ann.image_height
+            if resolved_width is None and ann.video_width is not None and ann.video_width > 0:
+                resolved_width = ann.video_width
+            if resolved_height is None and ann.video_height is not None and ann.video_height > 0:
+                resolved_height = ann.video_height
             if resolved_width is not None and resolved_height is not None:
                 break
 
@@ -304,13 +304,13 @@ def export_cvat_video_to_xml_string(
     prepared_annotations = []
     for ann in annotations:
         prepared = ann
-        if prepared.image_width is None or prepared.image_width <= 0:
+        if prepared.video_width is None or prepared.video_width <= 0:
             prepared = prepared.model_copy()
-            prepared.image_width = resolved_width
-        if prepared.image_height is None or prepared.image_height <= 0:
+            prepared.video_width = resolved_width
+        if prepared.video_height is None or prepared.video_height <= 0:
             if prepared is ann:
                 prepared = prepared.model_copy()
-            prepared.image_height = resolved_height
+            prepared.video_height = resolved_height
         prepared_annotations.append(prepared)
 
     return cvat_video_xml_to_string(

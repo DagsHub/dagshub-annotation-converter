@@ -18,23 +18,23 @@ class IRVideoBBoxAnnotation(IRVideoAnnotationBase):
     """Visibility/occlusion ratio (0-1). 1.0 = fully visible."""
 
     def _require_dimensions_for_coordinate_conversion(self):
-        if self.image_width is None or self.image_height is None:
+        if self.video_width is None or self.video_height is None:
             raise ValueError("Cannot normalize/denormalize video annotation without image_width/image_height")
 
     def _normalize(self):
         self._require_dimensions_for_coordinate_conversion()
-        assert self.image_width is not None
-        assert self.image_height is not None
-        self.left = self.left / self.image_width
-        self.top = self.top / self.image_height
-        self.width = self.width / self.image_width
-        self.height = self.height / self.image_height
+        assert self.video_width is not None
+        assert self.video_height is not None
+        self.left = self.left / self.video_width
+        self.top = self.top / self.video_height
+        self.width = self.width / self.video_width
+        self.height = self.height / self.video_height
 
     def _denormalize(self):
         self._require_dimensions_for_coordinate_conversion()
-        assert self.image_width is not None
-        assert self.image_height is not None
-        self.left = self.left * self.image_width
-        self.top = self.top * self.image_height
-        self.width = self.width * self.image_width
-        self.height = self.height * self.image_height
+        assert self.video_width is not None
+        assert self.video_height is not None
+        self.left = self.left * self.video_width
+        self.top = self.top * self.video_height
+        self.width = self.width * self.video_width
+        self.height = self.height * self.video_height

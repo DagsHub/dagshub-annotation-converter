@@ -14,8 +14,8 @@ def test_normalize_coordinates(epsilon):
         top=108,  # 108/1080 = 0.1
         width=384,  # 384/1920 = 0.2
         height=216,  # 216/1080 = 0.2
-        image_width=1920,
-        image_height=1080,
+        video_width=1920,
+        video_height=1080,
         categories={"person": 1.0},
         coordinate_style=CoordinateStyle.DENORMALIZED,
     )
@@ -39,8 +39,8 @@ def test_annotation_with_optional_fields():
         top=150,
         width=50,
         height=120,
-        image_width=1920,
-        image_height=1080,
+        video_width=1920,
+        video_height=1080,
         categories={"car": 1.0},
         coordinate_style=CoordinateStyle.DENORMALIZED,
         timestamp=0.167,
@@ -61,8 +61,8 @@ def test_with_filename():
         top=150,
         width=50,
         height=120,
-        image_width=1920,
-        image_height=1080,
+        video_width=1920,
+        video_height=1080,
         categories={"person": 1.0},
         coordinate_style=CoordinateStyle.DENORMALIZED,
     )
@@ -78,8 +78,8 @@ def test_ensure_has_one_category():
         top=150,
         width=50,
         height=120,
-        image_width=1920,
-        image_height=1080,
+        video_width=1920,
+        video_height=1080,
         categories={"person": 1.0},
         coordinate_style=CoordinateStyle.DENORMALIZED,
     )
@@ -95,13 +95,13 @@ def test_allows_missing_image_dimensions():
         top=0.1,
         width=0.2,
         height=0.2,
-        image_width=None,
-        image_height=None,
+        video_width=None,
+        video_height=None,
         categories={"person": 1.0},
         coordinate_style=CoordinateStyle.NORMALIZED,
     )
-    assert ann.image_width is None
-    assert ann.image_height is None
+    assert ann.video_width is None
+    assert ann.video_height is None
 
 def test_normalize_denormalize_require_dimensions():
     denorm = IRVideoBBoxAnnotation(
@@ -111,8 +111,8 @@ def test_normalize_denormalize_require_dimensions():
         top=100,
         width=50,
         height=50,
-        image_width=None,
-        image_height=None,
+        video_width=None,
+        video_height=None,
         categories={"person": 1.0},
         coordinate_style=CoordinateStyle.DENORMALIZED,
     )
@@ -126,8 +126,8 @@ def test_normalize_denormalize_require_dimensions():
         top=0.1,
         width=0.2,
         height=0.2,
-        image_width=None,
-        image_height=None,
+        video_width=None,
+        video_height=None,
         categories={"person": 1.0},
         coordinate_style=CoordinateStyle.NORMALIZED,
     )
@@ -143,8 +143,8 @@ def test_denormalize_coordinates(epsilon):
         top=0.1,
         width=0.2,
         height=0.2,
-        image_width=1920,
-        image_height=1080,
+        video_width=1920,
+        video_height=1080,
         categories={"car": 1.0},
         coordinate_style=CoordinateStyle.NORMALIZED,
     )

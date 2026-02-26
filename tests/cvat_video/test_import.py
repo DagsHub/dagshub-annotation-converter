@@ -142,8 +142,8 @@ class TestCVATVideoFileImport:
         # All annotations should have correct image dimensions
         for frame_anns in annotations.values():
             for ann in frame_anns:
-                assert ann.image_width == 1920
-                assert ann.image_height == 1080
+                assert ann.video_width == 1920
+                assert ann.video_height == 1080
 
     def test_track_ids_consistent(self, sample_cvat_video_xml):
         annotations = load_cvat_from_xml_file(sample_cvat_video_xml)

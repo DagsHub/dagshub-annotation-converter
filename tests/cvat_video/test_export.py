@@ -25,8 +25,8 @@ def _make_annotation(image_width: int, image_height: int) -> IRVideoBBoxAnnotati
         top=150,
         width=50,
         height=120,
-        image_width=image_width,
-        image_height=image_height,
+        video_width=image_width,
+        video_height=image_height,
         categories={"person": 1.0},
         coordinate_style=CoordinateStyle.DENORMALIZED,
     )

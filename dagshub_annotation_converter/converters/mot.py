@@ -118,14 +118,14 @@ def _validate_context_dimensions(context: MOTContext, source: str) -> None:
 def _to_denormalized_for_mot(ann: IRVideoBBoxAnnotation, context: MOTContext) -> IRVideoBBoxAnnotation:
     if ann.coordinate_style == CoordinateStyle.NORMALIZED:
         if (
-            (ann.image_width is None and context.image_width is not None)
-            or (ann.image_height is None and context.image_height is not None)
+            (ann.video_width is None and context.image_width is not None)
+            or (ann.video_height is None and context.image_height is not None)
         ):
             ann = ann.model_copy()
-            if ann.image_width is None and context.image_width is not None:
-                ann.image_width = context.image_width
-            if ann.image_height is None and context.image_height is not None:
-                ann.image_height = context.image_height
+            if ann.video_width is None and context.image_width is not None:
+                ann.video_width = context.image_width
+            if ann.video_height is None and context.image_height is not None:
+                ann.video_height = context.image_height
         ann = ann.denormalized()
     return ann
 
@@ -411,10 +411,10 @@ def export_to_mot(
     """Export annotations to MOT gt.txt format, resolving missing dimensions from annotations/video_file."""
     if context.image_width is None or context.image_height is None:
         for ann in annotations:
-            if context.image_width is None and ann.image_width is not None and ann.image_width > 0:
-                context.image_width = ann.image_width
-            if context.image_height is None and ann.image_height is not None and ann.image_height > 0:
-                context.image_height = ann.image_height
+            if context.image_width is None and ann.video_width is not None and ann.video_width > 0:
+                context.image_width = ann.video_width
+            if context.image_height is None and ann.video_height is not None and ann.video_height > 0:
+                context.image_height = ann.video_height
             if context.image_width is not None and context.image_height is not None:
                 break
 

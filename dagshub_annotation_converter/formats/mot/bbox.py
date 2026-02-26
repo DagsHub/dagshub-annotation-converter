@@ -41,8 +41,8 @@ def import_bbox_from_line(line: str, context: MOTContext) -> IRVideoBBoxAnnotati
         top=y,
         width=w,
         height=h,
-        image_width=context.image_width,
-        image_height=context.image_height,
+        video_width=context.image_width,
+        video_height=context.image_height,
         categories={category_name: 1.0},
         coordinate_style=CoordinateStyle.DENORMALIZED,
         visibility=visibility,
@@ -61,14 +61,14 @@ def export_bbox_to_line(ann: IRVideoBBoxAnnotation, context: MOTContext) -> str:
     """
     if ann.coordinate_style == CoordinateStyle.NORMALIZED:
         if (
-            (ann.image_width is None and context.image_width is not None)
-            or (ann.image_height is None and context.image_height is not None)
+            (ann.video_width is None and context.image_width is not None)
+            or (ann.video_height is None and context.image_height is not None)
         ):
             ann = ann.model_copy()
-            if ann.image_width is None and context.image_width is not None:
-                ann.image_width = context.image_width
-            if ann.image_height is None and context.image_height is not None:
-                ann.image_height = context.image_height
+            if ann.video_width is None and context.image_width is not None:
+                ann.video_width = context.image_width
+            if ann.video_height is None and context.image_height is not None:
+                ann.video_height = context.image_height
         ann = ann.denormalized()
 
     category_name = ann.ensure_has_one_category()

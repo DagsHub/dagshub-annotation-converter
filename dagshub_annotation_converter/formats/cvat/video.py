@@ -75,8 +75,8 @@ def parse_video_track(
             top=ytl,
             width=xbr - xtl,
             height=ybr - ytl,
-            image_width=image_width,
-            image_height=image_height,
+            video_width=image_width,
+            video_height=image_height,
             categories={label: 1.0},
             coordinate_style=CoordinateStyle.DENORMALIZED,
             visibility=visibility,
@@ -202,9 +202,9 @@ def build_cvat_video_xml(
     """Build a complete CVAT video XML document from annotations."""
     if annotations:
         if image_width is None:
-            image_width = annotations[0].image_width
+            image_width = annotations[0].video_width
         if image_height is None:
-            image_height = annotations[0].image_height
+            image_height = annotations[0].video_height
         if seq_length is None:
             seq_length = max(ann.frame_number for ann in annotations) + 1
             ls_frames_counts = [

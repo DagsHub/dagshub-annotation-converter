@@ -1,10 +1,10 @@
 from abc import abstractmethod
 from typing import Optional
 
-from dagshub_annotation_converter.ir.image.annotations.base import IRImageAnnotationBase
+from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
 
 
-class IRVideoAnnotationBase(IRImageAnnotationBase):
+class IRVideoAnnotationBase(IRAnnotationBase):
     """
     Base class for video annotations with tracking support.
 
@@ -21,8 +21,8 @@ class IRVideoAnnotationBase(IRImageAnnotationBase):
     """Whether this annotation is an explicit keyframe in tracked formats."""
     timestamp: Optional[float] = None
     video_path: Optional[str] = None
-    image_width: Optional[int] = None
-    image_height: Optional[int] = None
+    video_width: Optional[int] = None
+    video_height: Optional[int] = None
 
     @abstractmethod
     def _normalize(self):

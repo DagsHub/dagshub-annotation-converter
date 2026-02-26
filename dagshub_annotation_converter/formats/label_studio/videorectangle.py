@@ -141,8 +141,8 @@ class VideoRectangleAnnotation(AnnotationResultABC):
                 width=seq_item.width / 100.0,
                 height=seq_item.height / 100.0,
                 rotation=seq_item.rotation,
-                image_width=self.original_width,
-                image_height=self.original_height,
+                video_width=self.original_width,
+                video_height=self.original_height,
                 categories={label: 1.0},
                 coordinate_style=CoordinateStyle.NORMALIZED,
                 timestamp=seq_item.time,
@@ -189,7 +189,7 @@ class VideoRectangleAnnotation(AnnotationResultABC):
         for idx, ann in enumerate(sorted_anns):
             is_outside = _coerce_bool_like(ann.meta.get("outside", ann.visibility <= 0.0))
             if ann.coordinate_style == CoordinateStyle.DENORMALIZED:
-                if ann.image_width is None or ann.image_height is None:
+                if ann.video_width is None or ann.video_height is None:
                     raise ValueError(
                         f"Cannot normalize annotation at frame {ann.frame_number} without image dimensions"
                     )
@@ -253,8 +253,8 @@ class VideoRectangleAnnotation(AnnotationResultABC):
 
         return VideoRectangleAnnotation(
             id=ls_id,
-            original_width=first.image_width,
-            original_height=first.image_height,
+            original_width=first.video_width,
+            original_height=first.video_height,
             value=VideoRectangleValue(
                 sequence=sequence,
                 labels=[label],

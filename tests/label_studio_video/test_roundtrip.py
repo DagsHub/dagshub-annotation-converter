@@ -474,8 +474,8 @@ class TestLabelStudioVideoLocalProbeFallback:
         task = LabelStudioTask.model_validate(task_data)
         annotations = task.to_ir_annotations(filename="repo/remote/path/video.mp4")
         assert len(annotations) == 10
-        assert all(ann.image_width is None for ann in annotations)
-        assert all(ann.image_height is None for ann in annotations)
+        assert all(ann.video_width is None for ann in annotations)
+        assert all(ann.video_height is None for ann in annotations)
 
     def test_task_to_ir_uses_video_file_argument_for_probing(
         self,
@@ -502,5 +502,5 @@ class TestLabelStudioVideoLocalProbeFallback:
             video_file=str(local_video),
         )
         assert len(annotations) == 10
-        assert all(ann.image_width == 1920 for ann in annotations)
-        assert all(ann.image_height == 1080 for ann in annotations)
+        assert all(ann.video_width == 1920 for ann in annotations)
+        assert all(ann.video_height == 1080 for ann in annotations)

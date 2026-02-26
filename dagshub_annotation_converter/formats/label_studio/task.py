@@ -22,6 +22,7 @@ from dagshub_annotation_converter.ir.image import (
     IRSegmentationImageAnnotation,
     IREllipseImageAnnotation,
 )
+from dagshub_annotation_converter.ir.video import IRVideoAnnotationBase
 from dagshub_annotation_converter.util.video import get_video_dimensions
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
@@ -117,9 +118,9 @@ class LabelStudioTask(ParentModel):
         self,
         filename: Optional[str] = None,
         video_file: Optional[Union[str, Path]] = None,
-    ) -> Sequence[IRImageAnnotationBase]:
+    ) -> Sequence[Union[IRImageAnnotationBase, IRVideoAnnotationBase]]:
         """Convert task annotations to IR; probe video dims from local ``video_file`` if provided."""
-        res: List[IRImageAnnotationBase] = []
+        res: List[Union[IRImageAnnotationBase, IRVideoAnnotationBase]] = []
         probed_width: Optional[int] = None
         probed_height: Optional[int] = None
         did_probe = False
@@ -153,7 +154,7 @@ class LabelStudioTask(ParentModel):
         res = self._reimport_poses(res)
         return res
 
-    def _reimport_poses(self, annotations: List[IRImageAnnotationBase]) -> List[IRImageAnnotationBase]:
+    def _reimport_poses(self, annotations: Sequence[Union[IRImageAnnotationBase, IRVideoAnnotationBase]]) -> Sequence[Union[IRImageAnnotationBase, IRVideoAnnotationBase]]:
         if PosePointsLookupKey not in self.data or PoseBBoxLookupKey not in self.data:
             return annotations
 
