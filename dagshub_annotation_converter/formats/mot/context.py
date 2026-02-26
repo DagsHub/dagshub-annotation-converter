@@ -26,9 +26,9 @@ class MOTContext(ParentModel):
     default_category: str = "object"
 
     @staticmethod
-    def from_seqinfo(seqinfo_path: Path) -> "MOTContext":
+    def from_seqinfo_string(content: str) -> "MOTContext":
         """
-        Load context from seqinfo.ini file.
+        Load context from seqinfo.ini file's content.
 
         Example seqinfo.ini::
 
@@ -41,33 +41,17 @@ class MOTContext(ParentModel):
             imHeight=1080
             imExt=.jpg
         """
+
         config = configparser.ConfigParser()
-        config.read(seqinfo_path)
-
-        ctx = MOTContext()
-
-        if config.has_section("Sequence"):
-            seq = config["Sequence"]
-            ctx.seq_name = seq.get("name")
-            ctx.frame_rate = float(seq.get("frameRate", 30.0))
-            ctx.seq_length = int(seq.get("seqLength", 0)) or None
-            ctx.image_width = int(seq.get("imWidth", 0)) or None
-            ctx.image_height = int(seq.get("imHeight", 0)) or None
-
-        return ctx
-
-    @staticmethod
-    def from_seqinfo_string(content: str) -> "MOTContext":
-        config = configparser.ConfigParser()
-        config.read_file(io.StringIO(content))
+        config.read_string(content)
         ctx = MOTContext()
         if config.has_section("Sequence"):
             seq = config["Sequence"]
             ctx.seq_name = seq.get("name")
-            ctx.frame_rate = float(seq.get("frameRate", 30.0))
-            ctx.seq_length = int(seq.get("seqLength", 0)) or None
-            ctx.image_width = int(seq.get("imWidth", 0)) or None
-            ctx.image_height = int(seq.get("imHeight", 0)) or None
+            ctx.frame_rate = float(seq.get("frameRate", "30.0"))
+            ctx.seq_length = int(seq.get("seqLength", "0")) or None
+            ctx.image_width = int(seq.get("imWidth", "0")) or None
+            ctx.image_height = int(seq.get("imHeight", "0")) or None
         return ctx
 
     @staticmethod

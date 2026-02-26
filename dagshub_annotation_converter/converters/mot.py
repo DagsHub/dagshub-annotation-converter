@@ -233,7 +233,7 @@ def load_mot_from_dir(
 
     seqinfo_path = mot_dir / "seqinfo.ini"
     if seqinfo_path.exists():
-        context = MOTContext.from_seqinfo(seqinfo_path)
+        context = MOTContext.from_seqinfo_string(seqinfo_path.read_text(encoding="utf-8"))
     else:
         context = MOTContext()
         logger.warning(f"seqinfo.ini not found at {seqinfo_path}, using default context")
@@ -299,10 +299,10 @@ def load_mot_from_zip(
         labels_key = f"{prefix}gt/labels.txt"
         seqinfo_key = f"{prefix}seqinfo.ini"
 
-        if gt_key not in z.namelist() or not _is_safe_zip_path(gt_key):
+        if gt_key not in z.namelist():
             raise FileNotFoundError(f"Could not find gt/gt.txt in {zip_path}")
 
-        if seqinfo_key in z.namelist() and _is_safe_zip_path(seqinfo_key):
+        if seqinfo_key in z.namelist():
             with z.open(seqinfo_key) as f:
                 context = MOTContext.from_seqinfo_string(f.read().decode("utf-8"))
         else:
@@ -314,7 +314,7 @@ def load_mot_from_zip(
         if image_height is not None:
             context.image_height = image_height
 
-        if labels_key in z.namelist() and _is_safe_zip_path(labels_key):
+        if labels_key in z.namelist():
             with z.open(labels_key) as f:
                 context.categories = MOTContext.load_labels_from_string(f.read().decode("utf-8"))
 
