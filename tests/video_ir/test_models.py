@@ -45,13 +45,11 @@ def test_annotation_with_optional_fields():
         coordinate_style=CoordinateStyle.DENORMALIZED,
         timestamp=0.167,
         visibility=0.8,
-        video_path="/videos/test.mp4",
     )
 
     assert ann.timestamp == 0.167
     assert ann.visibility == 0.8
     assert not ann.keyframe
-    assert ann.video_path == "/videos/test.mp4"
 
 def test_with_filename():
     ann = IRVideoBBoxAnnotation(
