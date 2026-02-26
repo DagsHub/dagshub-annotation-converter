@@ -199,7 +199,7 @@ class TestMOTToLabelStudioRoundtrip:
             seq = ls_tasks[0].annotations[0].result[0].value.sequence
             by_frame = {item.frame: item for item in seq}
 
-            # MOT does not store LS "enabled"; after round-trip, frame 11 is a gap boundary so it may be True
+            assert by_frame[11].enabled is False
             assert by_frame[100].enabled is False
         finally:
             output_path.unlink()
@@ -376,12 +376,49 @@ class TestCVATVideoToLabelStudioRoundtrip:
         ls_tasks = video_ir_to_ls_video_tasks(all_annotations)
 
         seq = ls_tasks[0].annotations[0].result[0].value.sequence
-        by_frame = {item.frame: item for item in seq}
-        # CVAT may emit interpolated frames; keyframes from original LS should have correct enabled
-        assert by_frame[1].enabled is True
-        assert by_frame[9].enabled is False
-        assert by_frame[127].enabled is True
-        assert by_frame[378].enabled is False  # last frame, no interpolation to next
+        got = [
+            (item.frame, item.enabled, (item.__pydantic_extra__ or {}).get("outside"))
+            for item in seq
+        ]
+        expected = [
+            (1, True, None),
+            (9, False, None),
+            (10, False, True),
+            (13, False, None),
+            (14, False, None),
+            (15, False, None),
+            (16, False, True),
+            (25, False, None),
+            (26, False, True),
+            (127, True, None),
+            (175, False, None),
+            (176, False, True),
+            (378, False, None),
+        ]
+        assert got == expected
+
+    def test_cvat_middle_outside_boundary_is_preserved_in_ls(self, sample_cvat_video_xml):
+        cvat_annotations = load_cvat_from_xml_file(sample_cvat_video_xml)
+        all_annotations = [ann for frame_anns in cvat_annotations.values() for ann in frame_anns]
+
+        ls_tasks = video_ir_to_ls_video_tasks(all_annotations)
+        car_result = next(
+            result
+            for result in ls_tasks[0].annotations[0].result
+            if "car" in result.value.labels
+        )
+
+        got = [
+            (item.frame, item.enabled, (item.__pydantic_extra__ or {}).get("outside"))
+            for item in car_result.value.sequence
+        ]
+        assert got == [
+            (1, True, None),
+            (2, False, None),
+            (3, False, None),
+            (4, False, True),
+            (5, False, None),
+        ]
 
 
 class TestCrossFormatConversion:

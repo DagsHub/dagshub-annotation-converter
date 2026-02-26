@@ -68,6 +68,41 @@ class TestCVATVideoTrackParsing:
         frame_1_ann = [a for a in annotations if a.frame_number == 1][0]
         assert not frame_1_ann.keyframe
 
+    def test_parse_track_middle_outside_is_not_marked_as_trailing(self, sample_cvat_video_xml):
+        tree = etree.parse(str(sample_cvat_video_xml))
+        tracks = tree.findall(".//track")
+
+        annotations = parse_video_track(tracks[1], image_width=1920, image_height=1080)
+        frame_3_ann = [a for a in annotations if a.frame_number == 3][0]
+        assert frame_3_ann.meta.get("outside") is True
+        assert frame_3_ann.meta.get("trailing_outside") is not True
+
+    def test_parse_track_final_outside_is_marked_as_trailing(self):
+        xml_str = b"""<?xml version="1.0" encoding="utf-8"?>
+<annotations>
+  <version>1.1</version>
+  <meta>
+    <task>
+      <size>4</size>
+      <mode>interpolation</mode>
+      <original_size><width>1920</width><height>1080</height></original_size>
+    </task>
+  </meta>
+  <track id="0" label="dog" source="manual">
+    <box frame="0" outside="0" occluded="0" keyframe="1"
+         xtl="10" ytl="20" xbr="110" ybr="120" z_order="0"/>
+    <box frame="1" outside="0" occluded="0" keyframe="0"
+         xtl="12" ytl="22" xbr="112" ybr="122" z_order="0"/>
+    <box frame="2" outside="1" occluded="0" keyframe="1"
+         xtl="14" ytl="24" xbr="114" ybr="124" z_order="0"/>
+  </track>
+</annotations>"""
+        root = etree.fromstring(xml_str)
+        track = root.findall(".//track")[0]
+        annotations = parse_video_track(track, image_width=1920, image_height=1080)
+        assert annotations[-1].meta.get("outside") is True
+        assert annotations[-1].meta.get("trailing_outside") is True
+
 
 class TestCVATVideoOutsideRoundtrip:
     def test_outside_roundtrip(self):

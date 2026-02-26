@@ -132,8 +132,9 @@ class VideoRectangleAnnotation(AnnotationResultABC):
             if self.value.framesCount is not None and self.value.framesCount > 0:
                 meta["ls_frames_count"] = self.value.framesCount
 
-            # enabled=True in LS means interpolate from this frame → keyframe in IR
-            keyframe = bool(seq_item.enabled)
+            # In IR, keyframe controls interpolation to following frames.
+            # Keep outside boundary rows as explicit keyframes even when enabled=False.
+            keyframe = outside or bool(seq_item.enabled)
 
             ann = IRVideoBBoxAnnotation(
                 track_id=track_id,

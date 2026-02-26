@@ -41,9 +41,16 @@ def parse_video_track(
     label = track_elem.attrib["label"]
 
     annotations = []
+    box_elems = track_elem.findall("box")
     seen_visible_in_track = False
+    has_future_visible = [False] * len(box_elems)
+    visible_ahead = False
+    for idx in range(len(box_elems) - 1, -1, -1):
+        has_future_visible[idx] = visible_ahead
+        if int(box_elems[idx].attrib.get("outside", 0)) != 1:
+            visible_ahead = True
 
-    for box_elem in track_elem.findall("box"):
+    for idx, box_elem in enumerate(box_elems):
         frame_number = int(box_elem.attrib["frame"])
         outside = int(box_elem.attrib.get("outside", 0))
         occluded = int(box_elem.attrib.get("occluded", 0))
@@ -66,7 +73,7 @@ def parse_video_track(
             "z_order": int(box_elem.attrib.get("z_order", 0)),
             "outside": outside == 1,
         }
-        if outside == 1 and seen_visible_in_track:
+        if outside == 1 and seen_visible_in_track and not has_future_visible[idx]:
             meta["trailing_outside"] = True
 
         if outside != 1:

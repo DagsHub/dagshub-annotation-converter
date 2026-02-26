@@ -155,6 +155,38 @@ class TestVideoRectangleAnnotation:
         assert len(ir_annotations) == 1
         assert ir_annotations[0].meta.get("outside") is True
 
+    def test_to_ir_annotations_outside_boundary_is_explicit_keyframe(self):
+        from dagshub_annotation_converter.formats.label_studio.videorectangle import (
+            VideoRectangleValue,
+            VideoRectangleSequenceItem,
+        )
+
+        ann = VideoRectangleAnnotation(
+            original_width=1920,
+            original_height=1080,
+            value=VideoRectangleValue(
+                sequence=[
+                    VideoRectangleSequenceItem(
+                        frame=4,
+                        x=10.0,
+                        y=20.0,
+                        width=5.0,
+                        height=10.0,
+                        enabled=False,
+                        outside=True,
+                        visibility=0.0,
+                    ),
+                ],
+                labels=["person"],
+            ),
+            meta={"original_track_id": 1},
+        )
+
+        ir_annotations = ann.to_ir_annotations()
+        assert len(ir_annotations) == 1
+        assert ir_annotations[0].meta.get("outside") is True
+        assert ir_annotations[0].keyframe is True
+
     def test_to_ir_annotations_parses_string_outside_false_as_visible(self):
         from dagshub_annotation_converter.formats.label_studio.videorectangle import (
             VideoRectangleValue,
