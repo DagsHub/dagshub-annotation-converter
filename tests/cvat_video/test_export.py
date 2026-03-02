@@ -255,4 +255,5 @@ class TestCVATVideoExport:
         assert by_frame[12].attrib["outside"] == "0"
         assert by_frame[13].attrib["outside"] == "0"
         assert by_frame[14].attrib["outside"] == "0"
-        assert 15 not in by_frame
+        assert by_frame[15].attrib["outside"] == "1"
+        assert 16 not in by_frame

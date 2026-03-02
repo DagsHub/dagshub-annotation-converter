@@ -165,14 +165,14 @@ def _parse_video_mode(
     image_width: Optional[int],
     image_height: Optional[int],
 ) -> CVATVideoAnnotations:
-    if image_width is None or image_height is None:
-        meta_elem = root_elem.find("meta")
-        if meta_elem is not None:
-            meta_width, meta_height, _ = parse_video_meta(meta_elem)
-            if image_width is None:
-                image_width = meta_width
-            if image_height is None:
-                image_height = meta_height
+    seq_length: Optional[int] = None
+    meta_elem = root_elem.find("meta")
+    if meta_elem is not None:
+        meta_width, meta_height, seq_length = parse_video_meta(meta_elem)
+        if image_width is None:
+            image_width = meta_width
+        if image_height is None:
+            image_height = meta_height
 
     if image_width is None or image_height is None:
         missing = []
@@ -190,6 +190,8 @@ def _parse_video_mode(
     for track_elem in root_elem.findall(".//track"):
         track_annotations = parse_video_track(track_elem, image_width, image_height)
         for ann in track_annotations:
+            if isinstance(seq_length, int) and seq_length > 0:
+                ann.meta["ls_frames_count"] = seq_length
             if ann.frame_number not in all_annotations:
                 all_annotations[ann.frame_number] = []
             all_annotations[ann.frame_number].append(ann)

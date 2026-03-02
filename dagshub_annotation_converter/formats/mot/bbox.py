@@ -32,8 +32,6 @@ def import_bbox_from_line(line: str, context: MOTContext) -> IRVideoBBoxAnnotati
     meta: Dict[str, Any] = {}
     if not_ignored == 0:
         meta["ignored"] = True
-    if visibility <= 0.0:
-        meta["outside"] = True
 
     # MOT is dense per-frame; no keyframe concept, so no interpolation in LS
     return IRVideoBBoxAnnotation(

@@ -70,14 +70,14 @@ class TestMOTLineImport:
         assert ann.frame_number == 2  # MOT frame 3 -> IR frame 2
         assert ann.visibility == 0.5
 
-    def test_parse_line_with_zero_visibility_marks_outside(self, mot_context):
+    def test_parse_line_with_zero_visibility(self, mot_context):
         line = "11,1,120,154,50,120,1,1,0.0"
 
         ann = import_bbox_from_line(line, mot_context)
 
         assert ann.frame_number == 10
         assert ann.visibility == 0.0
-        assert ann.meta.get("outside") is True
+        assert "outside" not in ann.meta
 
 
 class TestMOTFileImport:

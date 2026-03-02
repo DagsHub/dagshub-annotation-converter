@@ -42,15 +42,7 @@ def parse_video_track(
 
     annotations = []
     box_elems = track_elem.findall("box")
-    seen_visible_in_track = False
-    has_future_visible = [False] * len(box_elems)
-    visible_ahead = False
-    for idx in range(len(box_elems) - 1, -1, -1):
-        has_future_visible[idx] = visible_ahead
-        if int(box_elems[idx].attrib.get("outside", 0)) != 1:
-            visible_ahead = True
-
-    for idx, box_elem in enumerate(box_elems):
+    for box_elem in box_elems:
         frame_number = int(box_elem.attrib["frame"])
         outside = int(box_elem.attrib.get("outside", 0))
         occluded = int(box_elem.attrib.get("occluded", 0))
@@ -69,15 +61,7 @@ def parse_video_track(
         else:
             visibility = 1.0
 
-        meta = {
-            "z_order": int(box_elem.attrib.get("z_order", 0)),
-            "outside": outside == 1,
-        }
-        if outside == 1 and seen_visible_in_track and not has_future_visible[idx]:
-            meta["trailing_outside"] = True
-
-        if outside != 1:
-            seen_visible_in_track = True
+        meta = {"z_order": int(box_elem.attrib.get("z_order", 0))}
 
         ann = IRVideoBBoxAnnotation(
             track_id=track_id,
@@ -152,11 +136,14 @@ def export_video_track_to_xml(
         xbr = ann.left + ann.width
         ybr = ann.top + ann.height
 
-        outside = 1 if _coerce_bool_like(ann.meta.get("outside", False)) else 0
+        outside = 1 if ann.visibility <= 0.0 else 0
         occluded = 0
         if not outside and ann.visibility < 1.0:
             occluded = 1
-        keyframe = 1 if ann.keyframe else 0
+        # CVAT keyframe marks an explicit control point.
+        # IR rows are explicit points; interpolation intent is encoded by IR keyframe
+        # and represented in CVAT via optional outside boundary rows below.
+        keyframe = 1
         z_order = ann.meta.get("z_order", 0)
 
         box_elem = etree.SubElement(track_elem, "box")
@@ -170,25 +157,31 @@ def export_video_track_to_xml(
         box_elem.set("ybr", f"{ybr:.2f}")
         box_elem.set("z_order", str(z_order))
 
-        ls_enabled = ann.meta.get("ls_enabled")
+        boundary_frame = ann.frame_number + 1
+        max_frame_candidates = []
+        if isinstance(seq_length, int) and seq_length > 0:
+            max_frame_candidates.append(seq_length - 1)
+        ls_frames_count = ann.meta.get("ls_frames_count")
+        if isinstance(ls_frames_count, int) and ls_frames_count > 0:
+            max_frame_candidates.append(ls_frames_count - 1)
+        max_frame = min(max_frame_candidates) if max_frame_candidates else None
+
         has_future_annotation = any(
             next_ann.frame_number > ann.frame_number for next_ann in sorted_anns[idx + 1:]
         )
-        if ls_enabled is not None and not _coerce_bool_like(ls_enabled) and outside == 0 and has_future_annotation:
-            boundary_frame = ann.frame_number + 1
+        has_known_room_for_boundary = max_frame is not None and boundary_frame <= max_frame
+        should_add_stop_boundary = (
+            not ann.keyframe
+            and outside == 0
+            and (has_future_annotation or has_known_room_for_boundary)
+        )
+
+        if should_add_stop_boundary:
             has_next_on_boundary = (
                 idx + 1 < len(sorted_anns)
                 and sorted_anns[idx + 1].frame_number == boundary_frame
             )
-            max_frame_candidates = []
-            if isinstance(seq_length, int) and seq_length > 0:
-                max_frame_candidates.append(seq_length - 1)
-            ls_frames_count = ann.meta.get("ls_frames_count")
-            if isinstance(ls_frames_count, int) and ls_frames_count > 0:
-                max_frame_candidates.append(ls_frames_count - 1)
-            max_frame = min(max_frame_candidates) if max_frame_candidates else None
             can_add_boundary = max_frame is None or boundary_frame <= max_frame
-
             if not has_next_on_boundary and can_add_boundary:
                 boundary_elem = etree.SubElement(track_elem, "box")
                 boundary_elem.set("frame", str(boundary_frame))

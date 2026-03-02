@@ -35,7 +35,6 @@ class TestCVATVideoTrackParsing:
         
         frame_2_ann = [a for a in annotations if a.frame_number == 2][0]
         assert frame_2_ann.visibility == 0.5
-        assert not frame_2_ann.meta.get("outside")
 
     def test_parse_track_with_outside(self, sample_cvat_video_xml):
         tree = etree.parse(str(sample_cvat_video_xml))
@@ -47,11 +46,9 @@ class TestCVATVideoTrackParsing:
         
         frame_3_ann = [a for a in annotations if a.frame_number == 3][0]
         assert frame_3_ann.visibility == 0.0
-        assert frame_3_ann.meta.get("outside")
         
         for ann in annotations:
             if ann.frame_number != 3:
-                assert not ann.meta.get("outside")
                 assert ann.visibility > 0.0
 
     def test_parse_track_keyframe_metadata(self, sample_cvat_video_xml):
@@ -68,40 +65,13 @@ class TestCVATVideoTrackParsing:
         frame_1_ann = [a for a in annotations if a.frame_number == 1][0]
         assert not frame_1_ann.keyframe
 
-    def test_parse_track_middle_outside_is_not_marked_as_trailing(self, sample_cvat_video_xml):
+    def test_parse_track_does_not_emit_cvat_outside_metadata(self, sample_cvat_video_xml):
         tree = etree.parse(str(sample_cvat_video_xml))
         tracks = tree.findall(".//track")
 
         annotations = parse_video_track(tracks[1], image_width=1920, image_height=1080)
-        frame_3_ann = [a for a in annotations if a.frame_number == 3][0]
-        assert frame_3_ann.meta.get("outside") is True
-        assert frame_3_ann.meta.get("trailing_outside") is not True
-
-    def test_parse_track_final_outside_is_marked_as_trailing(self):
-        xml_str = b"""<?xml version="1.0" encoding="utf-8"?>
-<annotations>
-  <version>1.1</version>
-  <meta>
-    <task>
-      <size>4</size>
-      <mode>interpolation</mode>
-      <original_size><width>1920</width><height>1080</height></original_size>
-    </task>
-  </meta>
-  <track id="0" label="dog" source="manual">
-    <box frame="0" outside="0" occluded="0" keyframe="1"
-         xtl="10" ytl="20" xbr="110" ybr="120" z_order="0"/>
-    <box frame="1" outside="0" occluded="0" keyframe="0"
-         xtl="12" ytl="22" xbr="112" ybr="122" z_order="0"/>
-    <box frame="2" outside="1" occluded="0" keyframe="1"
-         xtl="14" ytl="24" xbr="114" ybr="124" z_order="0"/>
-  </track>
-</annotations>"""
-        root = etree.fromstring(xml_str)
-        track = root.findall(".//track")[0]
-        annotations = parse_video_track(track, image_width=1920, image_height=1080)
-        assert annotations[-1].meta.get("outside") is True
-        assert annotations[-1].meta.get("trailing_outside") is True
+        assert all("outside" not in ann.meta for ann in annotations)
+        assert all("trailing_outside" not in ann.meta for ann in annotations)
 
 
 class TestCVATVideoOutsideRoundtrip:
@@ -134,9 +104,7 @@ class TestCVATVideoOutsideRoundtrip:
         
         assert len(annotations) == 4
         assert annotations[2].visibility == 0.0
-        assert annotations[2].meta["outside"]
         assert annotations[1].visibility == 0.5  # occluded, not outside
-        assert not annotations[1].meta["outside"]
         
         exported_track = export_video_track_to_xml(0, annotations)
         boxes = exported_track.findall("box")
@@ -146,7 +114,7 @@ class TestCVATVideoOutsideRoundtrip:
         assert boxes[0].attrib["keyframe"] == "1"
         assert boxes[1].attrib["outside"] == "0"
         assert boxes[1].attrib["occluded"] == "1"
-        assert boxes[1].attrib["keyframe"] == "0"
+        assert boxes[1].attrib["keyframe"] == "1"
         assert boxes[2].attrib["outside"] == "1"
         assert boxes[2].attrib["occluded"] == "0"  # outside takes priority
         assert boxes[2].attrib["keyframe"] == "1"
@@ -158,7 +126,6 @@ class TestCVATVideoOutsideRoundtrip:
         for orig, re in zip(annotations, reimported):
             assert orig.frame_number == re.frame_number
             assert orig.visibility == re.visibility
-            assert orig.meta.get("outside") == re.meta.get("outside")
 
 
 class TestCVATVideoFileImport:

@@ -88,9 +88,9 @@ class TestVideoRectangleAnnotation:
 
         ir_annotations = ann.to_ir_annotations()
         assert len(ir_annotations) == 1
-        assert ir_annotations[0].keyframe is False  # enabled=False → no interpolation from this frame
-        assert ir_annotations[0].meta.get("ls_enabled") is False
-        assert not ir_annotations[0].meta.get("outside")
+        assert ir_annotations[0].keyframe is False
+        assert "ls_enabled" not in ir_annotations[0].meta
+        assert "outside" not in ir_annotations[0].meta
         assert ir_annotations[0].visibility == 0.75
 
     def test_to_ir_annotations_disabled_without_visibility_stays_visible(self):
@@ -120,8 +120,6 @@ class TestVideoRectangleAnnotation:
 
         ir_annotations = ann.to_ir_annotations()
         assert len(ir_annotations) == 1
-        assert ir_annotations[0].meta.get("ls_enabled") is False
-        assert not ir_annotations[0].meta.get("outside")
         assert ir_annotations[0].visibility == 1.0
 
     def test_to_ir_annotations_preserves_outside_flag(self):
@@ -153,7 +151,7 @@ class TestVideoRectangleAnnotation:
 
         ir_annotations = ann.to_ir_annotations()
         assert len(ir_annotations) == 1
-        assert ir_annotations[0].meta.get("outside") is True
+        assert ir_annotations[0].visibility == 0.0
 
     def test_to_ir_annotations_outside_boundary_is_explicit_keyframe(self):
         from dagshub_annotation_converter.formats.label_studio.videorectangle import (
@@ -184,8 +182,8 @@ class TestVideoRectangleAnnotation:
 
         ir_annotations = ann.to_ir_annotations()
         assert len(ir_annotations) == 1
-        assert ir_annotations[0].meta.get("outside") is True
-        assert ir_annotations[0].keyframe is True
+        assert ir_annotations[0].visibility == 0.0
+        assert ir_annotations[0].keyframe is False
 
     def test_to_ir_annotations_parses_string_outside_false_as_visible(self):
         from dagshub_annotation_converter.formats.label_studio.videorectangle import (
@@ -216,7 +214,6 @@ class TestVideoRectangleAnnotation:
 
         ir_annotations = ann.to_ir_annotations()
         assert len(ir_annotations) == 1
-        assert ir_annotations[0].meta.get("outside") is False
         assert ir_annotations[0].visibility == 1.0
 
     def test_to_ir_annotations_coordinate_conversion(self, sample_ls_video_task_data, epsilon):
@@ -294,9 +291,10 @@ class TestVideoRectangleAnnotation:
         # Frame numbers should be 1-based in LS format
         assert ls_ann.value.sequence[0].frame == 1
         assert ls_ann.value.sequence[1].frame == 2
-        # First has keyframe=False => no interpolation from this frame; last frame => enabled=False
+        # First has keyframe=False => no interpolation from this frame.
+        # Second is keyframe=True and has no explicit stop boundary.
         assert not ls_ann.value.sequence[0].enabled
-        assert not ls_ann.value.sequence[1].enabled
+        assert ls_ann.value.sequence[1].enabled
 
     def test_from_ir_annotations_sparse_keyframes_keep_interpolation(self):
         ir_annotations = [
@@ -332,7 +330,7 @@ class TestVideoRectangleAnnotation:
 
         ls_ann = VideoRectangleAnnotation.from_ir_annotations(ir_annotations)
         assert ls_ann.value.sequence[0].enabled
-        assert not ls_ann.value.sequence[1].enabled
+        assert ls_ann.value.sequence[1].enabled
 
     def test_from_ir_annotations_outside_row_disables_previous_visible_keyframe(self):
         ir_annotations = [
@@ -363,16 +361,14 @@ class TestVideoRectangleAnnotation:
                 categories={"person": 1.0},
                 coordinate_style=CoordinateStyle.NORMALIZED,
                 visibility=0.0,
-                meta={"outside": True},
+                meta={},
             ),
         ]
 
         ls_ann = VideoRectangleAnnotation.from_ir_annotations(ir_annotations)
-        assert len(ls_ann.value.sequence) == 2
+        assert len(ls_ann.value.sequence) == 1
         assert ls_ann.value.sequence[0].frame == 3
         assert not ls_ann.value.sequence[0].enabled
-        assert ls_ann.value.sequence[1].frame == 4
-        assert not ls_ann.value.sequence[1].enabled
 
     def test_from_ir_annotations_coordinate_conversion(self, epsilon):
         ir_annotations = [
@@ -435,7 +431,7 @@ class TestVideoRectangleAnnotation:
                 categories={"person": 1.0},
                 coordinate_style=CoordinateStyle.NORMALIZED,
                 visibility=0.25,
-                meta={"outside": False},
+                meta={},
             ),
         ]
 

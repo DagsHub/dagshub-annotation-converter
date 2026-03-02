@@ -134,12 +134,12 @@ def _lerp(start: float, end: float, t: float) -> float:
     return start + (end - start) * t
 
 
-def _is_outside(ann: IRVideoBBoxAnnotation) -> bool:
-    return bool(ann.meta.get("outside", False))
+def _is_visible(ann: IRVideoBBoxAnnotation) -> bool:
+    return ann.visibility > 0.0
 
 
 def _interpolation_enabled(ann: IRVideoBBoxAnnotation) -> bool:
-    return bool(ann.meta.get("ls_enabled", True))
+    return bool(ann.keyframe)
 
 
 def _interpolate_track_for_mot(
@@ -158,7 +158,7 @@ def _interpolate_track_for_mot(
     dense: List[IRVideoBBoxAnnotation] = []
 
     for idx, curr in enumerate(ordered):
-        curr_outside = _is_outside(curr)
+        curr_visible = _is_visible(curr)
         dense.append(curr)
 
         if idx == len(ordered) - 1:
@@ -166,7 +166,7 @@ def _interpolate_track_for_mot(
 
         nxt = ordered[idx + 1]
         gap = nxt.frame_number - curr.frame_number - 1
-        if gap <= 0 or curr_outside or not _interpolation_enabled(curr):
+        if gap <= 0 or not curr_visible or not _interpolation_enabled(curr):
             continue
 
         curr_ignored = bool(curr.meta.get("ignored", False))
@@ -187,7 +187,6 @@ def _interpolate_track_for_mot(
                 interpolated.timestamp = _lerp(curr.timestamp, nxt.timestamp, t)
             else:
                 interpolated.timestamp = None
-            interpolated.meta.pop("outside", None)
             if curr_ignored and nxt_ignored:
                 interpolated.meta["ignored"] = True
             else:
@@ -196,12 +195,11 @@ def _interpolate_track_for_mot(
 
     if end_frame is not None:
         last = ordered[-1]
-        if not _is_outside(last) and _interpolation_enabled(last) and last.frame_number < end_frame:
+        if _is_visible(last) and _interpolation_enabled(last) and last.frame_number < end_frame:
             for frame_number in range(last.frame_number + 1, end_frame + 1):
                 extrapolated = last.model_copy(deep=True)
                 extrapolated.frame_number = frame_number
                 extrapolated.keyframe = False
-                extrapolated.meta.pop("outside", None)
                 dense.append(extrapolated)
 
     return dense

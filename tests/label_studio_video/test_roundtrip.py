@@ -377,25 +377,55 @@ class TestCVATVideoToLabelStudioRoundtrip:
 
         seq = ls_tasks[0].annotations[0].result[0].value.sequence
         got = [
-            (item.frame, item.enabled, (item.__pydantic_extra__ or {}).get("outside"))
+            (item.frame, item.enabled)
             for item in seq
         ]
         expected = [
-            (1, True, None),
-            (9, False, None),
-            (10, False, True),
-            (13, False, None),
-            (14, False, None),
-            (15, False, None),
-            (16, False, True),
-            (25, False, None),
-            (26, False, True),
-            (127, True, None),
-            (175, False, None),
-            (176, False, True),
-            (378, False, None),
+            (1, True),
+            (9, False),
+            (13, False),
+            (14, False),
+            (15, False),
+            (25, False),
+            (127, True),
+            (175, False),
+            (378, True),
         ]
         assert got == expected
+
+    def test_cvat_dense_interpolated_rows_collapse_to_sparse_ls_keyframes(self):
+        boxes = "\n".join(
+            [
+                (
+                    f'<box frame="{frame}" outside="0" occluded="0" '
+                    f'keyframe="{1 if frame == 0 else 0}" '
+                    'xtl="100" ytl="100" xbr="200" ybr="200" z_order="0"/>'
+                )
+                for frame in range(0, 11)
+            ]
+        )
+        boxes += (
+            '\n<box frame="11" outside="1" occluded="0" keyframe="1" '
+            'xtl="100" ytl="100" xbr="200" ybr="200" z_order="0"/>'
+        )
+        xml_bytes = (
+            '<?xml version="1.0" encoding="utf-8"?>'
+            '<annotations><version>1.1</version><meta><task>'
+            '<size>20</size><mode>interpolation</mode>'
+            '<original_size><width>1920</width><height>1080</height></original_size>'
+            f'</task></meta><track id="0" label="person" source="manual">{boxes}</track></annotations>'
+        ).encode("utf-8")
+
+        cvat_annotations = load_cvat_from_xml_string(xml_bytes)
+        all_annotations = [ann for frame_anns in cvat_annotations.values() for ann in frame_anns]
+        ls_tasks = video_ir_to_ls_video_tasks(all_annotations)
+        seq = ls_tasks[0].annotations[0].result[0].value.sequence
+
+        got = [(item.frame, item.enabled) for item in seq]
+        assert got == [
+            (1, True),
+            (11, False),
+        ]
 
     def test_cvat_middle_outside_boundary_is_preserved_in_ls(self, sample_cvat_video_xml):
         cvat_annotations = load_cvat_from_xml_file(sample_cvat_video_xml)
@@ -409,16 +439,34 @@ class TestCVATVideoToLabelStudioRoundtrip:
         )
 
         got = [
-            (item.frame, item.enabled, (item.__pydantic_extra__ or {}).get("outside"))
+            (item.frame, item.enabled)
             for item in car_result.value.sequence
         ]
         assert got == [
-            (1, True, None),
-            (2, False, None),
-            (3, False, None),
-            (4, False, True),
-            (5, False, None),
+            (1, True),
+            (3, False),
+            (5, True),
         ]
+
+    def test_cvat_terminal_keyframe_interpolates_to_end_when_size_known(self):
+        xml_bytes = (
+            '<?xml version="1.0" encoding="utf-8"?>'
+            '<annotations><version>1.1</version><meta><task>'
+            '<size>10</size><mode>interpolation</mode>'
+            '<original_size><width>1920</width><height>1080</height></original_size>'
+            '</task></meta><track id="0" label="person" source="manual">'
+            '<box frame="5" outside="0" occluded="0" keyframe="1" '
+            'xtl="100" ytl="100" xbr="200" ybr="200" z_order="0"/>'
+            '</track></annotations>'
+        ).encode("utf-8")
+
+        cvat_annotations = load_cvat_from_xml_string(xml_bytes)
+        all_annotations = [ann for frame_anns in cvat_annotations.values() for ann in frame_anns]
+        ls_tasks = video_ir_to_ls_video_tasks(all_annotations)
+        seq = ls_tasks[0].annotations[0].result[0].value.sequence
+
+        assert [(item.frame, item.enabled) for item in seq] == [(6, True)]
+        assert ls_tasks[0].annotations[0].result[0].value.framesCount == 10
 
 
 class TestCrossFormatConversion:
@@ -472,9 +520,12 @@ class TestCrossFormatConversion:
         ls_tasks = video_ir_to_ls_video_tasks(all_annotations)
         ls_annotations = ls_video_task_to_video_ir(ls_tasks[0])
 
-        # CVAT trailing_outside frames are omitted from LS sequence, so compare to visible count
-        visible_cvat = [a for a in all_annotations if not a.meta.get("trailing_outside")]
-        assert len(ls_annotations) == len(visible_cvat)
+        # CVAT interpolated rows (keyframe=0) collapse to sparse keyframes/boundaries in LS.
+        cvat_keyframes_and_boundaries = [
+            a for a in all_annotations
+            if a.keyframe or a.visibility <= 0.0
+        ]
+        assert len(ls_annotations) == len(cvat_keyframes_and_boundaries)
         
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             output_path = Path(f.name)
@@ -484,7 +535,9 @@ class TestCrossFormatConversion:
             mot_annotations = load_mot_from_file(output_path, mot_context)
             mot_total = sum(len(anns) for anns in mot_annotations.values())
 
-            assert mot_total == len(visible_cvat)
+            # MOT is dense, so sparse LS keyframes expand during export.
+            assert mot_total >= len(cvat_keyframes_and_boundaries)
+            assert mot_total <= len(all_annotations)
             
         finally:
             output_path.unlink()

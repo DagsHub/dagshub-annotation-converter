@@ -128,13 +128,11 @@ class VideoRectangleAnnotation(AnnotationResultABC):
             if parsed_visibility is not None:
                 visibility = parsed_visibility
 
-            meta = {"ls_id": self.id, "outside": outside, "ls_enabled": bool(seq_item.enabled)}
+            meta = {"ls_id": self.id}
             if self.value.framesCount is not None and self.value.framesCount > 0:
                 meta["ls_frames_count"] = self.value.framesCount
 
-            # In IR, keyframe controls interpolation to following frames.
-            # Keep outside boundary rows as explicit keyframes even when enabled=False.
-            keyframe = outside or bool(seq_item.enabled)
+            keyframe = bool(seq_item.enabled)
 
             ann = IRVideoBBoxAnnotation(
                 track_id=track_id,
@@ -181,9 +179,32 @@ class VideoRectangleAnnotation(AnnotationResultABC):
         }
         frames_count = max(frames_count_values) if frames_count_values else None
 
-        sequence = []
+        def _is_visible(annotation: IRVideoBBoxAnnotation) -> bool:
+            return annotation.visibility > 0.0
+
+        has_cvat_style_metadata = any("z_order" in ann.meta for ann in sorted_anns)
+        has_keyframes = any(ann.keyframe for ann in sorted_anns)
+        effective_anns = []
         for idx, ann in enumerate(sorted_anns):
-            is_outside = _coerce_bool_like(ann.meta.get("outside", ann.visibility <= 0.0))
+            next_ann = sorted_anns[idx + 1] if idx + 1 < len(sorted_anns) else None
+            keep_nonkey_pre_outside = (
+                next_ann is not None
+                and not _is_visible(next_ann)
+            )
+            # CVAT interpolation exports often include dense keyframe=0 rows.
+            # Keep only true keyframes/outside boundaries when keyframes are present.
+            if (
+                has_cvat_style_metadata
+                and has_keyframes
+                and not ann.keyframe
+                and _is_visible(ann)
+                and not keep_nonkey_pre_outside
+            ):
+                continue
+            effective_anns.append(ann)
+
+        sequence = []
+        for idx, ann in enumerate(effective_anns):
             if ann.coordinate_style == CoordinateStyle.DENORMALIZED:
                 if ann.video_width is None or ann.video_height is None:
                     raise ValueError(
@@ -191,10 +212,10 @@ class VideoRectangleAnnotation(AnnotationResultABC):
                     )
                 ann = ann.normalized()
 
-            if is_outside:
-                if ann.meta.get("trailing_outside"):
+            if not _is_visible(ann):
+                if not ann.meta.get("ls_id"):
                     continue
-                seq_item = VideoRectangleSequenceItem(
+                seq_item_kwargs = dict(
                     frame=ann.frame_number + 1,
                     x=ann.left * 100.0,
                     y=ann.top * 100.0,
@@ -203,33 +224,23 @@ class VideoRectangleAnnotation(AnnotationResultABC):
                     rotation=ann.rotation,
                     enabled=False,
                     time=ann.timestamp,
-                    outside=True,
-                    visibility=ann.visibility,
                 )
+                seq_item = VideoRectangleSequenceItem(**seq_item_kwargs)
                 sequence.append(seq_item)
                 continue
 
-            if "ls_enabled" in ann.meta:
-                enabled = _coerce_bool_like(ann.meta["ls_enabled"])
-            elif not ann.keyframe:
-                enabled = False
-            else:
-                next_ann = next(iter(sorted_anns[idx + 1:]), None)
-                if next_ann is None:
-                    enabled = False
-                else:
-                    next_is_outside = _coerce_bool_like(
-                        next_ann.meta.get("outside", next_ann.visibility <= 0.0)
-                    )
-                    if next_is_outside:
-                        enabled = False
+            enabled = bool(ann.keyframe)
+            if enabled:
+                next_ann = next(iter(effective_anns[idx + 1:]), None)
+                if next_ann is not None:
+                    # CVAT uses an outside control point on the next frame to mark stop.
+                    if not _is_visible(next_ann):
+                        enabled = next_ann.frame_number > ann.frame_number + 1
                     elif (
                         next_ann.frame_number == ann.frame_number + 1
                         and next_ann.keyframe
                     ):
                         enabled = False
-                    else:
-                        enabled = True
 
             seq_item = VideoRectangleSequenceItem(
                 frame=ann.frame_number + 1,  # Convert 0-based to 1-based

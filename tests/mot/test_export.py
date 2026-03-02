@@ -250,7 +250,6 @@ class TestMOTFileExport:
                 categories={"person": 1.0},
                 coordinate_style=CoordinateStyle.DENORMALIZED,
                 visibility=1.0,
-                meta={"outside": False},
             ),
             IRVideoBBoxAnnotation(
                 track_id=1,
@@ -265,7 +264,6 @@ class TestMOTFileExport:
                 categories={"person": 1.0},
                 coordinate_style=CoordinateStyle.DENORMALIZED,
                 visibility=0.0,
-                meta={"outside": True},
             ),
             IRVideoBBoxAnnotation(
                 track_id=1,
@@ -280,7 +278,6 @@ class TestMOTFileExport:
                 categories={"person": 1.0},
                 coordinate_style=CoordinateStyle.DENORMALIZED,
                 visibility=1.0,
-                meta={"outside": False},
             ),
         ]
 
@@ -579,7 +576,7 @@ class TestMOTFileExport:
                 video_height=480,
                 categories={"person": 1.0},
                 coordinate_style=CoordinateStyle.DENORMALIZED,
-                meta={"ls_enabled": True, "ls_frames_count": 381},
+                meta={"ls_frames_count": 381},
             ),
             IRVideoBBoxAnnotation(
                 track_id=2,
@@ -592,7 +589,7 @@ class TestMOTFileExport:
                 video_height=480,
                 categories={"woman": 1.0},
                 coordinate_style=CoordinateStyle.DENORMALIZED,
-                meta={"ls_enabled": True, "ls_frames_count": 381},
+                meta={"ls_frames_count": 381},
             ),
         ]
 
