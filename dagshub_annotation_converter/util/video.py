@@ -162,18 +162,15 @@ def _probe_cv2_frame_count(video_path: Path) -> Optional[int]:
     return count
 
 
-def find_video_sibling(reference_path: Path, name_stem: Optional[str] = None) -> Optional[Path]:
-    """Look for a video file next to *reference_path* whose stem matches *name_stem*.
-
-    If *name_stem* is None, the stem of *reference_path* is used.
-    Returns the first match or None.
+def find_video_sibling(reference_path: Path) -> Optional[Path]:
+    """
+    Look for a sibling video file with the same stem as *reference_path*.
+    Returns None if there's no video file
     """
     parent = reference_path.parent
     if not parent.is_dir():
         return None
-    stem = name_stem or reference_path.stem
-    for ext in sorted(VIDEO_EXTENSIONS):
-        candidate = parent / f"{stem}{ext}"
-        if candidate.is_file():
-            return candidate
-    return None
+    stem = reference_path.stem
+    files_by_name = {entry.name.lower(): entry for entry in parent.iterdir() if entry.is_file()}
+    candidates = [f"{stem}{ext}" for ext in VIDEO_EXTENSIONS]
+    return next((files_by_name[candidate] for candidate in candidates if candidate in files_by_name), None)
