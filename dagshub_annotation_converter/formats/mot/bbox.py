@@ -8,7 +8,7 @@ def import_bbox_from_line(line: str, context: MOTContext) -> IRVideoBBoxAnnotati
     """
     Parse a single MOT line into an IRVideoBBoxAnnotation.
 
-    CVAT MOT 1.1 format (9 columns):
+    CVAT MOT 1.1 ground truth format (9 columns):
     ``frame_id, track_id, x, y, w, h, "not ignored", class_id, visibility``
 
     Example: ``1,1,1363,569,103,241,1,1,0.86014``
