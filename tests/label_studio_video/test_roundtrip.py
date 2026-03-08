@@ -79,10 +79,9 @@ class TestMOTToLabelStudioRoundtrip:
             ls_ann = VideoRectangleAnnotation.model_validate(result)
             ir_annotations.extend(ls_ann.to_ir_annotations())
         
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
             output_path = Path(f.name)
-        
-        try:
+
             export_to_mot(ir_annotations, mot_context, output_path)
             
             content = output_path.read_text()
@@ -95,9 +94,6 @@ class TestMOTToLabelStudioRoundtrip:
             for line in lines:
                 parts = line.split(",")
                 assert len(parts) == 9
-            
-        finally:
-            output_path.unlink()
 
     def test_mot_ls_mot_roundtrip(self, sample_mot_file, mot_context):
         original_mot = load_mot_from_file(sample_mot_file, mot_context)
@@ -110,10 +106,9 @@ class TestMOTToLabelStudioRoundtrip:
         
         reconstructed_annotations = ls_video_task_to_video_ir(ls_tasks[0])
         
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
             output_path = Path(f.name)
-        
-        try:
+
             export_to_mot(reconstructed_annotations, mot_context, output_path)
             
             final_mot = load_mot_from_file(output_path, mot_context)
@@ -133,9 +128,6 @@ class TestMOTToLabelStudioRoundtrip:
                     # Allow 1 pixel tolerance due to float conversion
                     assert math.isclose(orig.left, final.left, abs_tol=1)
                     assert math.isclose(orig.top, final.top, abs_tol=1)
-                    
-        finally:
-            output_path.unlink()
 
     def test_mot_ls_roundtrip_preserves_track_frames_and_keyframes(self, sample_mot_file, mot_context):
         original_mot = load_mot_from_file(sample_mot_file, mot_context)
@@ -182,9 +174,8 @@ class TestMOTToLabelStudioRoundtrip:
         )
         ir_annotations = ls_ann.to_ir_annotations()
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
             output_path = Path(f.name)
-        try:
             export_to_mot(ir_annotations, mot_context, output_path)
             mot_lines = [line for line in output_path.read_text().splitlines() if line and not line.startswith("#")]
             mot_frames = [int(line.split(",")[0]) for line in mot_lines]
@@ -201,8 +192,6 @@ class TestMOTToLabelStudioRoundtrip:
 
             assert by_frame[11].enabled is False
             assert by_frame[100].enabled is False
-        finally:
-            output_path.unlink()
 
     def test_ls_track_removed_after_frame_does_not_extend_to_end_through_mot(self, mot_context):
         ls_ann = VideoRectangleAnnotation(
@@ -221,9 +210,8 @@ class TestMOTToLabelStudioRoundtrip:
         )
         ir_annotations = ls_ann.to_ir_annotations()
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
             output_path = Path(f.name)
-        try:
             export_to_mot(ir_annotations, mot_context, output_path)
             mot_lines = [line for line in output_path.read_text().splitlines() if line and not line.startswith("#")]
             mot_frames = [int(line.split(",")[0]) for line in mot_lines]
@@ -239,8 +227,6 @@ class TestMOTToLabelStudioRoundtrip:
 
             assert seq[-1].frame == 11
             assert seq[-1].enabled is False
-        finally:
-            output_path.unlink()
 
     def test_ls_segment_to_end_exports_dense_rows_using_frames_count(self, mot_context):
         ls_ann = VideoRectangleAnnotation(
@@ -261,9 +247,8 @@ class TestMOTToLabelStudioRoundtrip:
         )
         ir_annotations = ls_ann.to_ir_annotations()
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
             output_path = Path(f.name)
-        try:
             export_to_mot(ir_annotations, mot_context, output_path)
             mot_lines = [line for line in output_path.read_text().splitlines() if line and not line.startswith("#")]
             mot_frames = [int(line.split(",")[0]) for line in mot_lines]
@@ -282,8 +267,6 @@ class TestMOTToLabelStudioRoundtrip:
             assert 100 in seq_frames
             assert 120 in seq_frames
             assert seq_frames[-1] == 120
-        finally:
-            output_path.unlink()
 
 
 class TestCVATVideoToLabelStudioRoundtrip:
@@ -491,10 +474,9 @@ class TestCrossFormatConversion:
         for frame_anns in cvat_annotations.values():
             all_annotations.extend(frame_anns)
         
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
             output_path = Path(f.name)
-        
-        try:
+
             export_to_mot(all_annotations, mot_context, output_path)
             
             content = output_path.read_text()
@@ -507,9 +489,6 @@ class TestCrossFormatConversion:
             for line in lines:
                 parts = line.split(",")
                 assert len(parts) == 9
-            
-        finally:
-            output_path.unlink()
 
     def test_all_formats_same_annotation_count(self, sample_cvat_video_xml, mot_context):
         cvat_annotations = load_cvat_from_xml_file(sample_cvat_video_xml)
@@ -527,10 +506,9 @@ class TestCrossFormatConversion:
         ]
         assert len(ls_annotations) == len(cvat_keyframes_and_boundaries)
         
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
             output_path = Path(f.name)
-        
-        try:
+
             export_to_mot(ls_annotations, mot_context, output_path)
             mot_annotations = load_mot_from_file(output_path, mot_context)
             mot_total = sum(len(anns) for anns in mot_annotations.values())
@@ -538,9 +516,6 @@ class TestCrossFormatConversion:
             # MOT is dense, so sparse LS keyframes expand during export.
             assert mot_total >= len(cvat_keyframes_and_boundaries)
             assert mot_total <= len(all_annotations)
-            
-        finally:
-            output_path.unlink()
 
 
 class TestLabelStudioVideoLocalProbeFallback:

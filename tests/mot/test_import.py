@@ -116,9 +116,8 @@ class TestMOTFileImport:
 class TestMOTZipImport:
     def test_load_from_zip_same_as_dir(self, sample_mot_dir):
         res_dir = Path(__file__).parent / "res"
-        with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".zip") as f:
             zip_path = Path(f.name)
-        try:
             with ZipFile(zip_path, "w") as z:
                 for f in (res_dir / "gt").iterdir():
                     z.write(f, f"gt/{f.name}")
@@ -132,14 +131,11 @@ class TestMOTZipImport:
             assert dir_ctx.frame_rate == zip_ctx.frame_rate
             assert dir_ctx.image_width == zip_ctx.image_width
             assert dir_ctx.categories == zip_ctx.categories
-        finally:
-            zip_path.unlink(missing_ok=True)
 
     def test_load_from_zip_nested_structure(self, sample_mot_dir):
         res_dir = Path(__file__).parent / "res"
-        with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".zip") as f:
             zip_path = Path(f.name)
-        try:
             with ZipFile(zip_path, "w") as z:
                 z.write(res_dir / "gt" / "gt.txt", "myseq/gt/gt.txt")
                 z.write(res_dir / "gt" / "labels.txt", "myseq/gt/labels.txt")
@@ -149,8 +145,6 @@ class TestMOTZipImport:
             total = sum(len(a) for a in zip_anns.values())
             assert total == 10
             assert zip_ctx.categories == {1: "person", 2: "car"}
-        finally:
-            zip_path.unlink(missing_ok=True)
 
 
 class TestMOTDirectoryImport:

@@ -147,10 +147,9 @@ class TestMOTFileExport:
             ),
         ]
         
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
             output_path = Path(f.name)
-        
-        try:
+
             export_to_mot(annotations, mot_context, output_path)
             
             content = output_path.read_text()
@@ -160,9 +159,6 @@ class TestMOTFileExport:
             
             first_line_parts = lines[0].split(",")
             assert first_line_parts[0] == "1"
-            
-        finally:
-            output_path.unlink()
 
     def test_export_roundtrip(self, mot_context, sample_mot_file):
         from dagshub_annotation_converter.converters.mot import load_mot_from_file
@@ -173,10 +169,9 @@ class TestMOTFileExport:
         for frame_anns in annotations_by_frame.values():
             all_annotations.extend(frame_anns)
         
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
             output_path = Path(f.name)
-        
-        try:
+
             export_to_mot(all_annotations, mot_context, output_path)
             
             reimported = load_mot_from_file(output_path, mot_context)
@@ -185,9 +180,6 @@ class TestMOTFileExport:
             
             for frame_num in annotations_by_frame:
                 assert len(reimported[frame_num]) == len(annotations_by_frame[frame_num])
-                
-        finally:
-            output_path.unlink()
 
     def test_export_interpolates_between_sparse_keyframes(self, mot_context):
         annotations = [
@@ -221,10 +213,9 @@ class TestMOTFileExport:
             ),
         ]
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
             output_path = Path(f.name)
 
-        try:
             export_to_mot(annotations, mot_context, output_path)
             lines = [line for line in output_path.read_text().splitlines() if line and not line.startswith("#")]
 
@@ -232,8 +223,6 @@ class TestMOTFileExport:
             assert len(lines) == 5
             mot_frames = [int(line.split(",")[0]) for line in lines]
             assert mot_frames == [1, 2, 3, 4, 5]
-        finally:
-            output_path.unlink()
 
     def test_export_hides_outside_ranges_between_keyframes(self, mot_context):
         annotations = [
@@ -281,10 +270,9 @@ class TestMOTFileExport:
             ),
         ]
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
             output_path = Path(f.name)
 
-        try:
             export_to_mot(annotations, mot_context, output_path)
             lines = [line for line in output_path.read_text().splitlines() if line and not line.startswith("#")]
 
@@ -292,8 +280,6 @@ class TestMOTFileExport:
             mot_frames = [int(line.split(",")[0]) for line in lines]
             assert mot_frames == [1, 2, 3, 4, 6]
             assert float(lines[3].split(",")[8]) == 0.0
-        finally:
-            output_path.unlink()
 
     def test_export_extends_last_visible_segment_to_seq_length(self):
         context = MOTContext(frame_rate=30.0, image_width=1920, image_height=1080, seq_length=12)
@@ -329,16 +315,13 @@ class TestMOTFileExport:
             ),
         ]
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
             output_path = Path(f.name)
 
-        try:
             export_to_mot(annotations, context, output_path)
             lines = [line for line in output_path.read_text().splitlines() if line and not line.startswith("#")]
             mot_frames = [int(line.split(",")[0]) for line in lines]
             assert mot_frames == list(range(1, 13))
-        finally:
-            output_path.unlink()
 
     def test_export_to_dir_uses_probed_dimensions_for_seqinfo(self, tmp_path, monkeypatch):
         context = MOTContext(frame_rate=30.0, image_width=None, image_height=None, seq_name="test_sequence")
