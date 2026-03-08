@@ -19,6 +19,8 @@ class MOTContext(ParentModel):
     """
 
     frame_rate: float = 30.0
+    frame_subdirectory: str = "img1"
+    frame_extension: str = ".jpg"
     video_width: Optional[int] = None
     video_height: Optional[int] = None
     sequence_name: Optional[str] = None
@@ -53,6 +55,8 @@ class MOTContext(ParentModel):
             seq = config["Sequence"]
             ctx.sequence_name = seq.get("name")
             ctx.frame_rate = float(seq.get("frameRate", "30.0"))
+            ctx.frame_extension = seq.get("imExt", ".jpg")
+            ctx.frame_subdirectory = seq.get("imDir", "img1")
             ctx.sequence_length = int(seq.get("seqLength", "0")) or None
             ctx.video_width = int(seq.get("imWidth", "0")) or None
             ctx.video_height = int(seq.get("imHeight", "0")) or None
@@ -96,8 +100,8 @@ class MOTContext(ParentModel):
             seq["imWidth"] = str(self.video_width)
         if self.video_height:
             seq["imHeight"] = str(self.video_height)
-        seq["imDir"] = "img1"
-        seq["imExt"] = ".jpg"
+        seq["imDir"] = self.frame_subdirectory
+        seq["imExt"] = self.frame_extension
 
         with open(seqinfo_path, "w") as f:
             config.write(f)
