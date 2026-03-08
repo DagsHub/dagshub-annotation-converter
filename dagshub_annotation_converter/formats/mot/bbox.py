@@ -1,10 +1,12 @@
-from typing import Dict, Any
+import logging
+from typing import Dict, Any, Optional
 
 from dagshub_annotation_converter.formats.mot.context import MOTContext
 from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
 
+logger = logging.getLogger(__name__)
 
-def import_bbox_from_line(line: str, context: MOTContext) -> IRVideoBBoxAnnotation:
+def import_bbox_from_line(line: str, context: MOTContext) -> Optional[IRVideoBBoxAnnotation]:
     """
     Parse a single MOT line into an IRVideoBBoxAnnotation.
 
@@ -31,9 +33,9 @@ def import_bbox_from_line(line: str, context: MOTContext) -> IRVideoBBoxAnnotati
 
     meta: Dict[str, Any] = {}
     if not_ignored == 0:
-        meta["ignored"] = True
+        logger.warning(f"Skipping ignored annotation in frame {frame_id} track {track_id} category {category_name}")
+        return None
 
-    # MOT is dense per-frame; no keyframe concept, so no interpolation in LS
     return IRVideoBBoxAnnotation(
         track_id=track_id,
         frame_number=frame_id - 1,
@@ -74,7 +76,7 @@ def export_bbox_to_line(ann: IRVideoBBoxAnnotation, context: MOTContext) -> str:
 
     category_name = ann.ensure_has_one_category()
     class_id = context.get_class_id(category_name)
-    not_ignored = 0 if ann.meta.get("ignored", False) else 1
+    not_ignored = 1
 
     x = int(ann.left) if ann.left == int(ann.left) else ann.left
     y = int(ann.top) if ann.top == int(ann.top) else ann.top

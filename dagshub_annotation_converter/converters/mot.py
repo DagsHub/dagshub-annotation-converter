@@ -38,7 +38,7 @@ def _find_mot_prefix_in_zip(z: ZipFile) -> str:
 def load_mot_from_file(
     gt_path: Union[str, Path],
     context: MOTContext,
-) -> Dict[int, Sequence[IRVideoBBoxAnnotation]]:
+) -> Dict[int, List[IRVideoBBoxAnnotation]]:
     """Load MOT annotations from a gt.txt file."""
     gt_path = Path(gt_path)
     annotations: Dict[int, List[IRVideoBBoxAnnotation]] = {}
@@ -48,6 +48,8 @@ def load_mot_from_file(
             if not line or line.startswith("#"):
                 continue
             ann = import_bbox_from_line(line, context)
+            if ann is None:
+                continue
             if ann.frame_number not in annotations:
                 annotations[ann.frame_number] = []
             annotations[ann.frame_number].append(ann)
@@ -168,9 +170,6 @@ def _interpolate_track_for_mot(
         if gap <= 0 or not curr_visible or not _interpolation_enabled(curr):
             continue
 
-        curr_ignored = bool(curr.meta.get("ignored", False))
-        nxt_ignored = bool(nxt.meta.get("ignored", False))
-
         for step in range(1, gap + 1):
             t = step / (gap + 1)
             interpolated = curr.model_copy(deep=True)
@@ -186,10 +185,6 @@ def _interpolate_track_for_mot(
                 interpolated.timestamp = _lerp(curr.timestamp, nxt.timestamp, t)
             else:
                 interpolated.timestamp = None
-            if curr_ignored and nxt_ignored:
-                interpolated.meta["ignored"] = True
-            else:
-                interpolated.meta.pop("ignored", None)
             dense.append(interpolated)
 
     if end_frame is not None:
@@ -261,6 +256,8 @@ def _load_mot_from_gt_content(gt_content: str, context: MOTContext) -> Dict[int,
         if not line or line.startswith("#"):
             continue
         ann = import_bbox_from_line(line, context)
+        if ann is None:
+            continue
         if ann.frame_number not in annotations:
             annotations[ann.frame_number] = []
         annotations[ann.frame_number].append(ann)

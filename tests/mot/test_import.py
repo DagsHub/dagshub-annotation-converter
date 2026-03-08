@@ -60,7 +60,7 @@ class TestMOTLineImport:
         
         ann = import_bbox_from_line(line, mot_context)
         
-        assert ann.meta.get("ignored")
+        assert ann is None
 
     def test_parse_line_with_partial_visibility(self, mot_context):
         line = "3,1,120,154,50,120,1,1,0.5"

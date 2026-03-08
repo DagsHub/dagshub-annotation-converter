@@ -84,27 +84,6 @@ class TestMOTLineExport:
         assert parts[7] == "2"
         assert float(parts[8]) == 0.5
 
-    def test_export_ignored_annotation(self, mot_context):
-        ann = IRVideoBBoxAnnotation(
-            track_id=1,
-            frame_number=1,
-            left=100,
-            top=150,
-            width=50,
-            height=120,
-            video_width=1920,
-            video_height=1080,
-            categories={"person": 1.0},
-            coordinate_style=CoordinateStyle.DENORMALIZED,
-            visibility=1.0,
-            meta={"ignored": True},
-        )
-        
-        line = export_bbox_to_line(ann, mot_context)
-        parts = line.split(",")
-        
-        assert parts[6] == "0"
-
 
 class TestMOTFileExport:
     def test_export_to_file(self, mot_context):
