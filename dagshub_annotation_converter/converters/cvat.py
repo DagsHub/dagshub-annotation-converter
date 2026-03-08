@@ -316,12 +316,8 @@ def export_cvat_video_to_xml_string(
         prepared_annotations.append(prepared)
 
     return cvat_video_xml_to_string(
-        prepared_annotations, 
-        resolved_video_name, 
-        resolved_width, 
-        resolved_height, 
-        seq_length
-        )
+        prepared_annotations, resolved_video_name, resolved_width, resolved_height, seq_length
+    )
 
 
 def export_cvat_video_to_file(
@@ -401,6 +397,7 @@ def export_cvat_videos_to_zips(
     video_files: Optional[Dict[str, Union[str, PathLike]]] = None,
 ) -> List[Path]:
     """Export grouped video annotations to one CVAT zip per source video."""
+
     def resolve_video_file(video_name: str) -> Optional[Union[str, PathLike]]:
         if video_files is None:
             return None

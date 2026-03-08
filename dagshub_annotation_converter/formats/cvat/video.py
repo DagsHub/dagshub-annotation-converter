@@ -166,21 +166,14 @@ def export_video_track_to_xml(
             max_frame_candidates.append(ls_frames_count - 1)
         max_frame = min(max_frame_candidates) if max_frame_candidates else None
 
-        has_future_annotation = any(
-            next_ann.frame_number > ann.frame_number for next_ann in sorted_anns[idx + 1:]
-        )
+        has_future_annotation = any(next_ann.frame_number > ann.frame_number for next_ann in sorted_anns[idx + 1 :])
         has_known_room_for_boundary = max_frame is not None and boundary_frame <= max_frame
         should_add_stop_boundary = (
-            not ann.keyframe
-            and outside == 0
-            and (has_future_annotation or has_known_room_for_boundary)
+            not ann.keyframe and outside == 0 and (has_future_annotation or has_known_room_for_boundary)
         )
 
         if should_add_stop_boundary:
-            has_next_on_boundary = (
-                idx + 1 < len(sorted_anns)
-                and sorted_anns[idx + 1].frame_number == boundary_frame
-            )
+            has_next_on_boundary = idx + 1 < len(sorted_anns) and sorted_anns[idx + 1].frame_number == boundary_frame
             can_add_boundary = max_frame is None or boundary_frame <= max_frame
             if not has_next_on_boundary and can_add_boundary:
                 boundary_elem = etree.SubElement(track_elem, "box")

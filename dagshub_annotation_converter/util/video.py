@@ -28,8 +28,7 @@ def get_video_dimensions(video_path: Path) -> Tuple[int, int, float]:
         pass
 
     raise ValueError(
-        f"Could not read video dimensions from {video_path}. "
-        f"Install ffmpeg (ffprobe) or opencv-python (cv2)."
+        f"Could not read video dimensions from {video_path}. Install ffmpeg (ffprobe) or opencv-python (cv2)."
     )
 
 
@@ -58,9 +57,13 @@ def get_video_frame_count(video_path: Path) -> Optional[int]:
 def _probe_ffprobe(video_path: Path) -> Tuple[int, int, float]:
     result = subprocess.run(
         [
-            "ffprobe", "-v", "quiet",
-            "-select_streams", "v:0",
-            "-print_format", "json",
+            "ffprobe",
+            "-v",
+            "quiet",
+            "-select_streams",
+            "v:0",
+            "-print_format",
+            "json",
             "-show_streams",
             str(video_path),
         ],
@@ -96,11 +99,16 @@ def _probe_ffprobe(video_path: Path) -> Tuple[int, int, float]:
 def _probe_ffprobe_frame_count(video_path: Path) -> Optional[int]:
     result = subprocess.run(
         [
-            "ffprobe", "-v", "quiet",
+            "ffprobe",
+            "-v",
+            "quiet",
             "-count_frames",
-            "-select_streams", "v:0",
-            "-print_format", "json",
-            "-show_entries", "stream=nb_read_frames,nb_frames",
+            "-select_streams",
+            "v:0",
+            "-print_format",
+            "json",
+            "-show_entries",
+            "stream=nb_read_frames,nb_frames",
             str(video_path),
         ],
         capture_output=True,

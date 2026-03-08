@@ -26,4 +26,3 @@ def test_find_video_sibling_ignores_non_video_files(tmp_path: Path):
     (tmp_path / "sequence.csv").write_text("1,2,3", encoding="utf-8")
 
     assert find_video_sibling(reference) is None
-

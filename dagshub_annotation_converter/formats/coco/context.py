@@ -1,5 +1,3 @@
-
-
 from dagshub_annotation_converter.formats.categories import Categories
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
@@ -12,4 +10,3 @@ class CocoContext(ParentModel):
     """
 
     categories: Categories = Categories()
-

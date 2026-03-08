@@ -13,11 +13,11 @@ class TestCVATVideoTrackParsing:
     def test_parse_track_basic(self, sample_cvat_video_xml):
         tree = etree.parse(str(sample_cvat_video_xml))
         tracks = tree.findall(".//track")
-        
+
         annotations = parse_video_track(tracks[0], image_width=1920, image_height=1080)
-        
+
         assert len(annotations) == 5
-        
+
         first_ann = annotations[0]
         assert first_ann.track_id == 0
         assert first_ann.frame_number == 0
@@ -30,23 +30,23 @@ class TestCVATVideoTrackParsing:
     def test_parse_track_with_occlusion(self, sample_cvat_video_xml):
         tree = etree.parse(str(sample_cvat_video_xml))
         tracks = tree.findall(".//track")
-        
+
         annotations = parse_video_track(tracks[0], image_width=1920, image_height=1080)
-        
+
         frame_2_ann = [a for a in annotations if a.frame_number == 2][0]
         assert frame_2_ann.visibility == 0.5
 
     def test_parse_track_with_outside(self, sample_cvat_video_xml):
         tree = etree.parse(str(sample_cvat_video_xml))
         tracks = tree.findall(".//track")
-        
+
         annotations = parse_video_track(tracks[1], image_width=1920, image_height=1080)
-        
+
         assert len(annotations) == 5
-        
+
         frame_3_ann = [a for a in annotations if a.frame_number == 3][0]
         assert frame_3_ann.visibility == 0.0
-        
+
         for ann in annotations:
             if ann.frame_number != 3:
                 assert ann.visibility > 0.0
@@ -54,13 +54,13 @@ class TestCVATVideoTrackParsing:
     def test_parse_track_keyframe_metadata(self, sample_cvat_video_xml):
         tree = etree.parse(str(sample_cvat_video_xml))
         tracks = tree.findall(".//track")
-        
+
         annotations = parse_video_track(tracks[0], image_width=1920, image_height=1080)
-        
+
         # Frame 0 should be keyframe
         frame_0_ann = [a for a in annotations if a.frame_number == 0][0]
         assert frame_0_ann.keyframe
-        
+
         # Frame 1 should not be keyframe
         frame_1_ann = [a for a in annotations if a.frame_number == 1][0]
         assert not frame_1_ann.keyframe
@@ -101,14 +101,14 @@ class TestCVATVideoOutsideRoundtrip:
         root = etree.fromstring(xml_str)
         track = root.findall(".//track")[0]
         annotations = parse_video_track(track, image_width=1920, image_height=1080)
-        
+
         assert len(annotations) == 4
         assert annotations[2].visibility == 0.0
         assert annotations[1].visibility == 0.5  # occluded, not outside
-        
+
         exported_track = export_video_track_to_xml(0, annotations)
         boxes = exported_track.findall("box")
-        
+
         assert len(boxes) == 4
         assert boxes[0].attrib["outside"] == "0"
         assert boxes[0].attrib["keyframe"] == "1"
@@ -120,7 +120,7 @@ class TestCVATVideoOutsideRoundtrip:
         assert boxes[2].attrib["keyframe"] == "1"
         assert boxes[3].attrib["outside"] == "0"
         assert boxes[3].attrib["keyframe"] == "1"
-        
+
         reimported = parse_video_track(exported_track, image_width=1920, image_height=1080)
         assert len(reimported) == 4
         for orig, re in zip(annotations, reimported):
@@ -131,16 +131,16 @@ class TestCVATVideoOutsideRoundtrip:
 class TestCVATVideoFileImport:
     def test_load_from_xml_file(self, sample_cvat_video_xml):
         annotations = load_cvat_from_xml_file(sample_cvat_video_xml)
-        
+
         assert len(annotations) > 0
-        
+
         # Frame 0 should have 2 annotations (person and car tracks)
         frame_0_anns = annotations.get(0, [])
         assert len(frame_0_anns) == 2
 
     def test_load_extracts_image_dimensions(self, sample_cvat_video_xml):
         annotations = load_cvat_from_xml_file(sample_cvat_video_xml)
-        
+
         # All annotations should have correct image dimensions
         for frame_anns in annotations.values():
             for ann in frame_anns:
@@ -149,32 +149,32 @@ class TestCVATVideoFileImport:
 
     def test_track_ids_consistent(self, sample_cvat_video_xml):
         annotations = load_cvat_from_xml_file(sample_cvat_video_xml)
-        
+
         all_track_ids = set()
         for frame_anns in annotations.values():
             for ann in frame_anns:
                 all_track_ids.add(ann.track_id)
-        
+
         # Should have exactly 2 tracks
         assert len(all_track_ids) == 2
         assert all_track_ids == {0, 1}
 
     def test_categories_from_labels(self, sample_cvat_video_xml):
         annotations = load_cvat_from_xml_file(sample_cvat_video_xml)
-        
+
         categories_by_track = {}
         for frame_anns in annotations.values():
             for ann in frame_anns:
                 if ann.track_id not in categories_by_track:
                     categories_by_track[ann.track_id] = ann.ensure_has_one_category()
-        
+
         # Track 0 should be "person", Track 1 should be "car"
         assert categories_by_track[0] == "person"
         assert categories_by_track[1] == "car"
 
     def test_coordinate_style_denormalized(self, sample_cvat_video_xml):
         annotations = load_cvat_from_xml_file(sample_cvat_video_xml)
-        
+
         for frame_anns in annotations.values():
             for ann in frame_anns:
                 assert ann.coordinate_style == CoordinateStyle.DENORMALIZED

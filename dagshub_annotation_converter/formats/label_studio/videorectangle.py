@@ -84,8 +84,7 @@ class VideoRectangleAnnotation(AnnotationResultABC):
     @staticmethod
     def from_ir_annotation(ir_annotation: IRImageAnnotationBase) -> Sequence["VideoRectangleAnnotation"]:
         raise NotImplementedError(
-            "VideoRectangleAnnotation requires multiple IR annotations per track. "
-            "Use from_ir_annotations() instead."
+            "VideoRectangleAnnotation requires multiple IR annotations per track. Use from_ir_annotations() instead."
         )
 
     def to_ir_annotations(self) -> List[IRVideoBBoxAnnotation]:
@@ -111,10 +110,10 @@ class VideoRectangleAnnotation(AnnotationResultABC):
                     raise ValueError("Frame numbers must be 0-based (>= 0)")
                 raise ValueError("Frame numbers must be 1-based (>= 1)")
             if not (
-                0.0 <= seq_item.x <= 100.0 and
-                0.0 <= seq_item.y <= 100.0 and
-                0.0 <= seq_item.width <= 100.0 and
-                0.0 <= seq_item.height <= 100.0
+                0.0 <= seq_item.x <= 100.0
+                and 0.0 <= seq_item.y <= 100.0
+                and 0.0 <= seq_item.width <= 100.0
+                and 0.0 <= seq_item.height <= 100.0
             ):
                 raise ValueError("Coordinates must be percentages in [0, 100]")
 
@@ -166,16 +165,14 @@ class VideoRectangleAnnotation(AnnotationResultABC):
         track_id = first.track_id
         if any(ann.track_id != track_id for ann in ir_annotations):
             raise ValueError("All annotations must share the same track_id")
-        
+
         ls_id = first.meta.get("ls_id", f"track_{track_id}") if first.meta else f"track_{track_id}"
         label = first.ensure_has_one_category()
 
         sorted_anns = sorted(ir_annotations, key=lambda a: a.frame_number)
 
         frames_count_values = {
-            int(ann.meta["ls_frames_count"])
-            for ann in sorted_anns
-            if isinstance(ann.meta.get("ls_frames_count"), int)
+            int(ann.meta["ls_frames_count"]) for ann in sorted_anns if isinstance(ann.meta.get("ls_frames_count"), int)
         }
         frames_count = max(frames_count_values) if frames_count_values else None
 
@@ -187,10 +184,7 @@ class VideoRectangleAnnotation(AnnotationResultABC):
         effective_anns = []
         for idx, ann in enumerate(sorted_anns):
             next_ann = sorted_anns[idx + 1] if idx + 1 < len(sorted_anns) else None
-            keep_nonkey_pre_outside = (
-                next_ann is not None
-                and not _is_visible(next_ann)
-            )
+            keep_nonkey_pre_outside = next_ann is not None and not _is_visible(next_ann)
             # CVAT interpolation exports often include dense keyframe=0 rows.
             # Keep only true keyframes/outside boundaries when keyframes are present.
             if (
@@ -231,15 +225,12 @@ class VideoRectangleAnnotation(AnnotationResultABC):
 
             enabled = bool(ann.keyframe)
             if enabled:
-                next_ann = next(iter(effective_anns[idx + 1:]), None)
+                next_ann = next(iter(effective_anns[idx + 1 :]), None)
                 if next_ann is not None:
                     # CVAT uses an outside control point on the next frame to mark stop.
                     if not _is_visible(next_ann):
                         enabled = next_ann.frame_number > ann.frame_number + 1
-                    elif (
-                        next_ann.frame_number == ann.frame_number + 1
-                        and next_ann.keyframe
-                    ):
+                    elif next_ann.frame_number == ann.frame_number + 1 and next_ann.keyframe:
                         enabled = False
 
             seq_item = VideoRectangleSequenceItem(

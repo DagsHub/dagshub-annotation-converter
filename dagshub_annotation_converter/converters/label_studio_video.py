@@ -62,7 +62,7 @@ def ls_video_task_to_video_ir(task: LabelStudioTask) -> List[IRVideoBBoxAnnotati
         for result in container.result:
             if isinstance(result, VideoRectangleAnnotation):
                 annotations.extend(result.to_ir_annotations())
-            elif hasattr(result, 'type') and result.type == 'videorectangle':
+            elif hasattr(result, "type") and result.type == "videorectangle":
                 video_rect = VideoRectangleAnnotation.model_validate(result.model_dump())
                 annotations.extend(video_rect.to_ir_annotations())
 
