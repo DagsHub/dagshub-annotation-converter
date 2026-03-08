@@ -6,7 +6,12 @@ from zipfile import ZipFile
 
 import pytest
 
-from dagshub_annotation_converter.converters.mot import export_mot_sequences_to_dirs, export_mot_to_dir, export_to_mot
+from dagshub_annotation_converter.converters.mot import (
+    export_mot_sequences_to_dirs,
+    export_mot_to_dir,
+    export_to_mot,
+    load_mot_from_file,
+)
 from dagshub_annotation_converter.formats.mot.bbox import export_bbox_to_line
 from dagshub_annotation_converter.formats.mot.context import MOTContext
 from dagshub_annotation_converter.ir.video import CoordinateStyle, IRVideoBBoxAnnotation
@@ -141,8 +146,6 @@ class TestMOTFileExport:
             assert first_line_parts[0] == "1"
 
     def test_export_roundtrip(self, mot_context, sample_mot_file):
-        from dagshub_annotation_converter.converters.mot import load_mot_from_file
-
         annotations_by_frame = load_mot_from_file(sample_mot_file, mot_context)
 
         all_annotations = []

@@ -26,7 +26,7 @@ from dagshub_annotation_converter.formats.mot import MOTContext
 
 class TestMOTToLabelStudioRoundtrip:
     """Tests for MOT <-> Label Studio Video conversion.
-    
+
     Uses CVAT MOT 1.1 format (9 columns):
     frame_id, track_id, x, y, w, h, "not ignored", class_id, visibility
     """
@@ -48,18 +48,18 @@ class TestMOTToLabelStudioRoundtrip:
 
     def test_mot_to_ls_video(self, sample_mot_file, mot_context):
         mot_annotations = load_mot_from_file(sample_mot_file, mot_context)
-        
+
         all_annotations = []
         for frame_anns in mot_annotations.values():
             all_annotations.extend(frame_anns)
-        
+
         ls_tasks = video_ir_to_ls_video_tasks(all_annotations)
-        
+
         assert len(ls_tasks) == 1
         task = ls_tasks[0]
-        
+
         assert len(task.annotations) > 0
-        
+
         # Should have 2 videorectangle results (one per track)
         results = task.annotations[0].result
         assert len(results) == 2
@@ -74,24 +74,22 @@ class TestMOTToLabelStudioRoundtrip:
             assert all(item.enabled is False for item in result.value.sequence)
 
     def test_ls_video_to_mot(self, sample_ls_video_task_data, mot_context):
-        from dagshub_annotation_converter.formats.label_studio.videorectangle import VideoRectangleAnnotation
-        
         ir_annotations = []
         for result in sample_ls_video_task_data["annotations"][0]["result"]:
             ls_ann = VideoRectangleAnnotation.model_validate(result)
             ir_annotations.extend(ls_ann.to_ir_annotations())
-        
+
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
             output_path = Path(f.name)
 
             export_to_mot(ir_annotations, mot_context, output_path)
-            
+
             content = output_path.read_text()
             lines = [line for line in content.strip().split("\n") if line and not line.startswith("#")]
-            
+
             # Should have 10 lines (5 frames x 2 tracks)
             assert len(lines) == 10
-            
+
             # Each line should have 9 columns (CVAT MOT 1.1 format)
             for line in lines:
                 parts = line.split(",")
@@ -99,32 +97,32 @@ class TestMOTToLabelStudioRoundtrip:
 
     def test_mot_ls_mot_roundtrip(self, sample_mot_file, mot_context):
         original_mot = load_mot_from_file(sample_mot_file, mot_context)
-        
+
         original_annotations = []
         for frame_anns in original_mot.values():
             original_annotations.extend(frame_anns)
-        
+
         ls_tasks = video_ir_to_ls_video_tasks(original_annotations)
-        
+
         reconstructed_annotations = ls_video_task_to_video_ir(ls_tasks[0])
-        
+
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
             output_path = Path(f.name)
 
             export_to_mot(reconstructed_annotations, mot_context, output_path)
-            
+
             final_mot = load_mot_from_file(output_path, mot_context)
-            
+
             assert len(final_mot) == len(original_mot)
-            
+
             for frame_num in original_mot:
                 assert len(final_mot[frame_num]) == len(original_mot[frame_num])
-            
+
             # Check coordinate preservation (within tolerance due to normalization)
             for frame_num in original_mot:
                 orig_frame = sorted(original_mot[frame_num], key=lambda a: a.track_id)
                 final_frame = sorted(final_mot[frame_num], key=lambda a: a.track_id)
-                
+
                 for orig, final in zip(orig_frame, final_frame):
                     assert orig.track_id == final.track_id
                     # Allow 1 pixel tolerance due to float conversion
@@ -143,14 +141,8 @@ class TestMOTToLabelStudioRoundtrip:
 
         reconstructed_annotations = ls_video_task_to_video_ir(task)
 
-        original_by_track_frame = {
-            (ann.track_id, ann.frame_number): ann
-            for ann in original_annotations
-        }
-        reconstructed_by_track_frame = {
-            (ann.track_id, ann.frame_number): ann
-            for ann in reconstructed_annotations
-        }
+        original_by_track_frame = {(ann.track_id, ann.frame_number): ann for ann in original_annotations}
+        reconstructed_by_track_frame = {(ann.track_id, ann.frame_number): ann for ann in reconstructed_annotations}
 
         assert reconstructed_by_track_frame.keys() == original_by_track_frame.keys()
         for key, original_ann in original_by_track_frame.items():
@@ -278,55 +270,54 @@ class TestCVATVideoToLabelStudioRoundtrip:
 
     def test_cvat_to_ls_video(self, sample_cvat_video_xml):
         cvat_annotations = load_cvat_from_xml_file(sample_cvat_video_xml)
-        
+
         all_annotations = []
         for frame_anns in cvat_annotations.values():
             all_annotations.extend(frame_anns)
-        
+
         ls_tasks = video_ir_to_ls_video_tasks(all_annotations)
-        
+
         assert len(ls_tasks) == 1
         task = ls_tasks[0]
-        
+
         results = task.annotations[0].result
         assert len(results) == 2
 
     def test_cvat_to_ls_preserves_categories(self, sample_cvat_video_xml):
         cvat_annotations = load_cvat_from_xml_file(sample_cvat_video_xml)
-        
+
         all_annotations = []
         for frame_anns in cvat_annotations.values():
             all_annotations.extend(frame_anns)
-        
+
         ls_tasks = video_ir_to_ls_video_tasks(all_annotations)
-        
+
         task = ls_tasks[0]
         labels = set()
         for result in task.annotations[0].result:
             labels.update(result.value.labels)
-        
+
         assert "person" in labels
         assert "car" in labels
 
     def test_cvat_to_ls_coordinate_conversion(self, sample_cvat_video_xml, epsilon):
         cvat_annotations = load_cvat_from_xml_file(sample_cvat_video_xml)
-        
+
         all_annotations = []
         for frame_anns in cvat_annotations.values():
             all_annotations.extend(frame_anns)
-        
+
         ls_tasks = video_ir_to_ls_video_tasks(all_annotations)
         task = ls_tasks[0]
-        
 
         person_result = None
         for result in task.annotations[0].result:
             if "person" in result.value.labels:
                 person_result = result
                 break
-        
+
         assert person_result is not None
-        
+
         # CVAT coords (100, 150, 50x120) on 1920x1080 -> x=100/1920*100, y=150/1080*100
         first_seq = person_result.value.sequence[0]
         assert math.isclose(first_seq.x, 5.208333, abs_tol=epsilon)
@@ -361,10 +352,7 @@ class TestCVATVideoToLabelStudioRoundtrip:
         ls_tasks = video_ir_to_ls_video_tasks(all_annotations)
 
         seq = ls_tasks[0].annotations[0].result[0].value.sequence
-        got = [
-            (item.frame, item.enabled)
-            for item in seq
-        ]
+        got = [(item.frame, item.enabled) for item in seq]
         expected = [
             (1, True),
             (9, False),
@@ -395,9 +383,9 @@ class TestCVATVideoToLabelStudioRoundtrip:
         )
         xml_bytes = (
             '<?xml version="1.0" encoding="utf-8"?>'
-            '<annotations><version>1.1</version><meta><task>'
-            '<size>20</size><mode>interpolation</mode>'
-            '<original_size><width>1920</width><height>1080</height></original_size>'
+            "<annotations><version>1.1</version><meta><task>"
+            "<size>20</size><mode>interpolation</mode>"
+            "<original_size><width>1920</width><height>1080</height></original_size>"
             f'</task></meta><track id="0" label="person" source="manual">{boxes}</track></annotations>'
         ).encode("utf-8")
 
@@ -417,16 +405,9 @@ class TestCVATVideoToLabelStudioRoundtrip:
         all_annotations = [ann for frame_anns in cvat_annotations.values() for ann in frame_anns]
 
         ls_tasks = video_ir_to_ls_video_tasks(all_annotations)
-        car_result = next(
-            result
-            for result in ls_tasks[0].annotations[0].result
-            if "car" in result.value.labels
-        )
+        car_result = next(result for result in ls_tasks[0].annotations[0].result if "car" in result.value.labels)
 
-        got = [
-            (item.frame, item.enabled)
-            for item in car_result.value.sequence
-        ]
+        got = [(item.frame, item.enabled) for item in car_result.value.sequence]
         assert got == [
             (1, True),
             (3, False),
@@ -436,13 +417,13 @@ class TestCVATVideoToLabelStudioRoundtrip:
     def test_cvat_terminal_keyframe_interpolates_to_end_when_size_known(self):
         xml_bytes = (
             '<?xml version="1.0" encoding="utf-8"?>'
-            '<annotations><version>1.1</version><meta><task>'
-            '<size>10</size><mode>interpolation</mode>'
-            '<original_size><width>1920</width><height>1080</height></original_size>'
+            "<annotations><version>1.1</version><meta><task>"
+            "<size>10</size><mode>interpolation</mode>"
+            "<original_size><width>1920</width><height>1080</height></original_size>"
             '</task></meta><track id="0" label="person" source="manual">'
             '<box frame="5" outside="0" occluded="0" keyframe="1" '
             'xtl="100" ytl="100" xbr="200" ybr="200" z_order="0"/>'
-            '</track></annotations>'
+            "</track></annotations>"
         ).encode("utf-8")
 
         cvat_annotations = load_cvat_from_xml_string(xml_bytes)
@@ -472,22 +453,22 @@ class TestCrossFormatConversion:
 
     def test_cvat_to_mot(self, sample_cvat_video_xml, mot_context):
         cvat_annotations = load_cvat_from_xml_file(sample_cvat_video_xml)
-        
+
         all_annotations = []
         for frame_anns in cvat_annotations.values():
             all_annotations.extend(frame_anns)
-        
+
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
             output_path = Path(f.name)
 
             export_to_mot(all_annotations, mot_context, output_path)
-            
+
             content = output_path.read_text()
             lines = [line for line in content.strip().split("\n") if line and not line.startswith("#")]
-            
+
             # Outside keyframes are kept as explicit visibility=0 boundary markers.
             assert len(lines) == 10
-            
+
             # Verify each line has 9 columns (CVAT MOT 1.1 format)
             for line in lines:
                 parts = line.split(",")
@@ -503,12 +484,9 @@ class TestCrossFormatConversion:
         ls_annotations = ls_video_task_to_video_ir(ls_tasks[0])
 
         # CVAT interpolated rows (keyframe=0) collapse to sparse keyframes/boundaries in LS.
-        cvat_keyframes_and_boundaries = [
-            a for a in all_annotations
-            if a.keyframe or a.visibility <= 0.0
-        ]
+        cvat_keyframes_and_boundaries = [a for a in all_annotations if a.keyframe or a.visibility <= 0.0]
         assert len(ls_annotations) == len(cvat_keyframes_and_boundaries)
-        
+
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
             output_path = Path(f.name)
 

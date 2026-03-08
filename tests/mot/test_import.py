@@ -10,7 +10,7 @@ from dagshub_annotation_converter.converters.mot import (
     load_mot_from_fs,
     load_mot_from_zip,
 )
-from dagshub_annotation_converter.formats.mot.bbox import import_bbox_from_line
+from dagshub_annotation_converter.formats.mot.bbox import export_bbox_to_line, import_bbox_from_line
 from dagshub_annotation_converter.ir.video import CoordinateStyle, IRVideoBBoxAnnotation
 
 
@@ -204,8 +204,6 @@ class TestMOTDirectoryImport:
 
 class TestMOTFrameNumberConversion:
     def test_mot_import_converts_frame_to_0_based(self, mot_context):
-        from dagshub_annotation_converter.formats.mot.bbox import import_bbox_from_line
-
         # MOT frame 1 should become IR frame 0
         line1 = "1,1,100,150,50,120,1,1,1.0"
         ann1 = import_bbox_from_line(line1, mot_context)
@@ -217,8 +215,6 @@ class TestMOTFrameNumberConversion:
         assert ann10.frame_number == 9
 
     def test_mot_export_converts_frame_to_1_based(self, mot_context):
-        from dagshub_annotation_converter.formats.mot.bbox import export_bbox_to_line
-
         ann0 = IRVideoBBoxAnnotation(
             track_id=1,
             frame_number=0,
@@ -253,8 +249,6 @@ class TestMOTFrameNumberConversion:
         assert line9.startswith("10,")  # MOT frame should be 10
 
     def test_mot_roundtrip_preserves_frame_numbers(self, mot_context):
-        from dagshub_annotation_converter.formats.mot.bbox import export_bbox_to_line, import_bbox_from_line
-
         original_line = "1,1,100,150,50,120,1,1,1.0"
 
         # Import (MOT 1 -> IR 0)

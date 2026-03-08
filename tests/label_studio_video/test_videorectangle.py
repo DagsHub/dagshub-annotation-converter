@@ -1,10 +1,11 @@
 import math
 
-from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
 from dagshub_annotation_converter.formats.label_studio.videorectangle import (
     VideoRectangleAnnotation,
     VideoRectangleSequenceItem,
+    VideoRectangleValue,
 )
+from dagshub_annotation_converter.ir.video import CoordinateStyle, IRVideoBBoxAnnotation
 
 
 class TestVideoRectangleSequenceItem:
@@ -61,11 +62,6 @@ class TestVideoRectangleAnnotation:
             assert ir_ann.visibility == 1.0
 
     def test_to_ir_annotations_enabled_controls_interpolation_state(self):
-        from dagshub_annotation_converter.formats.label_studio.videorectangle import (
-            VideoRectangleValue,
-            VideoRectangleSequenceItem,
-        )
-
         ann = VideoRectangleAnnotation(
             original_width=1920,
             original_height=1080,
@@ -94,11 +90,6 @@ class TestVideoRectangleAnnotation:
         assert ir_annotations[0].visibility == 0.75
 
     def test_to_ir_annotations_disabled_without_visibility_stays_visible(self):
-        from dagshub_annotation_converter.formats.label_studio.videorectangle import (
-            VideoRectangleValue,
-            VideoRectangleSequenceItem,
-        )
-
         ann = VideoRectangleAnnotation(
             original_width=1920,
             original_height=1080,
@@ -123,11 +114,6 @@ class TestVideoRectangleAnnotation:
         assert ir_annotations[0].visibility == 1.0
 
     def test_to_ir_annotations_preserves_outside_flag(self):
-        from dagshub_annotation_converter.formats.label_studio.videorectangle import (
-            VideoRectangleValue,
-            VideoRectangleSequenceItem,
-        )
-
         ann = VideoRectangleAnnotation(
             original_width=1920,
             original_height=1080,
@@ -154,11 +140,6 @@ class TestVideoRectangleAnnotation:
         assert ir_annotations[0].visibility == 0.0
 
     def test_to_ir_annotations_outside_boundary_is_explicit_keyframe(self):
-        from dagshub_annotation_converter.formats.label_studio.videorectangle import (
-            VideoRectangleValue,
-            VideoRectangleSequenceItem,
-        )
-
         ann = VideoRectangleAnnotation(
             original_width=1920,
             original_height=1080,
@@ -186,11 +167,6 @@ class TestVideoRectangleAnnotation:
         assert ir_annotations[0].keyframe is False
 
     def test_to_ir_annotations_parses_string_outside_false_as_visible(self):
-        from dagshub_annotation_converter.formats.label_studio.videorectangle import (
-            VideoRectangleValue,
-            VideoRectangleSequenceItem,
-        )
-
         ann = VideoRectangleAnnotation(
             original_width=1920,
             original_height=1080,
@@ -442,12 +418,6 @@ class TestVideoRectangleAnnotation:
 
 class TestVideoRectangleFrameNumberConversion:
     def test_ls_to_ir_frame_conversion(self):
-        from dagshub_annotation_converter.formats.label_studio.videorectangle import (
-            VideoRectangleAnnotation,
-            VideoRectangleValue,
-            VideoRectangleSequenceItem,
-        )
-        
         ls_ann = VideoRectangleAnnotation(
             original_width=1920,
             original_height=1080,
@@ -468,12 +438,6 @@ class TestVideoRectangleFrameNumberConversion:
         assert frame_numbers == [0, 1, 9]  # LS 1,2,10 -> IR 0,1,9
 
     def test_ls_to_ir_frame_conversion_supports_zero_based_sequences(self):
-        from dagshub_annotation_converter.formats.label_studio.videorectangle import (
-            VideoRectangleAnnotation,
-            VideoRectangleValue,
-            VideoRectangleSequenceItem,
-        )
-
         ls_ann = VideoRectangleAnnotation(
             original_width=1920,
             original_height=1080,
