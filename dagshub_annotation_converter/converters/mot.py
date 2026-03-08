@@ -90,10 +90,10 @@ def _try_fill_dimensions_from_video(
                 context.video_height = height
             if context.frame_rate == 30.0 and fps > 0:
                 context.frame_rate = fps
-            if context.seq_length is None:
+            if context.sequence_length is None:
                 frame_count = get_video_frame_count(candidate)
                 if frame_count is not None and frame_count > 0:
-                    context.seq_length = frame_count
+                    context.sequence_length = frame_count
             logger.info(f"Inferred dimensions {width}x{height} from {candidate}")
             return
         except (ImportError, ValueError) as e:
@@ -428,11 +428,11 @@ def export_to_mot(
         except (ImportError, ValueError) as e:
             logger.warning(f"Could not probe video dimensions from {video_file}: {e}")
 
-    if context.seq_length is None and video_file is not None:
+    if context.sequence_length is None and video_file is not None:
         try:
             frame_count = get_video_frame_count(Path(video_file))
             if frame_count is not None and frame_count > 0:
-                context.seq_length = frame_count
+                context.sequence_length = frame_count
         except (ImportError, ValueError) as e:
             logger.warning(f"Could not probe video frame count from {video_file}: {e}")
 
@@ -450,7 +450,7 @@ def export_to_mot(
     for ann in annotations:
         tracks[ann.track_id].append(ann)
 
-    context_end_frame = context.seq_length - 1 if context.seq_length is not None and context.seq_length > 0 else None
+    context_end_frame = context.sequence_length - 1 if context.sequence_length is not None and context.sequence_length > 0 else None
     expanded_annotations: List[IRVideoBBoxAnnotation] = []
     for _, track_annotations in sorted(tracks.items()):
         track_end_candidates: List[int] = []
@@ -467,8 +467,8 @@ def export_to_mot(
     sorted_anns = sorted(expanded_annotations, key=lambda a: (a.frame_number, a.track_id))
     if sorted_anns:
         exported_seq_length = max(ann.frame_number for ann in sorted_anns) + 1
-        if context.seq_length is None or context.seq_length < exported_seq_length:
-            context.seq_length = exported_seq_length
+        if context.sequence_length is None or context.sequence_length < exported_seq_length:
+            context.sequence_length = exported_seq_length
     lines = [export_bbox_to_line(ann, context) for ann in sorted_anns]
 
     with open(output_path, "w") as f:
@@ -508,8 +508,8 @@ def export_mot_to_dir(
     export_to_mot(annotations, context, gt_dir / "gt.txt", video_file=video_file)
 
     if create_seqinfo:
-        if context.seq_length is None and annotations:
-            context.seq_length = max(ann.frame_number for ann in annotations) + 1
+        if context.sequence_length is None and annotations:
+            context.sequence_length = max(ann.frame_number for ann in annotations) + 1
         context.write_seqinfo(seqinfo_path)
     elif seqinfo_path.exists():
         seqinfo_path.unlink()
@@ -574,7 +574,7 @@ def export_mot_sequences_to_dirs(
         if ann.filename:
             sequence_name = Path(ann.filename).name
         else:
-            sequence_name = context.seq_name or "sequence"
+            sequence_name = context.sequence_name or "sequence"
         grouped[sequence_name].append(ann)
 
     output_dir = Path(output_dir)
@@ -582,7 +582,7 @@ def export_mot_sequences_to_dirs(
     outputs: Dict[str, Path] = {}
     for sequence_name, seq_annotations in sorted(grouped.items()):
         seq_context = context.model_copy(deep=True)
-        seq_context.seq_name = sequence_name
+        seq_context.sequence_name = sequence_name
         outputs[sequence_name] = export_mot_to_zip(
             seq_annotations,
             seq_context,

@@ -19,8 +19,10 @@ class MOTContext(ParentModel):
     frame_rate: float = 30.0
     video_width: Optional[int] = None
     video_height: Optional[int] = None
-    seq_name: Optional[str] = None
-    seq_length: Optional[int] = None
+    sequence_name: Optional[str] = None
+    """Name of the video sequence"""
+    sequence_length: Optional[int] = None
+    """Length of the video sequence in frames"""
     categories: Dict[int, str] = {}
     """Mapping of class_id (1-indexed) to category name."""
     default_category: str = "object"
@@ -47,9 +49,9 @@ class MOTContext(ParentModel):
         ctx = MOTContext()
         if config.has_section("Sequence"):
             seq = config["Sequence"]
-            ctx.seq_name = seq.get("name")
+            ctx.sequence_name = seq.get("name")
             ctx.frame_rate = float(seq.get("frameRate", "30.0"))
-            ctx.seq_length = int(seq.get("seqLength", "0")) or None
+            ctx.sequence_length = int(seq.get("seqLength", "0")) or None
             ctx.video_width = int(seq.get("imWidth", "0")) or None
             ctx.video_height = int(seq.get("imHeight", "0")) or None
         return ctx
@@ -102,11 +104,11 @@ class MOTContext(ParentModel):
         config["Sequence"] = {}
         seq = config["Sequence"]
 
-        if self.seq_name:
-            seq["name"] = self.seq_name
+        if self.sequence_name:
+            seq["name"] = self.sequence_name
         seq["frameRate"] = str(int(round(self.frame_rate)))
-        if self.seq_length:
-            seq["seqLength"] = str(self.seq_length)
+        if self.sequence_length:
+            seq["seqLength"] = str(self.sequence_length)
         if self.video_width:
             seq["imWidth"] = str(self.video_width)
         if self.video_height:

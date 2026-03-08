@@ -154,7 +154,7 @@ class TestMOTDirectoryImport:
         assert context.frame_rate == 30.0
         assert context.video_width == 1920
         assert context.video_height == 1080
-        assert context.seq_name == "test_sequence"
+        assert context.sequence_name == "test_sequence"
         
         assert context.categories == {1: "person", 2: "car"}
 
@@ -195,7 +195,7 @@ class TestMOTDirectoryImport:
 
         assert context.video_width == 720
         assert context.video_height == 480
-        assert context.seq_length == 400
+        assert context.sequence_length == 400
         assert 0 in anns
         assert probed_paths == [video_path]
 
