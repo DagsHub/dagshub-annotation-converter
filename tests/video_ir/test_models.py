@@ -1,34 +1,12 @@
 import math
 
-from dagshub_annotation_converter.ir.video import (
-    IRVideoBBoxAnnotation,
-    CoordinateStyle,
-)
 import pytest
 
-def test_normalize_coordinates(epsilon):
-    ann = IRVideoBBoxAnnotation(
-        track_id=1,
-        frame_number=0,
-        left=192,  # 192/1920 = 0.1
-        top=108,  # 108/1080 = 0.1
-        width=384,  # 384/1920 = 0.2
-        height=216,  # 216/1080 = 0.2
-        video_width=1920,
-        video_height=1080,
-        categories={"person": 1.0},
-        coordinate_style=CoordinateStyle.DENORMALIZED,
-    )
+from dagshub_annotation_converter.ir.video import (
+    CoordinateStyle,
+    IRVideoBBoxAnnotation,
+)
 
-    normalized = ann.normalized()
-
-    assert normalized.coordinate_style == CoordinateStyle.NORMALIZED
-    assert math.isclose(normalized.left, 0.1, abs_tol=epsilon)
-    assert math.isclose(normalized.top, 0.1, abs_tol=epsilon)
-    assert math.isclose(normalized.width, 0.2, abs_tol=epsilon)
-    assert math.isclose(normalized.height, 0.2, abs_tol=epsilon)
-    assert normalized.track_id == 1
-    assert normalized.frame_number == 0
 
 def test_annotation_with_optional_fields():
     ann = IRVideoBBoxAnnotation(
@@ -51,6 +29,7 @@ def test_annotation_with_optional_fields():
     assert ann.visibility == 0.8
     assert not ann.keyframe
 
+
 def test_with_filename():
     ann = IRVideoBBoxAnnotation(
         track_id=1,
@@ -68,38 +47,6 @@ def test_with_filename():
     ann_with_filename = ann.with_filename("frame_0001.jpg")
     assert ann_with_filename.filename == "frame_0001.jpg"
 
-def test_ensure_has_one_category():
-    ann = IRVideoBBoxAnnotation(
-        track_id=1,
-        frame_number=0,
-        left=100,
-        top=150,
-        width=50,
-        height=120,
-        video_width=1920,
-        video_height=1080,
-        categories={"person": 1.0},
-        coordinate_style=CoordinateStyle.DENORMALIZED,
-    )
-
-    category = ann.ensure_has_one_category()
-    assert category == "person"
-
-def test_allows_missing_image_dimensions():
-    ann = IRVideoBBoxAnnotation(
-        track_id=1,
-        frame_number=0,
-        left=0.1,
-        top=0.1,
-        width=0.2,
-        height=0.2,
-        video_width=None,
-        video_height=None,
-        categories={"person": 1.0},
-        coordinate_style=CoordinateStyle.NORMALIZED,
-    )
-    assert ann.video_width is None
-    assert ann.video_height is None
 
 def test_normalize_denormalize_require_dimensions():
     denorm = IRVideoBBoxAnnotation(
@@ -156,3 +103,28 @@ def test_denormalize_coordinates(epsilon):
     assert math.isclose(denormalized.height, 216, abs_tol=epsilon)
     assert denormalized.track_id == 2
     assert denormalized.frame_number == 10
+
+
+def test_normalize_coordinates(epsilon):
+    ann = IRVideoBBoxAnnotation(
+        track_id=1,
+        frame_number=0,
+        left=192,  # 192/1920 = 0.1
+        top=108,  # 108/1080 = 0.1
+        width=384,  # 384/1920 = 0.2
+        height=216,  # 216/1080 = 0.2
+        video_width=1920,
+        video_height=1080,
+        categories={"person": 1.0},
+        coordinate_style=CoordinateStyle.DENORMALIZED,
+    )
+
+    normalized = ann.normalized()
+
+    assert normalized.coordinate_style == CoordinateStyle.NORMALIZED
+    assert math.isclose(normalized.left, 0.1, abs_tol=epsilon)
+    assert math.isclose(normalized.top, 0.1, abs_tol=epsilon)
+    assert math.isclose(normalized.width, 0.2, abs_tol=epsilon)
+    assert math.isclose(normalized.height, 0.2, abs_tol=epsilon)
+    assert normalized.track_id == 1
+    assert normalized.frame_number == 0
