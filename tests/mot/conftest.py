@@ -11,8 +11,8 @@ def mot_context() -> MOTContext:
     # Categories map class_id -> name (1-indexed as per CVAT)
     context = MOTContext(
         frame_rate=30.0,
-        image_width=1920,
-        image_height=1080,
+        video_width=1920,
+        video_height=1080,
         seq_name="test_sequence",
     )
     context.categories = {1: "person", 2: "car"}

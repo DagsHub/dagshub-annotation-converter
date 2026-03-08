@@ -34,8 +34,8 @@ class TestMOTToLabelStudioRoundtrip:
     def mot_context(self) -> MOTContext:
         context = MOTContext(
             frame_rate=30.0,
-            image_width=1920,
-            image_height=1080,
+            video_width=1920,
+            video_height=1080,
         )
         context.categories = {1: "person", 2: "car"}
         return context
@@ -457,8 +457,8 @@ class TestCrossFormatConversion:
     def mot_context(self) -> MOTContext:
         context = MOTContext(
             frame_rate=30.0,
-            image_width=1920,
-            image_height=1080,
+            video_width=1920,
+            video_height=1080,
         )
         context.categories = {1: "person", 2: "car"}
         return context

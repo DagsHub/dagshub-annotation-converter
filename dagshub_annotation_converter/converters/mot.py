@@ -64,7 +64,7 @@ def _try_fill_dimensions_from_video(
     Looks for a video at *video_file* (if given), then falls back to a
     sibling of *source_path* with the same stem and a common video extension.
     """
-    if context.image_width is not None and context.image_height is not None:
+    if context.video_width is not None and context.video_height is not None:
         return
 
     candidates: List[Path] = []
@@ -84,10 +84,10 @@ def _try_fill_dimensions_from_video(
     for candidate in candidates:
         try:
             width, height, fps = get_video_dimensions(candidate)
-            if context.image_width is None:
-                context.image_width = width
-            if context.image_height is None:
-                context.image_height = height
+            if context.video_width is None:
+                context.video_width = width
+            if context.video_height is None:
+                context.video_height = height
             if context.frame_rate == 30.0 and fps > 0:
                 context.frame_rate = fps
             if context.seq_length is None:
@@ -101,11 +101,11 @@ def _try_fill_dimensions_from_video(
 
 
 def _validate_context_dimensions(context: MOTContext, source: str) -> None:
-    if context.image_width is None or context.image_height is None:
+    if context.video_width is None or context.video_height is None:
         missing = []
-        if context.image_width is None:
+        if context.video_width is None:
             missing.append("image_width")
-        if context.image_height is None:
+        if context.video_height is None:
             missing.append("image_height")
         raise ValueError(
             f"MOT annotations from {source} require frame dimensions, but "
@@ -118,14 +118,14 @@ def _validate_context_dimensions(context: MOTContext, source: str) -> None:
 def _to_denormalized_for_mot(ann: IRVideoBBoxAnnotation, context: MOTContext) -> IRVideoBBoxAnnotation:
     if ann.coordinate_style == CoordinateStyle.NORMALIZED:
         if (
-            (ann.video_width is None and context.image_width is not None)
-            or (ann.video_height is None and context.image_height is not None)
+            (ann.video_width is None and context.video_width is not None)
+            or (ann.video_height is None and context.video_height is not None)
         ):
             ann = ann.model_copy()
-            if ann.video_width is None and context.image_width is not None:
-                ann.video_width = context.image_width
-            if ann.video_height is None and context.image_height is not None:
-                ann.video_height = context.image_height
+            if ann.video_width is None and context.video_width is not None:
+                ann.video_width = context.video_width
+            if ann.video_height is None and context.video_height is not None:
+                ann.video_height = context.video_height
         ann = ann.denormalized()
     return ann
 
@@ -237,9 +237,9 @@ def load_mot_from_dir(
         logger.warning(f"seqinfo.ini not found at {seqinfo_path}, using default context")
 
     if image_width is not None:
-        context.image_width = image_width
+        context.video_width = image_width
     if image_height is not None:
-        context.image_height = image_height
+        context.video_height = image_height
 
     labels_path = gt_dir / "labels.txt"
     if labels_path.exists():
@@ -308,9 +308,9 @@ def load_mot_from_zip(
             context = MOTContext()
 
         if image_width is not None:
-            context.image_width = image_width
+            context.video_width = image_width
         if image_height is not None:
-            context.image_height = image_height
+            context.video_height = image_height
 
         if labels_key in z.namelist():
             with z.open(labels_key) as f:
@@ -407,22 +407,22 @@ def export_to_mot(
     video_file: Optional[Union[str, Path]] = None,
 ) -> Path:
     """Export annotations to MOT gt.txt format, resolving missing dimensions from annotations/video_file."""
-    if context.image_width is None or context.image_height is None:
+    if context.video_width is None or context.video_height is None:
         for ann in annotations:
-            if context.image_width is None and ann.video_width is not None and ann.video_width > 0:
-                context.image_width = ann.video_width
-            if context.image_height is None and ann.video_height is not None and ann.video_height > 0:
-                context.image_height = ann.video_height
-            if context.image_width is not None and context.image_height is not None:
+            if context.video_width is None and ann.video_width is not None and ann.video_width > 0:
+                context.video_width = ann.video_width
+            if context.video_height is None and ann.video_height is not None and ann.video_height > 0:
+                context.video_height = ann.video_height
+            if context.video_width is not None and context.video_height is not None:
                 break
 
-    if (context.image_width is None or context.image_height is None) and video_file is not None:
+    if (context.video_width is None or context.video_height is None) and video_file is not None:
         try:
             width, height, fps = get_video_dimensions(Path(video_file))
-            if context.image_width is None:
-                context.image_width = width
-            if context.image_height is None:
-                context.image_height = height
+            if context.video_width is None:
+                context.video_width = width
+            if context.video_height is None:
+                context.video_height = height
             if context.frame_rate == 30.0 and fps > 0:
                 context.frame_rate = fps
         except (ImportError, ValueError) as e:
@@ -436,7 +436,7 @@ def export_to_mot(
         except (ImportError, ValueError) as e:
             logger.warning(f"Could not probe video frame count from {video_file}: {e}")
 
-    if context.image_width is None or context.image_height is None:
+    if context.video_width is None or context.video_height is None:
         raise ValueError(
             "Cannot determine frame dimensions for MOT export. "
             "Provide context.image_width/context.image_height, use annotations with valid dimensions, "

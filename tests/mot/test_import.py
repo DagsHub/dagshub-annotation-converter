@@ -129,7 +129,7 @@ class TestMOTZipImport:
                 assert frame in zip_anns
                 assert len(anns) == len(zip_anns[frame])
             assert dir_ctx.frame_rate == zip_ctx.frame_rate
-            assert dir_ctx.image_width == zip_ctx.image_width
+            assert dir_ctx.video_width == zip_ctx.video_width
             assert dir_ctx.categories == zip_ctx.categories
 
     def test_load_from_zip_nested_structure(self, sample_mot_dir):
@@ -152,8 +152,8 @@ class TestMOTDirectoryImport:
         annotations, context = load_mot_from_dir(sample_mot_dir)
         
         assert context.frame_rate == 30.0
-        assert context.image_width == 1920
-        assert context.image_height == 1080
+        assert context.video_width == 1920
+        assert context.video_height == 1080
         assert context.seq_name == "test_sequence"
         
         assert context.categories == {1: "person", 2: "car"}
@@ -193,8 +193,8 @@ class TestMOTDirectoryImport:
         loaded = load_mot_from_fs(labels_dir, datasource_path="data/videos")
         anns, context = loaded["earth-space-small.mp4.zip"]
 
-        assert context.image_width == 720
-        assert context.image_height == 480
+        assert context.video_width == 720
+        assert context.video_height == 480
         assert context.seq_length == 400
         assert 0 in anns
         assert probed_paths == [video_path]

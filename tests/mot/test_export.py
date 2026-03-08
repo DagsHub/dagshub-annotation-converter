@@ -282,7 +282,7 @@ class TestMOTFileExport:
             assert float(lines[3].split(",")[8]) == 0.0
 
     def test_export_extends_last_visible_segment_to_seq_length(self):
-        context = MOTContext(frame_rate=30.0, image_width=1920, image_height=1080, seq_length=12)
+        context = MOTContext(frame_rate=30.0, video_width=1920, video_height=1080, seq_length=12)
         context.categories = {1: "person"}
         annotations = [
             IRVideoBBoxAnnotation(
@@ -324,7 +324,7 @@ class TestMOTFileExport:
             assert mot_frames == list(range(1, 13))
 
     def test_export_to_dir_uses_probed_dimensions_for_seqinfo(self, tmp_path, monkeypatch):
-        context = MOTContext(frame_rate=30.0, image_width=None, image_height=None, seq_name="test_sequence")
+        context = MOTContext(frame_rate=30.0, video_width=None, video_height=None, seq_name="test_sequence")
         context.categories = {1: "person"}
         annotations = [
             IRVideoBBoxAnnotation(
@@ -367,7 +367,7 @@ class TestMOTFileExport:
         assert seq["frameRate"] == "25"
 
     def test_export_to_dir_skips_seqinfo_by_default(self, tmp_path):
-        context = MOTContext(frame_rate=30.0, image_width=1280, image_height=720, seq_name="test_sequence")
+        context = MOTContext(frame_rate=30.0, video_width=1280, video_height=720, seq_name="test_sequence")
         context.categories = {1: "person"}
         annotations = [
             IRVideoBBoxAnnotation(
@@ -392,7 +392,7 @@ class TestMOTFileExport:
         assert not (out_dir / "seqinfo.ini").exists()
 
     def test_export_to_dir_uses_probed_frame_count_for_seqinfo(self, tmp_path, monkeypatch):
-        context = MOTContext(frame_rate=30.0, image_width=None, image_height=None, seq_name="test_sequence")
+        context = MOTContext(frame_rate=30.0, video_width=None, video_height=None, seq_name="test_sequence")
         context.categories = {1: "person"}
         annotations = [
             IRVideoBBoxAnnotation(
@@ -437,7 +437,7 @@ class TestMOTFileExport:
         assert max_gt_frame == 40
 
     def test_export_raises_without_dimensions_or_video_file(self, tmp_path):
-        context = MOTContext(frame_rate=30.0, image_width=None, image_height=None)
+        context = MOTContext(frame_rate=30.0, video_width=None, video_height=None)
         context.categories = {1: "person"}
         annotations = [
             IRVideoBBoxAnnotation(
@@ -459,7 +459,7 @@ class TestMOTFileExport:
             export_to_mot(annotations, context, output_path)
 
     def test_export_sequences_to_dirs_groups_by_filename(self, tmp_path):
-        context = MOTContext(frame_rate=30.0, image_width=1920, image_height=1080, seq_name="default")
+        context = MOTContext(frame_rate=30.0, video_width=1920, video_height=1080, seq_name="default")
         context.categories = {1: "person"}
         ann_a = IRVideoBBoxAnnotation(
             track_id=1,
@@ -502,7 +502,7 @@ class TestMOTFileExport:
             assert "seqinfo.ini" not in z.namelist()
 
     def test_export_sequences_to_dirs_accepts_stem_video_file_keys(self, tmp_path, monkeypatch):
-        context = MOTContext(frame_rate=30.0, image_width=None, image_height=None, seq_name="default")
+        context = MOTContext(frame_rate=30.0, video_width=None, video_height=None, seq_name="default")
         context.categories = {1: "person"}
         ann = IRVideoBBoxAnnotation(
             track_id=1,
@@ -545,7 +545,7 @@ class TestMOTFileExport:
         assert seq["frameRate"] == "25"
 
     def test_export_to_dir_seq_length_matches_exported_gt(self, tmp_path):
-        context = MOTContext(frame_rate=30.0, image_width=720, image_height=480, seq_name="test_sequence")
+        context = MOTContext(frame_rate=30.0, video_width=720, video_height=480, seq_name="test_sequence")
         context.categories = {1: "person", 2: "woman"}
         annotations = [
             IRVideoBBoxAnnotation(

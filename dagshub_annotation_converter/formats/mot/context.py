@@ -17,8 +17,8 @@ class MOTContext(ParentModel):
     """
 
     frame_rate: float = 30.0
-    image_width: Optional[int] = None
-    image_height: Optional[int] = None
+    video_width: Optional[int] = None
+    video_height: Optional[int] = None
     seq_name: Optional[str] = None
     seq_length: Optional[int] = None
     categories: Dict[int, str] = {}
@@ -50,8 +50,8 @@ class MOTContext(ParentModel):
             ctx.seq_name = seq.get("name")
             ctx.frame_rate = float(seq.get("frameRate", "30.0"))
             ctx.seq_length = int(seq.get("seqLength", "0")) or None
-            ctx.image_width = int(seq.get("imWidth", "0")) or None
-            ctx.image_height = int(seq.get("imHeight", "0")) or None
+            ctx.video_width = int(seq.get("imWidth", "0")) or None
+            ctx.video_height = int(seq.get("imHeight", "0")) or None
         return ctx
 
     @staticmethod
@@ -107,10 +107,10 @@ class MOTContext(ParentModel):
         seq["frameRate"] = str(int(round(self.frame_rate)))
         if self.seq_length:
             seq["seqLength"] = str(self.seq_length)
-        if self.image_width:
-            seq["imWidth"] = str(self.image_width)
-        if self.image_height:
-            seq["imHeight"] = str(self.image_height)
+        if self.video_width:
+            seq["imWidth"] = str(self.video_width)
+        if self.video_height:
+            seq["imHeight"] = str(self.video_height)
         seq["imDir"] = "img1"
         seq["imExt"] = ".jpg"
 
