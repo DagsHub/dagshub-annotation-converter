@@ -6,6 +6,7 @@ from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, Coordin
 
 logger = logging.getLogger(__name__)
 
+
 def import_bbox_from_line(line: str, context: MOTContext) -> Optional[IRVideoBBoxAnnotation]:
     """
     Parse a single MOT line into an IRVideoBBoxAnnotation.
@@ -29,7 +30,7 @@ def import_bbox_from_line(line: str, context: MOTContext) -> Optional[IRVideoBBo
     class_id = int(parts[7])
     visibility = float(parts[8])
 
-    category_name = context.get_category_name(class_id)
+    category_name = context.categories[class_id].name
 
     meta: Dict[str, Any] = {}
     if not_ignored == 0:
@@ -63,9 +64,8 @@ def export_bbox_to_line(ann: IRVideoBBoxAnnotation, context: MOTContext) -> str:
     MOT uses 1-based frame numbering; IR uses 0-based.
     """
     if ann.coordinate_style == CoordinateStyle.NORMALIZED:
-        if (
-            (ann.video_width is None and context.video_width is not None)
-            or (ann.video_height is None and context.video_height is not None)
+        if (ann.video_width is None and context.video_width is not None) or (
+            ann.video_height is None and context.video_height is not None
         ):
             ann = ann.model_copy()
             if ann.video_width is None and context.video_width is not None:
@@ -75,7 +75,7 @@ def export_bbox_to_line(ann: IRVideoBBoxAnnotation, context: MOTContext) -> str:
         ann = ann.denormalized()
 
     category_name = ann.ensure_has_one_category()
-    class_id = context.get_class_id(category_name)
+    class_id = context.categories[category_name].id
     not_ignored = 1
 
     x = int(ann.left) if ann.left == int(ann.left) else ann.left

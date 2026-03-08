@@ -20,9 +20,9 @@ class TestMOTLineImport:
 
     def test_parse_basic_line(self, mot_context):
         line = "1,1,100,150,50,120,1,1,1.0"
-        
+
         ann = import_bbox_from_line(line, mot_context)
-        
+
         assert ann.frame_number == 0
         assert ann.track_id == 1
         assert ann.left == 100
@@ -36,9 +36,9 @@ class TestMOTLineImport:
 
     def test_parse_line_with_float_coords(self, mot_context, epsilon):
         line = "1,3,794.27,247.59,71.245,174.88,1,1,0.86014"
-        
+
         ann = import_bbox_from_line(line, mot_context)
-        
+
         assert ann.frame_number == 0  # MOT frame 1 -> IR frame 0
         assert ann.track_id == 3
         assert math.isclose(ann.left, 794.27, abs_tol=epsilon)
@@ -49,24 +49,24 @@ class TestMOTLineImport:
 
     def test_parse_line_with_class_id(self, mot_context):
         line = "1,2,500,200,150,100,1,2,1.0"
-        
+
         ann = import_bbox_from_line(line, mot_context)
-        
+
         assert ann.track_id == 2
         assert "car" in ann.categories
 
     def test_parse_line_ignored_entry(self, mot_context):
         line = "1,1,100,150,50,120,0,1,1.0"
-        
+
         ann = import_bbox_from_line(line, mot_context)
-        
+
         assert ann is None
 
     def test_parse_line_with_partial_visibility(self, mot_context):
         line = "3,1,120,154,50,120,1,1,0.5"
-        
+
         ann = import_bbox_from_line(line, mot_context)
-        
+
         assert ann.frame_number == 2  # MOT frame 3 -> IR frame 2
         assert ann.visibility == 0.5
 
@@ -83,32 +83,32 @@ class TestMOTLineImport:
 class TestMOTFileImport:
     def test_load_from_file(self, sample_mot_file, mot_context):
         annotations = load_mot_from_file(sample_mot_file, mot_context)
-        
+
         assert len(annotations) > 0
-        
+
         # IR Frame 0 (MOT Frame 1) should have 2 annotations (track 1 and track 2)
         frame_0_anns = annotations.get(0, [])
         assert len(frame_0_anns) == 2
-        
+
         track_ids = {ann.track_id for ann in frame_0_anns}
         assert track_ids == {1, 2}
 
     def test_load_from_file_track_consistency(self, sample_mot_file, mot_context):
         annotations = load_mot_from_file(sample_mot_file, mot_context)
-        
+
         # Track 1 should appear in all 5 frames (IR frames 0-4)
         track_1_frames = []
         for frame_num, anns in annotations.items():
             for ann in anns:
                 if ann.track_id == 1:
                     track_1_frames.append(frame_num)
-        
+
         assert len(track_1_frames) == 5
         assert sorted(track_1_frames) == [0, 1, 2, 3, 4]
 
     def test_load_skips_comments(self, sample_mot_file, mot_context):
         annotations = load_mot_from_file(sample_mot_file, mot_context)
-        
+
         total_anns = sum(len(anns) for anns in annotations.values())
         assert total_anns == 10
 
@@ -144,19 +144,21 @@ class TestMOTZipImport:
             assert len(zip_anns) > 0
             total = sum(len(a) for a in zip_anns.values())
             assert total == 10
-            assert zip_ctx.categories == {1: "person", 2: "car"}
+            assert zip_ctx.categories[1].name == "person"
+            assert zip_ctx.categories[2].name == "car"
 
 
 class TestMOTDirectoryImport:
     def test_load_from_dir(self, sample_mot_dir):
         annotations, context = load_mot_from_dir(sample_mot_dir)
-        
+
         assert context.frame_rate == 30.0
         assert context.video_width == 1920
         assert context.video_height == 1080
         assert context.sequence_name == "test_sequence"
-        
-        assert context.categories == {1: "person", 2: "car"}
+
+        assert context.categories[1].name == "person"
+        assert context.categories[2].name == "car"
 
     def test_load_from_fs_multiple_sequences(self, sample_mot_dir, tmp_path):
         shutil.copytree(sample_mot_dir, tmp_path / "seq_a")
@@ -203,12 +205,12 @@ class TestMOTDirectoryImport:
 class TestMOTFrameNumberConversion:
     def test_mot_import_converts_frame_to_0_based(self, mot_context):
         from dagshub_annotation_converter.formats.mot.bbox import import_bbox_from_line
-        
+
         # MOT frame 1 should become IR frame 0
         line1 = "1,1,100,150,50,120,1,1,1.0"
         ann1 = import_bbox_from_line(line1, mot_context)
         assert ann1.frame_number == 0
-        
+
         # MOT frame 10 should become IR frame 9
         line10 = "10,1,100,150,50,120,1,1,1.0"
         ann10 = import_bbox_from_line(line10, mot_context)
@@ -216,25 +218,33 @@ class TestMOTFrameNumberConversion:
 
     def test_mot_export_converts_frame_to_1_based(self, mot_context):
         from dagshub_annotation_converter.formats.mot.bbox import export_bbox_to_line
-        
+
         ann0 = IRVideoBBoxAnnotation(
             track_id=1,
             frame_number=0,
-            left=100, top=150, width=50, height=120,
-            video_width=1920, video_height=1080,
+            left=100,
+            top=150,
+            width=50,
+            height=120,
+            video_width=1920,
+            video_height=1080,
             categories={"person": 1.0},
             coordinate_style=CoordinateStyle.DENORMALIZED,
             visibility=1.0,
         )
         line0 = export_bbox_to_line(ann0, mot_context)
         assert line0.startswith("1,")  # MOT frame should be 1
-        
+
         # Create IR annotation with frame 9
         ann9 = IRVideoBBoxAnnotation(
             track_id=1,
             frame_number=9,
-            left=100, top=150, width=50, height=120,
-            video_width=1920, video_height=1080,
+            left=100,
+            top=150,
+            width=50,
+            height=120,
+            video_width=1920,
+            video_height=1080,
             categories={"person": 1.0},
             coordinate_style=CoordinateStyle.DENORMALIZED,
             visibility=1.0,
@@ -244,16 +254,16 @@ class TestMOTFrameNumberConversion:
 
     def test_mot_roundtrip_preserves_frame_numbers(self, mot_context):
         from dagshub_annotation_converter.formats.mot.bbox import import_bbox_from_line, export_bbox_to_line
-        
+
         original_line = "1,1,100,150,50,120,1,1,1.0"
-        
+
         # Import (MOT 1 -> IR 0)
         ann = import_bbox_from_line(original_line, mot_context)
         assert ann.frame_number == 0
-        
+
         # Export (IR 0 -> MOT 1)
         exported_line = export_bbox_to_line(ann, mot_context)
-        
+
         # Frame number should be back to 1
         parts = exported_line.split(",")
         assert parts[0] == "1"

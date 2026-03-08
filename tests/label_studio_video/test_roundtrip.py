@@ -37,7 +37,8 @@ class TestMOTToLabelStudioRoundtrip:
             video_width=1920,
             video_height=1080,
         )
-        context.categories = {1: "person", 2: "car"}
+        context.categories.add("person", 1)
+        context.categories.add("car", 2)
         return context
 
     @pytest.fixture
@@ -460,7 +461,8 @@ class TestCrossFormatConversion:
             video_width=1920,
             video_height=1080,
         )
-        context.categories = {1: "person", 2: "car"}
+        context.categories.add("person", 1)
+        context.categories.add("car", 2)
         return context
 
     @pytest.fixture

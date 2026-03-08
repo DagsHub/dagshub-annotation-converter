@@ -1,8 +1,10 @@
-import io
-from pathlib import Path
-from typing import Dict, Optional
 import configparser
+from pathlib import Path
+from typing import Optional
 
+from pydantic import Field
+
+from dagshub_annotation_converter.formats.categories import Categories
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 
@@ -23,7 +25,7 @@ class MOTContext(ParentModel):
     """Name of the video sequence"""
     sequence_length: Optional[int] = None
     """Length of the video sequence in frames"""
-    categories: Dict[int, str] = {}
+    categories: Categories = Field(default_factory=lambda: Categories(start_index=1))
     """Mapping of class_id (1-indexed) to category name."""
     default_category: str = "object"
 
@@ -57,45 +59,26 @@ class MOTContext(ParentModel):
         return ctx
 
     @staticmethod
-    def load_labels(labels_path: Path) -> Dict[int, str]:
+    def load_labels(labels_path: Path) -> Categories:
         """
         Load category mapping from labels.txt (one class per line).
-
-        Returns dict mapping class_id (1-indexed) to name.
         """
-        categories = {}
-        with open(labels_path, "r") as f:
-            for idx, line in enumerate(f, start=1):
-                name = line.strip()
-                if name:
-                    categories[idx] = name
-        return categories
+        return MOTContext.load_labels_from_string(labels_path.read_text(encoding="utf-8"))
 
     @staticmethod
-    def load_labels_from_string(content: str) -> Dict[int, str]:
-        categories = {}
-        for idx, line in enumerate(io.StringIO(content), start=1):
+    def load_labels_from_string(content: str) -> Categories:
+        categories = Categories(start_index=1)
+        for idx, line in enumerate(content.split(), start=1):
             name = line.strip()
             if name:
-                categories[idx] = name
+                categories.add(name, idx)
         return categories
 
-    def get_category_name(self, class_id: int) -> str:
-        return self.categories.get(class_id, self.default_category)
-
-    def get_class_id(self, category_name: str) -> int:
-        for class_id, name in self.categories.items():
-            if name == category_name:
-                return class_id
-        new_id = max(self.categories.keys(), default=0) + 1
-        self.categories[new_id] = category_name
-        return new_id
-
     def write_labels(self, labels_path: Path):
-        sorted_cats = sorted(self.categories.items(), key=lambda x: x[0])
+        sorted_categories = sorted(self.categories, key=lambda x: x.id)
         with open(labels_path, "w") as f:
-            for _, name in sorted_cats:
-                f.write(f"{name}\n")
+            for cat in sorted_categories:
+                f.write(f"{cat.name}\n")
 
     def write_seqinfo(self, seqinfo_path: Path):
         config = configparser.ConfigParser()

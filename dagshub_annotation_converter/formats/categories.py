@@ -1,4 +1,4 @@
-from typing import Union, Optional, Dict, List
+from typing import Dict, List, Optional, Union
 
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
@@ -13,6 +13,7 @@ class Category(ParentModel):
 
 class Categories(ParentModel):
     categories: List[Category] = []
+    start_index: int = 0
     _id_lookup: Dict[int, Category] = {}
     _name_lookup: Dict[str, Category] = {}
 
@@ -28,7 +29,7 @@ class Categories(ParentModel):
     def __len__(self):
         return len(self.categories)
 
-    def get(self, item: Union[int, str], default=None) -> Category:
+    def get(self, item: Union[int, str], default=None) -> Optional[Category]:
         try:
             return self[item]
         except KeyError:
@@ -47,7 +48,7 @@ class Categories(ParentModel):
             if len(self._id_lookup):
                 id = max(self._id_lookup.keys()) + 1
             else:
-                id = 0
+                id = self.start_index
         new_category = Category(name=name, id=id)
         self.categories.append(new_category)
         self.regenerate_dicts()
@@ -61,5 +62,5 @@ class Categories(ParentModel):
 def determine_category(category: Union[int, str], categories: Categories) -> Category:
     res = categories.get(category)
     if res is None:
-        raise ValueError(f"Unknown category {category}. Imported categories from the .yaml: {categories}")
+        raise ValueError(f"Unknown category {category}. Existing categories: {categories}")
     return res

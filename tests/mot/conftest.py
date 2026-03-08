@@ -15,7 +15,8 @@ def mot_context() -> MOTContext:
         video_height=1080,
         sequence_name="test_sequence",
     )
-    context.categories = {1: "person", 2: "car"}
+    context.categories.add("person", 1)
+    context.categories.add("car", 2)
     return context
 
 

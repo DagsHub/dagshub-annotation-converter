@@ -26,9 +26,9 @@ class TestMOTLineExport:
             coordinate_style=CoordinateStyle.DENORMALIZED,
             visibility=1.0,
         )
-        
+
         line = export_bbox_to_line(ann, mot_context)
-        
+
         # CVAT MOT 1.1: frame,track,x,y,w,h,not_ignored,class_id,visibility
         parts = line.split(",")
         assert len(parts) == 9
@@ -56,10 +56,10 @@ class TestMOTLineExport:
             coordinate_style=CoordinateStyle.NORMALIZED,
             visibility=1.0,
         )
-        
+
         line = export_bbox_to_line(ann, mot_context)
         parts = line.split(",")
-        
+
         assert math.isclose(float(parts[2]), 192, abs_tol=1)
         assert math.isclose(float(parts[3]), 108, abs_tol=1)
 
@@ -77,10 +77,10 @@ class TestMOTLineExport:
             coordinate_style=CoordinateStyle.DENORMALIZED,
             visibility=0.5,
         )
-        
+
         line = export_bbox_to_line(ann, mot_context)
         parts = line.split(",")
-        
+
         assert parts[7] == "2"
         assert float(parts[8]) == 0.5
 
@@ -125,38 +125,38 @@ class TestMOTFileExport:
                 coordinate_style=CoordinateStyle.DENORMALIZED,
             ),
         ]
-        
+
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
             output_path = Path(f.name)
 
             export_to_mot(annotations, mot_context, output_path)
-            
+
             content = output_path.read_text()
             lines = [line for line in content.strip().split("\n") if line and not line.startswith("#")]
-            
+
             assert len(lines) == 3
-            
+
             first_line_parts = lines[0].split(",")
             assert first_line_parts[0] == "1"
 
     def test_export_roundtrip(self, mot_context, sample_mot_file):
         from dagshub_annotation_converter.converters.mot import load_mot_from_file
-        
+
         annotations_by_frame = load_mot_from_file(sample_mot_file, mot_context)
-        
+
         all_annotations = []
         for frame_anns in annotations_by_frame.values():
             all_annotations.extend(frame_anns)
-        
+
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
             output_path = Path(f.name)
 
             export_to_mot(all_annotations, mot_context, output_path)
-            
+
             reimported = load_mot_from_file(output_path, mot_context)
-            
+
             assert len(reimported) == len(annotations_by_frame)
-            
+
             for frame_num in annotations_by_frame:
                 assert len(reimported[frame_num]) == len(annotations_by_frame[frame_num])
 
@@ -262,7 +262,7 @@ class TestMOTFileExport:
 
     def test_export_extends_last_visible_segment_to_seq_length(self):
         context = MOTContext(frame_rate=30.0, video_width=1920, video_height=1080, sequence_length=12)
-        context.categories = {1: "person"}
+        context.categories.add("person", 1)
         annotations = [
             IRVideoBBoxAnnotation(
                 track_id=1,
@@ -304,7 +304,7 @@ class TestMOTFileExport:
 
     def test_export_to_dir_uses_probed_dimensions_for_seqinfo(self, tmp_path, monkeypatch):
         context = MOTContext(frame_rate=30.0, video_width=None, video_height=None, sequence_name="test_sequence")
-        context.categories = {1: "person"}
+        context.categories.add("person", 1)
         annotations = [
             IRVideoBBoxAnnotation(
                 track_id=1,
@@ -347,7 +347,7 @@ class TestMOTFileExport:
 
     def test_export_to_dir_skips_seqinfo_by_default(self, tmp_path):
         context = MOTContext(frame_rate=30.0, video_width=1280, video_height=720, sequence_name="test_sequence")
-        context.categories = {1: "person"}
+        context.categories.add("person", 1)
         annotations = [
             IRVideoBBoxAnnotation(
                 track_id=1,
@@ -372,7 +372,7 @@ class TestMOTFileExport:
 
     def test_export_to_dir_uses_probed_frame_count_for_seqinfo(self, tmp_path, monkeypatch):
         context = MOTContext(frame_rate=30.0, video_width=None, video_height=None, sequence_name="test_sequence")
-        context.categories = {1: "person"}
+        context.categories.add("person", 1)
         annotations = [
             IRVideoBBoxAnnotation(
                 track_id=1,
@@ -417,7 +417,7 @@ class TestMOTFileExport:
 
     def test_export_raises_without_dimensions_or_video_file(self, tmp_path):
         context = MOTContext(frame_rate=30.0, video_width=None, video_height=None)
-        context.categories = {1: "person"}
+        context.categories.add("person", 1)
         annotations = [
             IRVideoBBoxAnnotation(
                 track_id=1,
@@ -439,7 +439,7 @@ class TestMOTFileExport:
 
     def test_export_sequences_to_dirs_groups_by_filename(self, tmp_path):
         context = MOTContext(frame_rate=30.0, video_width=1920, video_height=1080, sequence_name="default")
-        context.categories = {1: "person"}
+        context.categories.add("person", 1)
         ann_a = IRVideoBBoxAnnotation(
             track_id=1,
             frame_number=0,
@@ -482,7 +482,7 @@ class TestMOTFileExport:
 
     def test_export_sequences_to_dirs_accepts_stem_video_file_keys(self, tmp_path, monkeypatch):
         context = MOTContext(frame_rate=30.0, video_width=None, video_height=None, sequence_name="default")
-        context.categories = {1: "person"}
+        context.categories.add("person", 1)
         ann = IRVideoBBoxAnnotation(
             track_id=1,
             frame_number=0,
@@ -525,7 +525,8 @@ class TestMOTFileExport:
 
     def test_export_to_dir_seq_length_matches_exported_gt(self, tmp_path):
         context = MOTContext(frame_rate=30.0, video_width=720, video_height=480, sequence_name="test_sequence")
-        context.categories = {1: "person", 2: "woman"}
+        context.categories.add("person", 2)
+        context.categories.add("woman", 1)
         annotations = [
             IRVideoBBoxAnnotation(
                 track_id=1,
