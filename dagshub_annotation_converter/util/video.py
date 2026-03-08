@@ -172,5 +172,5 @@ def find_video_sibling(reference_path: Path) -> Optional[Path]:
         return None
     stem = reference_path.stem
     files_by_name = {entry.name.lower(): entry for entry in parent.iterdir() if entry.is_file()}
-    candidates = [f"{stem}{ext}" for ext in VIDEO_EXTENSIONS]
+    candidates = [f"{stem}{ext}".lower() for ext in VIDEO_EXTENSIONS]
     return next((files_by_name[candidate] for candidate in candidates if candidate in files_by_name), None)
