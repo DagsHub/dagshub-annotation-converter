@@ -511,8 +511,6 @@ def export_mot_to_dir(
         if context.sequence_length is None and annotations:
             context.sequence_length = max(ann.frame_number for ann in annotations) + 1
         context.write_seqinfo(seqinfo_path)
-    elif seqinfo_path.exists():
-        seqinfo_path.unlink()
     context.write_labels(gt_dir / "labels.txt")
 
     logger.info(f"Exported MOT sequence to {output_dir}")
