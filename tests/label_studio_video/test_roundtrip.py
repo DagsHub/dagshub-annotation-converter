@@ -1,26 +1,27 @@
-import pytest
-from pathlib import Path
-import tempfile
-import math
 import copy
+import math
+import tempfile
+from pathlib import Path
 
-from dagshub_annotation_converter.formats.mot import MOTContext
-from dagshub_annotation_converter.converters.mot import load_mot_from_file, export_to_mot
+import pytest
+
 from dagshub_annotation_converter.converters.cvat import (
+    export_cvat_video_to_xml_string,
     load_cvat_from_xml_file,
     load_cvat_from_xml_string,
-    export_cvat_video_to_xml_string,
 )
 from dagshub_annotation_converter.converters.label_studio_video import (
-    video_ir_to_ls_video_tasks,
     ls_video_task_to_video_ir,
+    video_ir_to_ls_video_tasks,
 )
+from dagshub_annotation_converter.converters.mot import export_to_mot, load_mot_from_file
 from dagshub_annotation_converter.formats.label_studio.task import LabelStudioTask
 from dagshub_annotation_converter.formats.label_studio.videorectangle import (
     VideoRectangleAnnotation,
-    VideoRectangleValue,
     VideoRectangleSequenceItem,
+    VideoRectangleValue,
 )
+from dagshub_annotation_converter.formats.mot import MOTContext
 
 
 class TestMOTToLabelStudioRoundtrip:
@@ -33,7 +34,7 @@ class TestMOTToLabelStudioRoundtrip:
     @pytest.fixture
     def mot_context(self) -> MOTContext:
         context = MOTContext(
-            frame_rate=30.0,
+            frame_rate=30,
             video_width=1920,
             video_height=1080,
         )
@@ -457,7 +458,7 @@ class TestCrossFormatConversion:
     @pytest.fixture
     def mot_context(self) -> MOTContext:
         context = MOTContext(
-            frame_rate=30.0,
+            frame_rate=30,
             video_width=1920,
             video_height=1080,
         )

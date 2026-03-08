@@ -18,7 +18,7 @@ class MOTContext(ParentModel):
     Categories are loaded from labels.txt (one class per line, 1-indexed).
     """
 
-    frame_rate: float = 30.0
+    frame_rate: int = 30
     frame_subdirectory: str = "img1"
     frame_extension: str = ".jpg"
     video_width: Optional[int] = None
@@ -54,7 +54,7 @@ class MOTContext(ParentModel):
         if config.has_section("Sequence"):
             seq = config["Sequence"]
             ctx.sequence_name = seq.get("name")
-            ctx.frame_rate = float(seq.get("frameRate", "30.0"))
+            ctx.frame_rate = int(seq.get("frameRate", "30"))
             ctx.frame_extension = seq.get("imExt", ".jpg")
             ctx.frame_subdirectory = seq.get("imDir", "img1")
             ctx.sequence_length = int(seq.get("seqLength", "0")) or None
@@ -93,7 +93,7 @@ class MOTContext(ParentModel):
 
         if self.sequence_name:
             seq["name"] = self.sequence_name
-        seq["frameRate"] = str(int(round(self.frame_rate)))
+        seq["frameRate"] = str(self.frame_rate)
         if self.sequence_length:
             seq["seqLength"] = str(self.sequence_length)
         if self.video_width:

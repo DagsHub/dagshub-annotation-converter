@@ -1,17 +1,17 @@
+import math
+import shutil
 import tempfile
 from pathlib import Path
 from zipfile import ZipFile
-import math
-import shutil
 
-from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
-from dagshub_annotation_converter.formats.mot.bbox import import_bbox_from_line
 from dagshub_annotation_converter.converters.mot import (
-    load_mot_from_file,
     load_mot_from_dir,
-    load_mot_from_zip,
+    load_mot_from_file,
     load_mot_from_fs,
+    load_mot_from_zip,
 )
+from dagshub_annotation_converter.formats.mot.bbox import import_bbox_from_line
+from dagshub_annotation_converter.ir.video import CoordinateStyle, IRVideoBBoxAnnotation
 
 
 class TestMOTLineImport:
@@ -152,7 +152,7 @@ class TestMOTDirectoryImport:
     def test_load_from_dir(self, sample_mot_dir):
         annotations, context = load_mot_from_dir(sample_mot_dir)
 
-        assert context.frame_rate == 30.0
+        assert context.frame_rate == 30
         assert context.video_width == 1920
         assert context.video_height == 1080
         assert context.sequence_name == "test_sequence"
@@ -253,7 +253,7 @@ class TestMOTFrameNumberConversion:
         assert line9.startswith("10,")  # MOT frame should be 10
 
     def test_mot_roundtrip_preserves_frame_numbers(self, mot_context):
-        from dagshub_annotation_converter.formats.mot.bbox import import_bbox_from_line, export_bbox_to_line
+        from dagshub_annotation_converter.formats.mot.bbox import export_bbox_to_line, import_bbox_from_line
 
         original_line = "1,1,100,150,50,120,1,1,1.0"
 

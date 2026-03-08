@@ -1,14 +1,15 @@
-from pathlib import Path
-import tempfile
-import math
 import configparser
+import math
+import tempfile
+from pathlib import Path
 from zipfile import ZipFile
+
 import pytest
 
-from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
+from dagshub_annotation_converter.converters.mot import export_mot_sequences_to_dirs, export_mot_to_dir, export_to_mot
 from dagshub_annotation_converter.formats.mot.bbox import export_bbox_to_line
-from dagshub_annotation_converter.converters.mot import export_to_mot, export_mot_to_dir, export_mot_sequences_to_dirs
 from dagshub_annotation_converter.formats.mot.context import MOTContext
+from dagshub_annotation_converter.ir.video import CoordinateStyle, IRVideoBBoxAnnotation
 
 
 class TestMOTLineExport:
@@ -261,7 +262,7 @@ class TestMOTFileExport:
             assert float(lines[3].split(",")[8]) == 0.0
 
     def test_export_extends_last_visible_segment_to_seq_length(self):
-        context = MOTContext(frame_rate=30.0, video_width=1920, video_height=1080, sequence_length=12)
+        context = MOTContext(frame_rate=30, video_width=1920, video_height=1080, sequence_length=12)
         context.categories.add("person", 1)
         annotations = [
             IRVideoBBoxAnnotation(
@@ -303,7 +304,7 @@ class TestMOTFileExport:
             assert mot_frames == list(range(1, 13))
 
     def test_export_to_dir_uses_probed_dimensions_for_seqinfo(self, tmp_path, monkeypatch):
-        context = MOTContext(frame_rate=30.0, video_width=None, video_height=None, sequence_name="test_sequence")
+        context = MOTContext(frame_rate=30, video_width=None, video_height=None, sequence_name="test_sequence")
         context.categories.add("person", 1)
         annotations = [
             IRVideoBBoxAnnotation(
@@ -346,7 +347,7 @@ class TestMOTFileExport:
         assert seq["frameRate"] == "25"
 
     def test_export_to_dir_skips_seqinfo_by_default(self, tmp_path):
-        context = MOTContext(frame_rate=30.0, video_width=1280, video_height=720, sequence_name="test_sequence")
+        context = MOTContext(frame_rate=30, video_width=1280, video_height=720, sequence_name="test_sequence")
         context.categories.add("person", 1)
         annotations = [
             IRVideoBBoxAnnotation(
@@ -371,7 +372,7 @@ class TestMOTFileExport:
         assert not (out_dir / "seqinfo.ini").exists()
 
     def test_export_to_dir_uses_probed_frame_count_for_seqinfo(self, tmp_path, monkeypatch):
-        context = MOTContext(frame_rate=30.0, video_width=None, video_height=None, sequence_name="test_sequence")
+        context = MOTContext(frame_rate=30, video_width=None, video_height=None, sequence_name="test_sequence")
         context.categories.add("person", 1)
         annotations = [
             IRVideoBBoxAnnotation(
@@ -416,7 +417,7 @@ class TestMOTFileExport:
         assert max_gt_frame == 40
 
     def test_export_raises_without_dimensions_or_video_file(self, tmp_path):
-        context = MOTContext(frame_rate=30.0, video_width=None, video_height=None)
+        context = MOTContext(frame_rate=30, video_width=None, video_height=None)
         context.categories.add("person", 1)
         annotations = [
             IRVideoBBoxAnnotation(
@@ -438,7 +439,7 @@ class TestMOTFileExport:
             export_to_mot(annotations, context, output_path)
 
     def test_export_sequences_to_dirs_groups_by_filename(self, tmp_path):
-        context = MOTContext(frame_rate=30.0, video_width=1920, video_height=1080, sequence_name="default")
+        context = MOTContext(frame_rate=30, video_width=1920, video_height=1080, sequence_name="default")
         context.categories.add("person", 1)
         ann_a = IRVideoBBoxAnnotation(
             track_id=1,
@@ -481,7 +482,7 @@ class TestMOTFileExport:
             assert "seqinfo.ini" not in z.namelist()
 
     def test_export_sequences_to_dirs_accepts_stem_video_file_keys(self, tmp_path, monkeypatch):
-        context = MOTContext(frame_rate=30.0, video_width=None, video_height=None, sequence_name="default")
+        context = MOTContext(frame_rate=30, video_width=None, video_height=None, sequence_name="default")
         context.categories.add("person", 1)
         ann = IRVideoBBoxAnnotation(
             track_id=1,
@@ -524,7 +525,7 @@ class TestMOTFileExport:
         assert seq["frameRate"] == "25"
 
     def test_export_to_dir_seq_length_matches_exported_gt(self, tmp_path):
-        context = MOTContext(frame_rate=30.0, video_width=720, video_height=480, sequence_name="test_sequence")
+        context = MOTContext(frame_rate=30, video_width=720, video_height=480, sequence_name="test_sequence")
         context.categories.add("person", 2)
         context.categories.add("woman", 1)
         annotations = [

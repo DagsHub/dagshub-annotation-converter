@@ -5,8 +5,8 @@ from tempfile import TemporaryDirectory
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 from zipfile import ZipFile
 
-from dagshub_annotation_converter.formats.mot import MOTContext, import_bbox_from_line, export_bbox_to_line
-from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
+from dagshub_annotation_converter.formats.mot import MOTContext, export_bbox_to_line, import_bbox_from_line
+from dagshub_annotation_converter.ir.video import CoordinateStyle, IRVideoBBoxAnnotation
 from dagshub_annotation_converter.util.video import (
     find_video_sibling,
     get_video_dimensions,
@@ -90,8 +90,10 @@ def _try_fill_dimensions_from_video(
                 context.video_width = width
             if context.video_height is None:
                 context.video_height = height
-            if context.frame_rate == 30.0 and fps > 0:
-                context.frame_rate = fps
+            if fps > 0:
+                if not fps.is_integer():
+                    logger.warning(f"Non-integer frame rate {fps} in video {candidate}, using rounded value")
+                context.frame_rate = int(round(fps))
             if context.sequence_length is None:
                 frame_count = get_video_frame_count(candidate)
                 if frame_count is not None and frame_count > 0:
@@ -415,8 +417,10 @@ def export_to_mot(
                 context.video_width = width
             if context.video_height is None:
                 context.video_height = height
-            if context.frame_rate == 30.0 and fps > 0:
-                context.frame_rate = fps
+            if fps > 0:
+                if not fps.is_integer():
+                    logger.warning(f"Non-integer frame rate {fps} in video {video_file}, using rounded value")
+                context.frame_rate = int(round(fps))
         except (ImportError, ValueError) as e:
             logger.warning(f"Could not probe video dimensions from {video_file}: {e}")
 

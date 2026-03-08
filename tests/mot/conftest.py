@@ -1,5 +1,6 @@
-import pytest
 from pathlib import Path
+
+import pytest
 
 from dagshub_annotation_converter.formats.mot import MOTContext
 
@@ -10,7 +11,7 @@ def mot_context() -> MOTContext:
     # frame_id, track_id, x, y, w, h, "not ignored", class_id, visibility
     # Categories map class_id -> name (1-indexed as per CVAT)
     context = MOTContext(
-        frame_rate=30.0,
+        frame_rate=30,
         video_width=1920,
         video_height=1080,
         sequence_name="test_sequence",
