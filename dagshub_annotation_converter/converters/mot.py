@@ -117,9 +117,8 @@ def _validate_context_dimensions(context: MOTContext, source: str) -> None:
 
 def _to_denormalized_for_mot(ann: IRVideoBBoxAnnotation, context: MOTContext) -> IRVideoBBoxAnnotation:
     if ann.coordinate_style == CoordinateStyle.NORMALIZED:
-        if (
-            (ann.video_width is None and context.video_width is not None)
-            or (ann.video_height is None and context.video_height is not None)
+        if (ann.video_width is None and context.video_width is not None) or (
+            ann.video_height is None and context.video_height is not None
         ):
             ann = ann.model_copy()
             if ann.video_width is None and context.video_width is not None:
@@ -382,11 +381,7 @@ def load_mot_from_fs(
 
         return None
 
-    seq_roots = {
-        gt_path.parent.parent
-        for gt_path in import_dir.rglob("gt.txt")
-        if gt_path.parent.name == "gt"
-    }
+    seq_roots = {gt_path.parent.parent for gt_path in import_dir.rglob("gt.txt") if gt_path.parent.name == "gt"}
     for seq_root in sorted(seq_roots):
         key = str(seq_root.relative_to(import_dir))
         video_file = _resolve_video_file(key)
@@ -450,7 +445,9 @@ def export_to_mot(
     for ann in annotations:
         tracks[ann.track_id].append(ann)
 
-    context_end_frame = context.sequence_length - 1 if context.sequence_length is not None and context.sequence_length > 0 else None
+    context_end_frame = (
+        context.sequence_length - 1 if context.sequence_length is not None and context.sequence_length > 0 else None
+    )
     expanded_annotations: List[IRVideoBBoxAnnotation] = []
     for _, track_annotations in sorted(tracks.items()):
         track_end_candidates: List[int] = []
@@ -554,6 +551,7 @@ def export_mot_sequences_to_dirs(
     create_seqinfo: bool = False,
 ) -> Dict[str, Path]:
     """Export multiple MOT sequences to one zip per source filename."""
+
     def resolve_video_file(sequence_name: str) -> Optional[Union[str, Path]]:
         if video_files is None:
             return None
