@@ -1,13 +1,13 @@
 import hashlib
 import uuid
-from typing import List, Optional, Dict, Any, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
 from pydantic import Field
 
 from dagshub_annotation_converter.formats.label_studio.base import AnnotationResultABC
-from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
-from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
 from dagshub_annotation_converter.ir.image import IRImageAnnotationBase
+from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
+from dagshub_annotation_converter.ir.video import CoordinateStyle, IRVideoBBoxAnnotation
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 
@@ -127,7 +127,7 @@ class VideoRectangleAnnotation(AnnotationResultABC):
             if parsed_visibility is not None:
                 visibility = parsed_visibility
 
-            meta = {"ls_id": self.id}
+            meta: Dict[str, Any] = {"ls_id": self.id}
             if self.value.framesCount is not None and self.value.framesCount > 0:
                 meta["ls_frames_count"] = self.value.framesCount
 
