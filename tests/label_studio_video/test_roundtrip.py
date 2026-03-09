@@ -503,8 +503,8 @@ class TestLabelStudioVideoLocalProbeFallback:
     def test_task_to_ir_succeeds_without_dimensions_or_video_file(self, sample_ls_video_task_data):
         task_data = copy.deepcopy(sample_ls_video_task_data)
         for result in task_data["annotations"][0]["result"]:
-            result.pop("original_width", None)
-            result.pop("original_height", None)
+            del result["original_width"]
+            del result["original_height"]
 
         task = LabelStudioTask.model_validate(task_data)
         annotations = task.to_ir_annotations(filename="repo/remote/path/video.mp4")
@@ -520,8 +520,8 @@ class TestLabelStudioVideoLocalProbeFallback:
     ):
         task_data = copy.deepcopy(sample_ls_video_task_data)
         for result in task_data["annotations"][0]["result"]:
-            result.pop("original_width", None)
-            result.pop("original_height", None)
+            del result["original_width"]
+            del result["original_height"]
 
         local_video = tmp_path / "video.mp4"
         local_video.write_text("stub")
