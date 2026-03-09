@@ -2,38 +2,39 @@ import datetime
 import logging
 import random
 from pathlib import Path
-from typing import Any, Sequence, Type, Optional, Union, cast, List, Dict
+from typing import Any, Dict, List, Optional, Sequence, Type, Union, cast
 
+from pydantic import BeforeValidator, Field, SerializeAsAny
 from typing_extensions import Annotated
 
-from pydantic import SerializeAsAny, Field, BeforeValidator
-
-from dagshub_annotation_converter.formats.label_studio.base import AnnotationResultABC, ImageAnnotationResultABC
+from dagshub_annotation_converter.formats.label_studio.base import AnnotationResultABC
 from dagshub_annotation_converter.formats.label_studio.ellipselabels import EllipseLabelsAnnotation
 from dagshub_annotation_converter.formats.label_studio.keypointlabels import KeyPointLabelsAnnotation
 from dagshub_annotation_converter.formats.label_studio.polygonlabels import PolygonLabelsAnnotation
 from dagshub_annotation_converter.formats.label_studio.rectanglelabels import RectangleLabelsAnnotation
+from dagshub_annotation_converter.formats.label_studio.videorectangle import VideoRectangleAnnotation
 from dagshub_annotation_converter.ir.image import (
+    CoordinateStyle,
+    IRBBoxImageAnnotation,
+    IREllipseImageAnnotation,
     IRImageAnnotationBase,
     IRPoseImageAnnotation,
-    IRBBoxImageAnnotation,
-    CoordinateStyle,
     IRPosePoint,
     IRSegmentationImageAnnotation,
-    IREllipseImageAnnotation,
 )
-from dagshub_annotation_converter.ir.video import IRVideoAnnotationBase
-from dagshub_annotation_converter.util.video import get_video_dimensions
+from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
+from dagshub_annotation_converter.util.video import get_video_dimensions
 
 task_lookup: Dict[str, Type[AnnotationResultABC]] = {
     "polygonlabels": PolygonLabelsAnnotation,
     "rectanglelabels": RectangleLabelsAnnotation,
     "keypointlabels": KeyPointLabelsAnnotation,
     "ellipselabels": EllipseLabelsAnnotation,
+    "videorectangle": VideoRectangleAnnotation,
 }
 
-ir_annotation_lookup: Dict[Type[IRImageAnnotationBase], Type[ImageAnnotationResultABC]] = {
+ir_annotation_lookup: Dict[Type[IRAnnotationBase], Type[AnnotationResultABC]] = {
     IRPoseImageAnnotation: KeyPointLabelsAnnotation,
     IRBBoxImageAnnotation: RectangleLabelsAnnotation,
     IRSegmentationImageAnnotation: PolygonLabelsAnnotation,
@@ -118,9 +119,9 @@ class LabelStudioTask(ParentModel):
         self,
         filename: Optional[str] = None,
         video_file: Optional[Union[str, Path]] = None,
-    ) -> Sequence[Union[IRImageAnnotationBase, IRVideoAnnotationBase]]:
+    ) -> List[IRAnnotationBase]:
         """Convert task annotations to IR; probe video dims from local ``video_file`` if provided."""
-        res: List[Union[IRImageAnnotationBase, IRVideoAnnotationBase]] = []
+        res: List[IRAnnotationBase] = []
         probed_width: Optional[int] = None
         probed_height: Optional[int] = None
         did_probe = False
@@ -154,9 +155,7 @@ class LabelStudioTask(ParentModel):
         res = self._reimport_poses(res)
         return res
 
-    def _reimport_poses(
-        self, annotations: Sequence[Union[IRImageAnnotationBase, IRVideoAnnotationBase]]
-    ) -> Sequence[Union[IRImageAnnotationBase, IRVideoAnnotationBase]]:
+    def _reimport_poses(self, annotations: List[IRAnnotationBase]) -> List[IRAnnotationBase]:
         if PosePointsLookupKey not in self.data or PoseBBoxLookupKey not in self.data:
             return annotations
 
@@ -248,7 +247,7 @@ class LabelStudioTask(ParentModel):
         annotations.extend(poses)
         return annotations
 
-    def add_ir_annotation(self, ann: IRImageAnnotationBase):
+    def add_ir_annotation(self, ann: IRAnnotationBase):
         ls_ann_type = ir_annotation_lookup.get(type(ann))
 
         if ls_ann_type is None:

@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Optional, Sequence
 from pydantic import Field
 
 from dagshub_annotation_converter.formats.label_studio.base import AnnotationResultABC
-from dagshub_annotation_converter.ir.image import IRImageAnnotationBase
 from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
 from dagshub_annotation_converter.ir.video import CoordinateStyle, IRVideoBBoxAnnotation
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
@@ -78,11 +77,11 @@ class VideoRectangleAnnotation(AnnotationResultABC):
     origin: str = "manual"
     meta: Optional[Dict[str, Any]] = None
 
-    def to_ir_annotation(self) -> Sequence[IRAnnotationBase]:
+    def to_ir_annotation(self) -> Sequence[IRVideoBBoxAnnotation]:
         return self.to_ir_annotations()
 
     @staticmethod
-    def from_ir_annotation(ir_annotation: IRImageAnnotationBase) -> Sequence["VideoRectangleAnnotation"]:
+    def from_ir_annotation(ir_annotation: IRAnnotationBase) -> Sequence["VideoRectangleAnnotation"]:
         raise NotImplementedError(
             "VideoRectangleAnnotation requires multiple IR annotations per track. Use from_ir_annotations() instead."
         )

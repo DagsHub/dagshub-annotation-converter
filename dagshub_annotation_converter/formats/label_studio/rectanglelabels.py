@@ -1,7 +1,8 @@
-from typing import Sequence, List
+from typing import List, Sequence
 
 from dagshub_annotation_converter.formats.label_studio.base import ImageAnnotationResultABC
-from dagshub_annotation_converter.ir.image import IRBBoxImageAnnotation, CoordinateStyle, IRImageAnnotationBase
+from dagshub_annotation_converter.ir.image import CoordinateStyle, IRBBoxImageAnnotation
+from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 
@@ -18,7 +19,7 @@ class RectangleLabelsAnnotation(ImageAnnotationResultABC):
     value: RectangleLabelsAnnotationValue
     type: str = "rectanglelabels"
 
-    def to_ir_annotation(self) -> List[IRBBoxImageAnnotation]:
+    def to_ir_annotation(self) -> Sequence[IRBBoxImageAnnotation]:
         res = IRBBoxImageAnnotation(
             categories={self.value.rectanglelabels[0]: 1.0},
             coordinate_style=CoordinateStyle.NORMALIZED,
@@ -35,7 +36,7 @@ class RectangleLabelsAnnotation(ImageAnnotationResultABC):
         return [res]
 
     @staticmethod
-    def from_ir_annotation(ir_annotation: IRImageAnnotationBase) -> Sequence[ImageAnnotationResultABC]:
+    def from_ir_annotation(ir_annotation: IRAnnotationBase) -> Sequence["RectangleLabelsAnnotation"]:
         assert isinstance(ir_annotation, IRBBoxImageAnnotation)
 
         ir_annotation = ir_annotation.normalized()
