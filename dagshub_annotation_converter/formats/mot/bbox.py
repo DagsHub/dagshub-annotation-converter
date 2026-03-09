@@ -1,8 +1,8 @@
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 from dagshub_annotation_converter.formats.mot.context import MOTContext
-from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
+from dagshub_annotation_converter.ir.video import CoordinateStyle, IRVideoBBoxAnnotation
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,6 @@ def import_bbox_from_line(line: str, context: MOTContext) -> Optional[IRVideoBBo
 
     category_name = context.categories[class_id].name
 
-    meta: Dict[str, Any] = {}
     if not_ignored == 0:
         logger.warning(f"Skipping ignored annotation in frame {frame_id} track {track_id} category {category_name}")
         return None
@@ -50,7 +49,6 @@ def import_bbox_from_line(line: str, context: MOTContext) -> Optional[IRVideoBBo
         categories={category_name: 1.0},
         coordinate_style=CoordinateStyle.DENORMALIZED,
         visibility=visibility,
-        meta=meta,
     )
 
 
