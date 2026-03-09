@@ -2,22 +2,22 @@ import logging
 from collections import defaultdict
 from os import PathLike
 from pathlib import Path
-from typing import Sequence, List, Dict, Union, Optional
+from typing import Dict, List, Optional, Sequence, Union
 from zipfile import ZipFile
 
 import lxml.etree
 
+from dagshub_annotation_converter.features import ConverterFeatures
 from dagshub_annotation_converter.formats.cvat import annotation_parsers
 from dagshub_annotation_converter.formats.cvat.context import parse_image_tag
 from dagshub_annotation_converter.formats.cvat.video import (
-    parse_video_track,
-    parse_video_meta,
     cvat_video_xml_to_string,
+    parse_video_meta,
+    parse_video_track,
 )
-from dagshub_annotation_converter.ir.image import IRImageAnnotationBase, IRBBoxImageAnnotation, IRPoseImageAnnotation
-from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, IRVideoAnnotationBase
+from dagshub_annotation_converter.ir.image import IRBBoxImageAnnotation, IRImageAnnotationBase, IRPoseImageAnnotation
+from dagshub_annotation_converter.ir.video import IRVideoAnnotationBase, IRVideoBBoxAnnotation
 from dagshub_annotation_converter.util.video import get_video_dimensions, get_video_frame_count
-from dagshub_annotation_converter.features import ConverterFeatures
 
 logger = logging.getLogger(__name__)
 
@@ -199,13 +199,13 @@ def _parse_video_mode(
     return all_annotations
 
 
-def load_cvat_from_xml_string(
-    xml_text: bytes,
+def load_cvat_from_xml_bytes(
+    xml_bytes: bytes,
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
 ) -> CVATAnnotations:
     """Load CVAT annotations from XML string, auto-detecting image or video mode."""
-    root_elem = lxml.etree.XML(xml_text)
+    root_elem = lxml.etree.XML(xml_bytes)
     mode = _detect_cvat_mode(root_elem)
 
     if mode == "video":
@@ -221,7 +221,7 @@ def load_cvat_from_xml_file(
 ) -> CVATAnnotations:
     """Load CVAT annotations from XML file, auto-detecting image or video mode."""
     with open(xml_file, "rb") as f:
-        return load_cvat_from_xml_string(f.read(), image_width, image_height)
+        return load_cvat_from_xml_bytes(f.read(), image_width, image_height)
 
 
 def load_cvat_from_zip(
@@ -232,7 +232,7 @@ def load_cvat_from_zip(
     """Load CVAT annotations from ZIP archive, auto-detecting image or video mode."""
     with ZipFile(zip_path) as proj_zip:
         with proj_zip.open("annotations.xml") as f:
-            return load_cvat_from_xml_string(f.read(), image_width, image_height)
+            return load_cvat_from_xml_bytes(f.read(), image_width, image_height)
 
 
 def load_cvat_from_fs(
@@ -255,7 +255,7 @@ def load_cvat_from_fs(
     return results
 
 
-def export_cvat_video_to_xml_string(
+def export_cvat_video_to_xml_bytes(
     annotations: Sequence[IRVideoBBoxAnnotation],
     video_name: str = "video.mp4",
     image_width: Optional[int] = None,
@@ -333,7 +333,7 @@ def export_cvat_video_to_file(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    xml_content = export_cvat_video_to_xml_string(
+    xml_content = export_cvat_video_to_xml_bytes(
         annotations, video_name, image_width, image_height, seq_length, video_file
     )
 
@@ -362,7 +362,7 @@ def export_cvat_video_to_zip(
 
         # Single-video behavior remains identical and fully CVAT-compatible.
         if len(grouped) == 1:
-            xml_content = export_cvat_video_to_xml_string(
+            xml_content = export_cvat_video_to_xml_bytes(
                 annotations, video_name, image_width, image_height, seq_length, video_file
             )
             z.writestr("annotations.xml", xml_content)
@@ -373,7 +373,7 @@ def export_cvat_video_to_zip(
                     "Provide explicit dimensions or export per video."
                 )
             for group_video_name, group_annotations in sorted(grouped.items()):
-                xml_content = export_cvat_video_to_xml_string(
+                xml_content = export_cvat_video_to_xml_bytes(
                     group_annotations,
                     group_video_name,
                     image_width,

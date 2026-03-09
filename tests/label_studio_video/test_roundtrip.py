@@ -6,9 +6,9 @@ from pathlib import Path
 import pytest
 
 from dagshub_annotation_converter.converters.cvat import (
-    export_cvat_video_to_xml_string,
+    export_cvat_video_to_xml_bytes,
+    load_cvat_from_xml_bytes,
     load_cvat_from_xml_file,
-    load_cvat_from_xml_string,
 )
 from dagshub_annotation_converter.converters.label_studio_video import (
     ls_video_task_to_video_ir,
@@ -346,8 +346,8 @@ class TestCVATVideoToLabelStudioRoundtrip:
         )
         ir_annotations = ls_ann.to_ir_annotations()
 
-        xml_bytes = export_cvat_video_to_xml_string(ir_annotations)
-        cvat_annotations = load_cvat_from_xml_string(xml_bytes)
+        xml_bytes = export_cvat_video_to_xml_bytes(ir_annotations)
+        cvat_annotations = load_cvat_from_xml_bytes(xml_bytes)
         all_annotations = [ann for frame_anns in cvat_annotations.values() for ann in frame_anns]
         ls_tasks = video_ir_to_ls_video_tasks(all_annotations)
 
@@ -389,7 +389,7 @@ class TestCVATVideoToLabelStudioRoundtrip:
             f'</task></meta><track id="0" label="person" source="manual">{boxes}</track></annotations>'
         ).encode("utf-8")
 
-        cvat_annotations = load_cvat_from_xml_string(xml_bytes)
+        cvat_annotations = load_cvat_from_xml_bytes(xml_bytes)
         all_annotations = [ann for frame_anns in cvat_annotations.values() for ann in frame_anns]
         ls_tasks = video_ir_to_ls_video_tasks(all_annotations)
         seq = ls_tasks[0].annotations[0].result[0].value.sequence
@@ -426,7 +426,7 @@ class TestCVATVideoToLabelStudioRoundtrip:
             "</track></annotations>"
         ).encode("utf-8")
 
-        cvat_annotations = load_cvat_from_xml_string(xml_bytes)
+        cvat_annotations = load_cvat_from_xml_bytes(xml_bytes)
         all_annotations = [ann for frame_anns in cvat_annotations.values() for ann in frame_anns]
         ls_tasks = video_ir_to_ls_video_tasks(all_annotations)
         seq = ls_tasks[0].annotations[0].result[0].value.sequence

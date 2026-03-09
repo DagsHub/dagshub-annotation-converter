@@ -1,20 +1,21 @@
-import pytest
 from zipfile import ZipFile
+
+import pytest
 from lxml import etree
 
 from dagshub_annotation_converter.converters.cvat import (
-    export_cvat_video_to_xml_string,
+    export_cvat_video_to_xml_bytes,
     export_cvat_video_to_zip,
     export_cvat_videos_to_zips,
 )
 from dagshub_annotation_converter.converters.label_studio_video import ls_video_task_to_video_ir
-from dagshub_annotation_converter.formats.label_studio.task import LabelStudioTask, AnnotationsContainer
+from dagshub_annotation_converter.formats.label_studio.task import AnnotationsContainer, LabelStudioTask
 from dagshub_annotation_converter.formats.label_studio.videorectangle import (
     VideoRectangleAnnotation,
-    VideoRectangleValue,
     VideoRectangleSequenceItem,
+    VideoRectangleValue,
 )
-from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation, CoordinateStyle
+from dagshub_annotation_converter.ir.video import CoordinateStyle, IRVideoBBoxAnnotation
 
 
 def _make_annotation(image_width: int, image_height: int) -> IRVideoBBoxAnnotation:
@@ -44,7 +45,7 @@ class TestCVATVideoExport:
             lambda _: 100,
         )
 
-        xml_bytes = export_cvat_video_to_xml_string([ann], video_file="local_video.mp4")
+        xml_bytes = export_cvat_video_to_xml_bytes([ann], video_file="local_video.mp4")
         xml_text = xml_bytes.decode("utf-8")
         assert "<width>1280</width>" in xml_text
         assert "<height>720</height>" in xml_text
@@ -56,18 +57,18 @@ class TestCVATVideoExport:
             lambda _: 400,
         )
 
-        xml_bytes = export_cvat_video_to_xml_string([ann], video_file="local_video.mp4")
+        xml_bytes = export_cvat_video_to_xml_bytes([ann], video_file="local_video.mp4")
         xml_text = xml_bytes.decode("utf-8")
         assert "<size>400</size>" in xml_text
 
     def test_export_raises_without_dimensions_or_video_file(self):
         ann = _make_annotation(image_width=0, image_height=0)
         with pytest.raises(ValueError, match="Cannot determine frame dimensions for CVAT video export"):
-            export_cvat_video_to_xml_string([ann])
+            export_cvat_video_to_xml_bytes([ann])
 
     def test_export_keeps_explicit_dimensions(self):
         ann = _make_annotation(image_width=0, image_height=0)
-        xml_bytes = export_cvat_video_to_xml_string([ann], image_width=1920, image_height=1080)
+        xml_bytes = export_cvat_video_to_xml_bytes([ann], image_width=1920, image_height=1080)
         xml_text = xml_bytes.decode("utf-8")
         assert "<width>1920</width>" in xml_text
         assert "<height>1080</height>" in xml_text
@@ -75,7 +76,7 @@ class TestCVATVideoExport:
     def test_export_uses_annotation_filename_as_default_source(self):
         ann = _make_annotation(image_width=1920, image_height=1080)
         ann.filename = "earth-space-small.mp4"
-        xml_bytes = export_cvat_video_to_xml_string([ann])
+        xml_bytes = export_cvat_video_to_xml_bytes([ann])
         xml_text = xml_bytes.decode("utf-8")
         assert "<source>earth-space-small.mp4</source>" in xml_text
 
@@ -85,7 +86,7 @@ class TestCVATVideoExport:
         ann_b = _make_annotation(image_width=1920, image_height=1080)
         ann_b.filename = "jelly.mp4"
         with pytest.raises(ValueError, match="single source video per export"):
-            export_cvat_video_to_xml_string([ann_a, ann_b])
+            export_cvat_video_to_xml_bytes([ann_a, ann_b])
 
     def test_zip_export_splits_multiple_videos(self, tmp_path):
         ann_a = _make_annotation(image_width=1920, image_height=1080)
@@ -242,7 +243,7 @@ class TestCVATVideoExport:
         ]
 
         annotations = ls_video_task_to_video_ir(task)
-        xml_bytes = export_cvat_video_to_xml_string(annotations)
+        xml_bytes = export_cvat_video_to_xml_bytes(annotations)
 
         root = etree.fromstring(xml_bytes)
         assert int(root.findtext(".//meta/task/size")) == 200
