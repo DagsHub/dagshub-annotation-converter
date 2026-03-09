@@ -1,10 +1,9 @@
 import uuid
 from abc import abstractmethod
-from typing import Sequence, Optional, Any, Dict
+from typing import Any, Dict, Optional, Sequence
 
 from pydantic import Field
 
-from dagshub_annotation_converter.ir.image import IRImageAnnotationBase
 from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
@@ -21,7 +20,7 @@ class AnnotationResultABC(ParentModel):
 
     @staticmethod
     @abstractmethod
-    def from_ir_annotation(ir_annotation: IRImageAnnotationBase) -> Sequence["AnnotationResultABC"]:
+    def from_ir_annotation(ir_annotation: IRAnnotationBase) -> Sequence["AnnotationResultABC"]:
         """
         Convert DagsHub IR annotation to 1..n LabelStudio annotations.
         """
@@ -42,7 +41,7 @@ class ImageAnnotationResultABC(AnnotationResultABC):
     meta: Optional[Dict[str, Any]] = None
 
     @abstractmethod
-    def to_ir_annotation(self) -> Sequence[IRImageAnnotationBase]:
+    def to_ir_annotation(self) -> Sequence[IRAnnotationBase]:
         """
         Convert LabelStudio annotation to 1..n DagsHub IR annotations.
         """
@@ -50,7 +49,7 @@ class ImageAnnotationResultABC(AnnotationResultABC):
 
     @staticmethod
     @abstractmethod
-    def from_ir_annotation(ir_annotation: IRImageAnnotationBase) -> Sequence["ImageAnnotationResultABC"]:
+    def from_ir_annotation(ir_annotation: IRAnnotationBase) -> Sequence["ImageAnnotationResultABC"]:
         """
         Convert DagsHub IR annotation to 1..n LabelStudio annotations.
         """

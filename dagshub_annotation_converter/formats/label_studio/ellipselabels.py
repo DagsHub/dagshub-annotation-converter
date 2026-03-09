@@ -1,7 +1,8 @@
 from typing import List, Sequence
 
 from dagshub_annotation_converter.formats.label_studio.base import ImageAnnotationResultABC
-from dagshub_annotation_converter.ir.image import IRImageAnnotationBase, IREllipseImageAnnotation, CoordinateStyle
+from dagshub_annotation_converter.ir.image import CoordinateStyle, IREllipseImageAnnotation
+from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 
@@ -18,7 +19,7 @@ class EllipseLabelsAnnotation(ImageAnnotationResultABC):
     value: EllipseLabelsAnnotationsValue
     type: str = "ellipselabels"
 
-    def to_ir_annotation(self) -> Sequence[IRImageAnnotationBase]:
+    def to_ir_annotation(self) -> Sequence[IREllipseImageAnnotation]:
         res = IREllipseImageAnnotation(
             categories={self.value.ellipselabels[0]: 1.0},
             coordinate_style=CoordinateStyle.NORMALIZED,
@@ -35,7 +36,7 @@ class EllipseLabelsAnnotation(ImageAnnotationResultABC):
         return [res]
 
     @staticmethod
-    def from_ir_annotation(ir_annotation: IRImageAnnotationBase) -> Sequence["ImageAnnotationResultABC"]:
+    def from_ir_annotation(ir_annotation: IRAnnotationBase) -> Sequence["EllipseLabelsAnnotation"]:
         assert isinstance(ir_annotation, IREllipseImageAnnotation)
 
         ir_annotation = ir_annotation.normalized()

@@ -1,5 +1,6 @@
 scratches/
 *.env
+env/
 dist/
 .coverage*
 
@@ -7,3 +8,6 @@ dist/
 .idea/
 .vscode/
 __pycache__/
+images/
+videos/
+exports/
