@@ -206,7 +206,7 @@ def load_mot_from_dir(
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
     video_file: Optional[Union[str, Path]] = None,
-) -> Tuple[Dict[int, Sequence[IRVideoBBoxAnnotation]], MOTContext]:
+) -> Tuple[Dict[int, List[IRVideoBBoxAnnotation]], MOTContext]:
     """
     Load MOT annotations from a directory structure.
 
@@ -251,7 +251,7 @@ def load_mot_from_dir(
     return annotations, context
 
 
-def _load_mot_from_gt_content(gt_content: str, context: MOTContext) -> Dict[int, Sequence[IRVideoBBoxAnnotation]]:
+def _load_mot_from_gt_content(gt_content: str, context: MOTContext) -> Dict[int, List[IRVideoBBoxAnnotation]]:
     annotations: Dict[int, List[IRVideoBBoxAnnotation]] = {}
     for line in gt_content.splitlines():
         line = line.strip()
@@ -271,7 +271,7 @@ def load_mot_from_zip(
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
     video_file: Optional[Union[str, Path]] = None,
-) -> Tuple[Dict[int, Sequence[IRVideoBBoxAnnotation]], MOTContext]:
+) -> Tuple[Dict[int, List[IRVideoBBoxAnnotation]], MOTContext]:
     """
     Load MOT annotations from a ZIP archive (no extraction, avoids Zip Slip).
 
@@ -330,10 +330,10 @@ def load_mot_from_fs(
     image_height: Optional[int] = None,
     video_files: Optional[Dict[str, Union[str, Path]]] = None,
     datasource_path: Optional[Union[str, Path]] = None,
-) -> Dict[str, Tuple[Dict[int, Sequence[IRVideoBBoxAnnotation]], MOTContext]]:
+) -> Dict[str, Tuple[Dict[int, List[IRVideoBBoxAnnotation]], MOTContext]]:
     """Load MOT annotations from all sequence directories/ZIPs under a directory."""
     import_dir = Path(import_dir)
-    results: Dict[str, Tuple[Dict[int, Sequence[IRVideoBBoxAnnotation]], MOTContext]] = {}
+    results: Dict[str, Tuple[Dict[int, List[IRVideoBBoxAnnotation]], MOTContext]] = {}
     normalized_datasource_path: Optional[Path] = None
     if datasource_path is not None:
         normalized_datasource_path = Path(str(datasource_path).lstrip("/"))
