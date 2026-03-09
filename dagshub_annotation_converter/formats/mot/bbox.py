@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from dagshub_annotation_converter.formats.mot.context import MOTContext
 from dagshub_annotation_converter.ir.video import CoordinateStyle, IRVideoBBoxAnnotation
