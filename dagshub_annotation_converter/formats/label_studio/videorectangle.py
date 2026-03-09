@@ -95,7 +95,7 @@ class VideoRectangleAnnotation(AnnotationResultABC):
         if self.meta and "original_track_id" in self.meta:
             track_id = self.meta["original_track_id"]
         else:
-            # Deterministic track_id from id (hash() is randomized per PYTHONHASHSEED)
+            # Deterministic track_id from id
             track_id = int(hashlib.md5(self.id.encode("utf-8")).hexdigest()[:8], 16) % (2**31)
 
         label = self.value.labels[0] if self.value.labels else "object"

@@ -23,6 +23,7 @@ from dagshub_annotation_converter.ir.image import (
     IRSegmentationImageAnnotation,
 )
 from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
+from dagshub_annotation_converter.ir.video import IRVideoBBoxAnnotation
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
 from dagshub_annotation_converter.util.video import get_video_dimensions
 
