@@ -29,10 +29,8 @@ class TestVideoRectangleAnnotation:
 
         assert len(ir_annotations) == 5
 
-        # Flattened annotations keep the source track id as their imported id.
         assert {a.imported_id for a in ir_annotations} == {"track_person_1"}
 
-        # All should have "person" category
         for ir_ann in ir_annotations:
             assert "person" in ir_ann.categories
             assert ir_ann.keyframe
@@ -65,113 +63,12 @@ class TestVideoRectangleAnnotation:
         assert "outside" not in ir_annotations[0].meta
         assert ir_annotations[0].visibility == 0.75
 
-    def test_to_ir_annotations_disabled_without_visibility_stays_visible(self):
-        ann = VideoRectangleAnnotation(
-            original_width=1920,
-            original_height=1080,
-            value=VideoRectangleValue(
-                sequence=[
-                    VideoRectangleSequenceItem(
-                        frame=11,
-                        x=10.0,
-                        y=20.0,
-                        width=5.0,
-                        height=10.0,
-                        enabled=False,
-                    ),
-                ],
-                labels=["person"],
-            ),
-        )
-
-        ir_annotations = ann.to_ir_annotations()
-        assert len(ir_annotations) == 1
-        assert ir_annotations[0].visibility == 1.0
-
-    def test_to_ir_annotations_preserves_outside_flag(self):
-        ann = VideoRectangleAnnotation(
-            original_width=1920,
-            original_height=1080,
-            value=VideoRectangleValue(
-                sequence=[
-                    VideoRectangleSequenceItem(
-                        frame=4,
-                        x=10.0,
-                        y=20.0,
-                        width=5.0,
-                        height=10.0,
-                        enabled=True,
-                        outside=True,
-                        visibility=0.0,
-                    ),
-                ],
-                labels=["person"],
-            ),
-        )
-
-        ir_annotations = ann.to_ir_annotations()
-        assert len(ir_annotations) == 1
-        assert ir_annotations[0].visibility == 0.0
-
-    def test_to_ir_annotations_outside_boundary_is_explicit_keyframe(self):
-        ann = VideoRectangleAnnotation(
-            original_width=1920,
-            original_height=1080,
-            value=VideoRectangleValue(
-                sequence=[
-                    VideoRectangleSequenceItem(
-                        frame=4,
-                        x=10.0,
-                        y=20.0,
-                        width=5.0,
-                        height=10.0,
-                        enabled=False,
-                        outside=True,
-                        visibility=0.0,
-                    ),
-                ],
-                labels=["person"],
-            ),
-        )
-
-        ir_annotations = ann.to_ir_annotations()
-        assert len(ir_annotations) == 1
-        assert ir_annotations[0].visibility == 0.0
-        assert ir_annotations[0].keyframe is False
-
-    def test_to_ir_annotations_parses_string_outside_false_as_visible(self):
-        ann = VideoRectangleAnnotation(
-            original_width=1920,
-            original_height=1080,
-            value=VideoRectangleValue(
-                sequence=[
-                    VideoRectangleSequenceItem(
-                        frame=9,
-                        x=10.0,
-                        y=20.0,
-                        width=5.0,
-                        height=10.0,
-                        enabled=False,
-                        outside="false",
-                        visibility="1",
-                    ),
-                ],
-                labels=["person"],
-            ),
-        )
-
-        ir_annotations = ann.to_ir_annotations()
-        assert len(ir_annotations) == 1
-        assert ir_annotations[0].visibility == 1.0
-
     def test_to_ir_annotations_coordinate_conversion(self, sample_ls_video_task_data, epsilon):
         result = sample_ls_video_task_data["annotations"][0]["result"][0]
         ann = VideoRectangleAnnotation.model_validate(result)
 
         ir_annotations = ann.to_ir_annotations()
 
-        # First annotation: x=5.208333%, y=13.888889%
-        # Should be normalized to 0.05208333, 0.13888889
         first = ir_annotations[0]
 
         assert first.coordinate_style == CoordinateStyle.NORMALIZED
@@ -179,7 +76,6 @@ class TestVideoRectangleAnnotation:
         assert math.isclose(first.top, 0.13888889, abs_tol=epsilon)
 
     def test_to_ir_annotations_frame_numbers(self, sample_ls_video_task_data):
-        """Test that frame numbers are correctly converted from 1-based (LS) to 0-based (IR)."""
         result = sample_ls_video_task_data["annotations"][0]["result"][0]
         ann = VideoRectangleAnnotation.model_validate(result)
 
@@ -194,7 +90,6 @@ class TestVideoRectangleAnnotation:
 
         ir_annotations = ann.to_ir_annotations()
 
-        # First frame (LS frame 1 -> IR frame 0) should have timestamp 0.033
         first = [a for a in ir_annotations if a.frame_number == 0][0]
         assert math.isclose(first.timestamp, 0.033, abs_tol=epsilon)
 

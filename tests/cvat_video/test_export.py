@@ -42,7 +42,7 @@ def _make_sequence(
         categories={"person": 1.0},
         coordinate_style=CoordinateStyle.DENORMALIZED,
     )
-    track = IRVideoAnnotationTrack.from_annotations([ann], id=track_id)
+    track = IRVideoAnnotationTrack.from_annotations([ann], track_id=track_id)
     return IRVideoSequence(tracks=[track], filename=filename)
 
 
@@ -77,11 +77,21 @@ class TestCVATVideoExport:
     def test_export_raises_without_dimensions_or_video_file(self):
         sequence = _make_sequence(image_width=0, image_height=0)
         with pytest.raises(ValueError, match="Cannot determine frame dimensions for CVAT video export"):
+            export_cvat_video_to_xml_bytes(sequence, video_name="video.mp4")
+
+    def test_export_raises_without_video_reference(self):
+        sequence = _make_sequence(image_width=1920, image_height=1080)
+        with pytest.raises(ValueError, match="Cannot determine video name for CVAT video export"):
             export_cvat_video_to_xml_bytes(sequence)
 
     def test_export_keeps_explicit_dimensions(self):
         sequence = _make_sequence(image_width=0, image_height=0)
-        xml_bytes = export_cvat_video_to_xml_bytes(sequence, image_width=1920, image_height=1080)
+        xml_bytes = export_cvat_video_to_xml_bytes(
+            sequence,
+            video_name="video.mp4",
+            image_width=1920,
+            image_height=1080,
+        )
         xml_text = xml_bytes.decode("utf-8")
         assert "<width>1920</width>" in xml_text
         assert "<height>1080</height>" in xml_text
@@ -91,6 +101,20 @@ class TestCVATVideoExport:
         xml_bytes = export_cvat_video_to_xml_bytes(sequence)
         xml_text = xml_bytes.decode("utf-8")
         assert "<source>earth-space-small.mp4</source>" in xml_text
+
+    def test_export_uses_video_file_name_as_default_source(self):
+        sequence = _make_sequence(image_width=1920, image_height=1080)
+        xml_bytes = export_cvat_video_to_xml_bytes(sequence, video_file="/tmp/earth-space-small.mp4")
+        xml_text = xml_bytes.decode("utf-8")
+        assert "<source>earth-space-small.mp4</source>" in xml_text
+
+    def test_export_preserves_non_numeric_track_identifier(self):
+        sequence = _make_sequence(image_width=1920, image_height=1080, track_id="track_person_1")
+        xml_root = etree.fromstring(export_cvat_video_to_xml_bytes(sequence, video_name="video.mp4"))
+
+        track_elem = xml_root.find("track")
+        assert track_elem is not None
+        assert track_elem.attrib["id"] == "track_person_1"
 
     def test_zip_export_writes_annotations_xml(self, tmp_path):
         sequence = _make_sequence(image_width=1920, image_height=1080, filename="earth-space-small.mp4")
@@ -159,7 +183,12 @@ class TestCVATVideoExport:
             assert "<height>360</height>" in xml
             assert "<source>jelly.mp4</source>" in xml
 
-    def test_export_ls_segments_with_string_outside_false(self):
+    def test_multi_export_raises_without_sequence_filename(self, tmp_path):
+        sequence = _make_sequence(image_width=1920, image_height=1080)
+        with pytest.raises(ValueError, match="Each sequence must have sequence.filename set"):
+            export_cvat_videos_to_zips([sequence], tmp_path)
+
+    def test_export_ls_segments(self):
         video_rect = VideoRectangleAnnotation(
             id="track_1",
             original_width=1920,
@@ -173,7 +202,6 @@ class TestCVATVideoExport:
                         width=5.0,
                         height=10.0,
                         enabled=True,
-                        outside="false",
                     ),
                     VideoRectangleSequenceItem(
                         frame=9,
@@ -182,7 +210,6 @@ class TestCVATVideoExport:
                         width=5.0,
                         height=10.0,
                         enabled=False,
-                        outside="false",
                     ),
                     VideoRectangleSequenceItem(
                         frame=13,
@@ -191,7 +218,6 @@ class TestCVATVideoExport:
                         width=5.0,
                         height=10.0,
                         enabled=False,
-                        outside="false",
                     ),
                     VideoRectangleSequenceItem(
                         frame=14,
@@ -200,7 +226,6 @@ class TestCVATVideoExport:
                         width=5.0,
                         height=10.0,
                         enabled=False,
-                        outside="false",
                     ),
                     VideoRectangleSequenceItem(
                         frame=15,
@@ -209,7 +234,6 @@ class TestCVATVideoExport:
                         width=5.0,
                         height=10.0,
                         enabled=False,
-                        outside="false",
                     ),
                 ],
                 labels=["person"],

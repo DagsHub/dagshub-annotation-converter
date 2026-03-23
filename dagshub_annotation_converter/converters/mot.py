@@ -1,13 +1,15 @@
 import logging
+import hashlib
+import re
 from collections import defaultdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 from zipfile import ZipFile
 
-from dagshub_annotation_converter.formats.mot import MOTContext, export_bbox_to_line, import_bbox_from_line
+from dagshub_annotation_converter.formats.mot import MOTContext, import_bbox_from_line
+from dagshub_annotation_converter.formats.mot.bbox import _export_bbox_to_line
 from dagshub_annotation_converter.ir.video import (
-    CoordinateStyle,
     IRVideoAnnotationTrack,
     IRVideoBBoxFrameAnnotation,
     IRVideoSequence,
@@ -19,6 +21,15 @@ from dagshub_annotation_converter.util.video import (
 )
 
 logger = logging.getLogger(__name__)
+
+_NUMERIC_TRACK_ID_RE = re.compile(r"^(?:track_)?(?P<track_id>\d+)$")
+
+
+def _mot_track_id_from_identifier(identifier: str) -> int:
+    match = _NUMERIC_TRACK_ID_RE.fullmatch(identifier.strip())
+    if match is not None:
+        return int(match.group("track_id"))
+    return int(hashlib.md5(identifier.encode("utf-8")).hexdigest()[:8], 16) % (2**31)
 
 
 def _is_safe_zip_path(name: str) -> bool:
@@ -59,7 +70,7 @@ def load_mot_from_file(
             tracks[track_id].append(ann)
     return IRVideoSequence(
         tracks=[
-            IRVideoAnnotationTrack.from_annotations(track_annotations, id=str(track_id))
+            IRVideoAnnotationTrack.from_annotations(track_annotations, track_id=str(track_id))
             for track_id, track_annotations in sorted(tracks.items())
         ],
         sequence_length=context.sequence_length,
@@ -130,25 +141,6 @@ def _validate_context_dimensions(context: MOTContext, source: str) -> None:
             f"with the same name next to the annotation source."
         )
 
-
-def _to_denormalized_for_mot(ann: IRVideoBBoxFrameAnnotation, context: MOTContext) -> IRVideoBBoxFrameAnnotation:
-    if ann.coordinate_style == CoordinateStyle.NORMALIZED:
-        if (ann.video_width is None and context.video_width is not None) or (
-            ann.video_height is None and context.video_height is not None
-        ):
-            ann = ann.model_copy()
-            if ann.video_width is None and context.video_width is not None:
-                ann.video_width = context.video_width
-            if ann.video_height is None and context.video_height is not None:
-                ann.video_height = context.video_height
-        ann = ann.denormalized()
-    return ann
-
-
-def _lerp(start: float, end: float, t: float) -> float:
-    return start + (end - start) * t
-
-
 def _is_visible(ann: IRVideoBBoxFrameAnnotation) -> bool:
     return ann.visibility > 0.0
 
@@ -158,16 +150,20 @@ def _interpolation_enabled(ann: IRVideoBBoxFrameAnnotation) -> bool:
 
 
 def _interpolate_track_for_mot(
-    track_annotations: Sequence[IRVideoBBoxFrameAnnotation],
+    track: IRVideoAnnotationTrack,
     context: MOTContext,
     end_frame: Optional[int] = None,
 ) -> List[IRVideoBBoxFrameAnnotation]:
-    if not track_annotations:
+    if not track.annotations:
         return []
 
     by_frame: Dict[int, IRVideoBBoxFrameAnnotation] = {}
-    for ann in sorted(track_annotations, key=lambda a: a.frame_number):
-        by_frame[ann.frame_number] = _to_denormalized_for_mot(ann, context)
+    denormalized_track = track.denormalized(
+        video_width=context.video_width,
+        video_height=context.video_height,
+    )
+    for ann in sorted(denormalized_track.annotations, key=lambda a: a.frame_number):
+        by_frame[ann.frame_number] = ann
 
     ordered = [by_frame[frame] for frame in sorted(by_frame)]
     dense: List[IRVideoBBoxFrameAnnotation] = []
@@ -186,19 +182,7 @@ def _interpolate_track_for_mot(
 
         for step in range(1, gap + 1):
             t = step / (gap + 1)
-            interpolated = curr.model_copy(deep=True)
-            interpolated.frame_number = curr.frame_number + step
-            interpolated.keyframe = False
-            interpolated.left = _lerp(curr.left, nxt.left, t)
-            interpolated.top = _lerp(curr.top, nxt.top, t)
-            interpolated.width = _lerp(curr.width, nxt.width, t)
-            interpolated.height = _lerp(curr.height, nxt.height, t)
-            interpolated.rotation = _lerp(curr.rotation, nxt.rotation, t)
-            interpolated.visibility = _lerp(curr.visibility, nxt.visibility, t)
-            if curr.timestamp is not None and nxt.timestamp is not None:
-                interpolated.timestamp = _lerp(curr.timestamp, nxt.timestamp, t)
-            else:
-                interpolated.timestamp = None
+            interpolated = curr.interpolate(nxt, t)
             dense.append(interpolated)
 
     if end_frame is not None:
@@ -277,7 +261,7 @@ def _load_mot_from_gt_content(gt_content: str, context: MOTContext) -> IRVideoSe
         tracks[track_id].append(ann)
     return IRVideoSequence(
         tracks=[
-            IRVideoAnnotationTrack.from_annotations(track_annotations, id=str(track_id))
+            IRVideoAnnotationTrack.from_annotations(track_annotations, track_id=str(track_id))
             for track_id, track_annotations in sorted(tracks.items())
         ],
         sequence_length=context.sequence_length,
@@ -470,16 +454,17 @@ def export_to_mot(
         context.sequence_length - 1 if context.sequence_length is not None and context.sequence_length > 0 else None
     )
     expanded_annotations: List[Tuple[int, IRVideoBBoxFrameAnnotation]] = []
-    for track in sorted(sequence.tracks, key=lambda item: item.track_id):
-        for ann in _interpolate_track_for_mot(track.annotations, context, end_frame=context_end_frame):
-            expanded_annotations.append((track.track_id, ann))
+    for track in sequence.tracks:
+        mot_track_id = _mot_track_id_from_identifier(track.track_id)
+        for ann in _interpolate_track_for_mot(track, context, end_frame=context_end_frame):
+            expanded_annotations.append((mot_track_id, ann))
 
     sorted_anns = sorted(expanded_annotations, key=lambda item: (item[1].frame_number, item[0]))
     if sorted_anns:
         exported_seq_length = max(ann.frame_number for _, ann in sorted_anns) + 1
         if context.sequence_length is None or context.sequence_length < exported_seq_length:
             context.sequence_length = exported_seq_length
-    lines = [export_bbox_to_line(ann, track_id, context) for track_id, ann in sorted_anns]
+    lines = [_export_bbox_to_line(ann, track_id, context) for track_id, ann in sorted_anns]
 
     with open(output_path, "w") as f:
         f.write("\n".join(lines))

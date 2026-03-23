@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 from os import PathLike
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Union
@@ -20,7 +21,6 @@ from dagshub_annotation_converter.util.video import get_video_dimensions, get_vi
 
 logger = logging.getLogger(__name__)
 
-# Type aliases for clarity
 CVATImageAnnotations = Dict[str, Sequence[IRImageAnnotationBase]]
 CVATVideoAnnotations = IRVideoSequence
 CVATAnnotations = Union[CVATImageAnnotations, CVATVideoAnnotations]
@@ -28,11 +28,19 @@ CVATAnnotations = Union[CVATImageAnnotations, CVATVideoAnnotations]
 
 def _resolve_video_name_for_export(
     sequence: IRVideoSequence,
-    video_name: str,
+    video_name: Optional[str],
+    video_file: Optional[Union[str, PathLike]],
 ) -> str:
-    if video_name == "video.mp4" and sequence.filename:
+    if video_name:
+        return video_name
+    if sequence.filename:
         return Path(sequence.filename).name
-    return video_name
+    if video_file is not None:
+        return Path(video_file).name
+    raise ValueError(
+        "Cannot determine video name for CVAT video export. "
+        "Provide video_name explicitly, set sequence.filename, or provide video_file."
+    )
 
 
 def parse_image_annotations(img: lxml.etree.ElementBase) -> Sequence[IRImageAnnotationBase]:
@@ -53,14 +61,12 @@ def _maybe_group_poses(annotations: List[IRImageAnnotationBase]) -> List[IRImage
     if not ConverterFeatures.cvat_pose_grouping_by_group_id_enabled():
         return annotations
     res = []
-    annotation_groups: Dict[str, List[IRImageAnnotationBase]] = {}
+    annotation_groups: Dict[str, List[IRImageAnnotationBase]] = defaultdict(list)
     for annotation in annotations:
         group_id = annotation.meta.get("group_id")
         if group_id is None:
             res.append(annotation)
         else:
-            if group_id not in annotation_groups:
-                annotation_groups[group_id] = []
             annotation_groups[group_id].append(annotation)
 
     for group_id, group_annotations in annotation_groups.items():
@@ -71,7 +77,6 @@ def _maybe_group_poses(annotations: List[IRImageAnnotationBase]) -> List[IRImage
         bbox_count = sum((isinstance(ann, IRBBoxImageAnnotation) for ann in group_annotations))
         point_count = sum((isinstance(ann, IRPoseImageAnnotation) for ann in group_annotations))
 
-        # If we have more than one bbox or point annotation in the group, don't bother trying to group
         if bbox_count != 1 or point_count != 1:
             res.extend(group_annotations)
             continue
@@ -90,12 +95,10 @@ def _maybe_group_poses(annotations: List[IRImageAnnotationBase]) -> List[IRImage
 
         assert bbox_ann is not None and pose_ann is not None
 
-        # If there's somehow multiple labels (shouldn't be happening in CVAT), don't group
         if not (bbox_ann.has_one_category() and pose_ann.has_one_category()):
             res.extend(group_annotations)
             continue
 
-        # Different categories - don't group
         if bbox_ann.ensure_has_one_category() != pose_ann.ensure_has_one_category():
             res.extend(group_annotations)
             continue
@@ -117,7 +120,7 @@ def _detect_cvat_mode(root_elem: lxml.etree.ElementBase) -> str:
     if mode_elem is not None and mode_elem.text:
         if mode_elem.text == "interpolation":
             return "video"
-        elif mode_elem.text == "annotation":
+        if mode_elem.text == "annotation":
             return "image"
 
     has_tracks = len(root_elem.findall(".//track")) > 0
@@ -125,13 +128,12 @@ def _detect_cvat_mode(root_elem: lxml.etree.ElementBase) -> str:
 
     if has_tracks and not has_images:
         return "video"
-    elif has_images and not has_tracks:
+    if has_images and not has_tracks:
         return "image"
-    elif has_tracks and has_images:
+    if has_tracks and has_images:
         logger.warning("CVAT XML contains both <track> and <image> elements, treating as video mode")
         return "video"
-    else:
-        return "image"
+    return "image"
 
 
 def _parse_image_mode(root_elem: lxml.etree.ElementBase) -> CVATImageAnnotations:
@@ -243,14 +245,14 @@ def load_cvat_from_fs(
 
 def export_cvat_video_to_xml_bytes(
     sequence: IRVideoSequence,
-    video_name: str = "video.mp4",
+    video_name: Optional[str] = None,
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
     seq_length: Optional[int] = None,
     video_file: Optional[Union[str, PathLike]] = None,
 ) -> bytes:
     """Export video annotations to CVAT XML bytes, resolving dimensions from args/sequence/video_file."""
-    resolved_video_name = _resolve_video_name_for_export(sequence, video_name)
+    resolved_video_name = _resolve_video_name_for_export(sequence, video_name, video_file)
 
     resolved_width = image_width if image_width is not None and image_width > 0 else None
     resolved_height = image_height if image_height is not None and image_height > 0 else None
@@ -316,7 +318,7 @@ def export_cvat_video_to_xml_bytes(
 def export_cvat_video_to_file(
     sequence: IRVideoSequence,
     output_path: Union[str, PathLike],
-    video_name: str = "video.mp4",
+    video_name: Optional[str] = None,
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
     seq_length: Optional[int] = None,
@@ -345,7 +347,7 @@ def export_cvat_video_to_file(
 def export_cvat_video_to_zip(
     sequence: IRVideoSequence,
     output_path: Union[str, PathLike],
-    video_name: str = "video.mp4",
+    video_name: Optional[str] = None,
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
     seq_length: Optional[int] = None,
@@ -404,7 +406,12 @@ def export_cvat_videos_to_zips(
 
     outputs: List[Path] = []
     for sequence in sequences:
-        video_name = Path(sequence.filename).name if sequence.filename else "video.mp4"
+        if not sequence.filename:
+            raise ValueError(
+                "Cannot determine video name for CVAT multi-export. "
+                "Each sequence must have sequence.filename set."
+            )
+        video_name = Path(sequence.filename).name
         zip_name = f"{video_name}.zip"
         output_path = output_dir / zip_name
         export_cvat_video_to_zip(

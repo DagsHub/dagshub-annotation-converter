@@ -10,7 +10,7 @@ from dagshub_annotation_converter.converters.mot import (
     load_mot_from_fs,
     load_mot_from_zip,
 )
-from dagshub_annotation_converter.formats.mot.bbox import export_bbox_to_line, import_bbox_from_line
+from dagshub_annotation_converter.formats.mot.bbox import _export_bbox_to_line, import_bbox_from_line
 from dagshub_annotation_converter.ir.video import CoordinateStyle, IRVideoBBoxFrameAnnotation
 
 
@@ -92,12 +92,12 @@ class TestMOTFileImport:
         assert len(frame_0) == 2
 
         track_ids = {track.track_id for track, _ in frame_0}
-        assert track_ids == {1, 2}
+        assert track_ids == {"1", "2"}
 
     def test_load_from_file_track_consistency(self, sample_mot_file, mot_context):
         sequence = load_mot_from_file(sample_mot_file, mot_context)
 
-        track_1 = next(track for track in sequence.tracks if track.track_id == 1)
+        track_1 = next(track for track in sequence.tracks if track.track_id == "1")
         track_1_frames = [ann.frame_number for ann in track_1.annotations]
 
         assert len(track_1_frames) == 5
@@ -217,7 +217,7 @@ class TestMOTFrameNumberConversion:
             categories={"person": 1.0},
             coordinate_style=CoordinateStyle.DENORMALIZED,
         )
-        line0 = export_bbox_to_line(ann0, 1, mot_context)
+        line0 = _export_bbox_to_line(ann0, 1, mot_context)
         assert line0.split(",")[0] == "1"
 
         ann9 = IRVideoBBoxFrameAnnotation(
@@ -231,5 +231,5 @@ class TestMOTFrameNumberConversion:
             categories={"person": 1.0},
             coordinate_style=CoordinateStyle.DENORMALIZED,
         )
-        line9 = export_bbox_to_line(ann9, 1, mot_context)
+        line9 = _export_bbox_to_line(ann9, 1, mot_context)
         assert line9.split(",")[0] == "10"

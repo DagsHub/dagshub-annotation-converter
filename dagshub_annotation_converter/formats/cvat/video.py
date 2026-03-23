@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Dict, List, Optional
 
 from lxml import etree
 from lxml.etree import ElementBase
@@ -11,19 +11,48 @@ from dagshub_annotation_converter.ir.video import (
 )
 
 
-def _coerce_bool_like(value: Any) -> bool:
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, (int, float)):
-        return value != 0
-    if isinstance(value, str):
-        normalized = value.strip().lower()
-        if normalized in {"true", "1", "yes", "y", "t"}:
-            return True
-        if normalized in {"false", "0", "no", "n", "f", ""}:
-            return False
-    return bool(value)
+def _is_visible(annotation: IRVideoBBoxFrameAnnotation) -> bool:
+    return annotation.visibility > 0.0
 
+
+def _canonicalize_track_annotations(
+    annotations: List[IRVideoBBoxFrameAnnotation],
+) -> List[IRVideoBBoxFrameAnnotation]:
+    canonical: List[IRVideoBBoxFrameAnnotation] = []
+
+    for idx, ann in enumerate(annotations):
+        prev_ann = annotations[idx - 1] if idx > 0 else None
+        next_ann = annotations[idx + 1] if idx + 1 < len(annotations) else None
+
+        if not _is_visible(ann):
+            continue
+
+        keep = ann.keyframe or ann.visibility < 1.0
+        if prev_ann is None or not _is_visible(prev_ann):
+            keep = True
+        if next_ann is not None and not _is_visible(next_ann):
+            keep = True
+
+        if not keep:
+            continue
+
+        canonical_ann = ann.model_copy(deep=True)
+        if next_ann is not None and not _is_visible(next_ann):
+            canonical_ann.keyframe = False
+        elif (
+            ann.keyframe
+            and next_ann is not None
+            and next_ann.keyframe
+            and _is_visible(next_ann)
+            and next_ann.frame_number == ann.frame_number + 1
+        ):
+            canonical_ann.keyframe = False
+        elif canonical_ann.visibility < 1.0:
+            canonical_ann.keyframe = True
+
+        canonical.append(canonical_ann)
+
+    return canonical
 
 def parse_video_track(
     track_elem: ElementBase,
@@ -57,7 +86,6 @@ def parse_video_track(
         xbr = float(box_elem.attrib["xbr"])
         ybr = float(box_elem.attrib["ybr"])
 
-        # Visibility: 0.0 for outside (track terminated), 0.5 for occluded, 1.0 otherwise
         if outside == 1:
             visibility = 0.0
         elif occluded == 1:
@@ -84,7 +112,8 @@ def parse_video_track(
 
         annotations.append(ann)
 
-    return IRVideoAnnotationTrack.from_annotations(annotations, id=track_id)
+    canonical_annotations = _canonicalize_track_annotations(annotations)
+    return IRVideoAnnotationTrack.from_annotations(canonical_annotations, track_id=track_id)
 
 
 def parse_video_meta(meta_elem: ElementBase) -> tuple:
@@ -114,25 +143,25 @@ def parse_video_meta(meta_elem: ElementBase) -> tuple:
 def export_video_track_to_xml(
     track: IRVideoAnnotationTrack,
     seq_length: Optional[int] = None,
+    video_width: Optional[int] = None,
+    video_height: Optional[int] = None,
 ) -> ElementBase:
     """Export a track's annotations to a CVAT video XML track element."""
     if not track.annotations:
         raise ValueError("Cannot create track from empty annotations list")
 
+    track = track.denormalized(video_width=video_width, video_height=video_height)
     first_ann = track.annotations[0]
     label = first_ann.ensure_has_one_category()
 
     track_elem = etree.Element("track")
-    track_elem.set("id", str(track.track_id))
+    track_elem.set("id", track.track_id)
     track_elem.set("label", label)
     track_elem.set("source", "manual")
 
     sorted_anns = sorted(track.annotations, key=lambda a: a.frame_number)
 
     for idx, ann in enumerate(sorted_anns):
-        if ann.coordinate_style == CoordinateStyle.NORMALIZED:
-            ann = ann.denormalized()
-
         xtl = ann.left
         ytl = ann.top
         xbr = ann.left + ann.width
@@ -142,9 +171,6 @@ def export_video_track_to_xml(
         occluded = 0
         if not outside and ann.visibility < 1.0:
             occluded = 1
-        # CVAT keyframe marks an explicit control point.
-        # IR rows are explicit points; interpolation intent is encoded by IR keyframe
-        # and represented in CVAT via optional outside boundary rows below.
         keyframe = 1
         z_order = ann.meta.get("z_order", 0)
 
@@ -188,7 +214,7 @@ def export_video_track_to_xml(
 
 def build_cvat_video_xml(
     sequence: IRVideoSequence,
-    video_name: str = "video.mp4",
+    video_name: str,
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
     seq_length: Optional[int] = None,
@@ -242,8 +268,13 @@ def build_cvat_video_xml(
     source_elem = etree.SubElement(task_elem, "source")
     source_elem.text = video_name
 
-    for track in sorted(sequence.tracks, key=lambda item: item.track_id):
-        track_elem = export_video_track_to_xml(track, seq_length=seq_length)
+    for track in sequence.tracks:
+        track_elem = export_video_track_to_xml(
+            track,
+            seq_length=seq_length,
+            video_width=image_width,
+            video_height=image_height,
+        )
         root.append(track_elem)
 
     return root
@@ -251,7 +282,7 @@ def build_cvat_video_xml(
 
 def cvat_video_xml_to_string(
     sequence: IRVideoSequence,
-    video_name: str = "video.mp4",
+    video_name: str,
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
     seq_length: Optional[int] = None,

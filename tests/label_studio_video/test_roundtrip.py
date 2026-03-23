@@ -25,6 +25,8 @@ from dagshub_annotation_converter.formats.mot import MOTContext
 from dagshub_annotation_converter.ir.video import IRVideoSequence
 from tests.video_helpers import annotations_by_track_frame, flatten_sequence_with_track_ids
 
+LS_VIDEO_PATH = "/data/video.mp4"
+
 
 def _sequence_from_ls_results(results, filename: str = "/data/video.mp4") -> IRVideoSequence:
     tracks = []
@@ -48,6 +50,10 @@ def _single_track_sequence(ls_ann: VideoRectangleAnnotation) -> IRVideoSequence:
         else None
     )
     return IRVideoSequence(tracks=[ls_ann.to_ir_track()], sequence_length=frames_count)
+
+
+def _ls_tasks(sequence: IRVideoSequence):
+    return video_ir_to_ls_video_tasks(sequence, video_path=LS_VIDEO_PATH)
 
 
 class TestMOTToLabelStudioRoundtrip:
@@ -74,7 +80,7 @@ class TestMOTToLabelStudioRoundtrip:
 
     def test_mot_to_ls_video(self, sample_mot_file, mot_context):
         mot_sequence = load_mot_from_file(sample_mot_file, mot_context)
-        ls_tasks = video_ir_to_ls_video_tasks(mot_sequence)
+        ls_tasks = _ls_tasks(mot_sequence)
 
         assert len(ls_tasks) == 1
         task = ls_tasks[0]
@@ -83,7 +89,7 @@ class TestMOTToLabelStudioRoundtrip:
 
     def test_mot_to_ls_treats_frames_as_independent(self, sample_mot_file, mot_context):
         mot_sequence = load_mot_from_file(sample_mot_file, mot_context)
-        ls_tasks = video_ir_to_ls_video_tasks(mot_sequence)
+        ls_tasks = _ls_tasks(mot_sequence)
         results = ls_tasks[0].annotations[0].result
         for result in results:
             assert all(item.enabled is False for item in result.value.sequence)
@@ -104,7 +110,7 @@ class TestMOTToLabelStudioRoundtrip:
 
     def test_mot_ls_mot_roundtrip(self, sample_mot_file, mot_context):
         original_sequence = load_mot_from_file(sample_mot_file, mot_context)
-        ls_tasks = video_ir_to_ls_video_tasks(original_sequence)
+        ls_tasks = _ls_tasks(original_sequence)
         reconstructed_sequence = ls_video_task_to_video_ir(ls_tasks[0])
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
@@ -131,7 +137,7 @@ class TestMOTToLabelStudioRoundtrip:
 
     def test_mot_ls_roundtrip_preserves_track_frames_and_keyframes(self, sample_mot_file, mot_context):
         original_sequence = load_mot_from_file(sample_mot_file, mot_context)
-        ls_tasks = video_ir_to_ls_video_tasks(original_sequence)
+        ls_tasks = _ls_tasks(original_sequence)
         task = ls_tasks[0]
         for result in task.annotations[0].result:
             for item in result.value.sequence:
@@ -176,7 +182,7 @@ class TestMOTToLabelStudioRoundtrip:
             assert all(frame <= 11 or frame >= 100 for frame in mot_frames)
 
             mot_sequence = load_mot_from_file(output_path, mot_context)
-            ls_tasks = video_ir_to_ls_video_tasks(mot_sequence)
+            ls_tasks = _ls_tasks(mot_sequence)
             seq = ls_tasks[0].annotations[0].result[0].value.sequence
             by_frame = {item.frame: item for item in seq}
 
@@ -210,7 +216,7 @@ class TestMOTToLabelStudioRoundtrip:
             assert last_visibility == 1.0
 
             mot_sequence = load_mot_from_file(output_path, mot_context)
-            ls_tasks = video_ir_to_ls_video_tasks(mot_sequence)
+            ls_tasks = _ls_tasks(mot_sequence)
             seq = ls_tasks[0].annotations[0].result[0].value.sequence
 
             assert seq[-1].frame == 11
@@ -245,7 +251,7 @@ class TestMOTToLabelStudioRoundtrip:
             assert all(frame <= 11 or frame >= 100 for frame in mot_frames)
 
             mot_sequence = load_mot_from_file(output_path, mot_context)
-            ls_tasks = video_ir_to_ls_video_tasks(mot_sequence)
+            ls_tasks = _ls_tasks(mot_sequence)
             seq = ls_tasks[0].annotations[0].result[0].value.sequence
             seq_frames = [item.frame for item in seq]
 
@@ -261,7 +267,7 @@ class TestCVATVideoToLabelStudioRoundtrip:
 
     def test_cvat_to_ls_video(self, sample_cvat_video_xml):
         cvat_sequence = load_cvat_from_xml_file(sample_cvat_video_xml)
-        ls_tasks = video_ir_to_ls_video_tasks(cvat_sequence)
+        ls_tasks = _ls_tasks(cvat_sequence)
 
         assert len(ls_tasks) == 1
         task = ls_tasks[0]
@@ -269,7 +275,7 @@ class TestCVATVideoToLabelStudioRoundtrip:
 
     def test_cvat_to_ls_preserves_categories(self, sample_cvat_video_xml):
         cvat_sequence = load_cvat_from_xml_file(sample_cvat_video_xml)
-        ls_tasks = video_ir_to_ls_video_tasks(cvat_sequence)
+        ls_tasks = _ls_tasks(cvat_sequence)
 
         labels = set()
         for result in ls_tasks[0].annotations[0].result:
@@ -280,13 +286,18 @@ class TestCVATVideoToLabelStudioRoundtrip:
 
     def test_cvat_to_ls_coordinate_conversion(self, sample_cvat_video_xml, epsilon):
         cvat_sequence = load_cvat_from_xml_file(sample_cvat_video_xml)
-        ls_tasks = video_ir_to_ls_video_tasks(cvat_sequence)
+        ls_tasks = _ls_tasks(cvat_sequence)
         task = ls_tasks[0]
 
         person_result = next(result for result in task.annotations[0].result if "person" in result.value.labels)
         first_seq = person_result.value.sequence[0]
         assert math.isclose(first_seq.x, 5.208333, abs_tol=epsilon)
         assert math.isclose(first_seq.y, 13.888889, abs_tol=epsilon)
+
+    def test_ls_export_raises_without_video_path_or_filename(self, sample_cvat_video_xml):
+        cvat_sequence = load_cvat_from_xml_file(sample_cvat_video_xml)
+        with pytest.raises(ValueError, match="Cannot determine video path for Label Studio video export"):
+            video_ir_to_ls_video_tasks(cvat_sequence)
 
     def test_ls_cvat_ls_roundtrip_keeps_sparse_keyframe_interpolation(self):
         ls_ann = VideoRectangleAnnotation(
@@ -310,9 +321,9 @@ class TestCVATVideoToLabelStudioRoundtrip:
         )
         sequence = _single_track_sequence(ls_ann)
 
-        xml_bytes = export_cvat_video_to_xml_bytes(sequence)
+        xml_bytes = export_cvat_video_to_xml_bytes(sequence, video_name="video.mp4")
         cvat_sequence = load_cvat_from_xml_bytes(xml_bytes)
-        ls_tasks = video_ir_to_ls_video_tasks(cvat_sequence)
+        ls_tasks = _ls_tasks(cvat_sequence)
 
         seq = ls_tasks[0].annotations[0].result[0].value.sequence
         got = [(item.frame, item.enabled) for item in seq]
@@ -353,14 +364,14 @@ class TestCVATVideoToLabelStudioRoundtrip:
         ).encode("utf-8")
 
         cvat_sequence = load_cvat_from_xml_bytes(xml_bytes)
-        ls_tasks = video_ir_to_ls_video_tasks(cvat_sequence)
+        ls_tasks = _ls_tasks(cvat_sequence)
         seq = ls_tasks[0].annotations[0].result[0].value.sequence
 
         assert [(item.frame, item.enabled) for item in seq] == [(1, True), (11, False)]
 
     def test_cvat_middle_outside_boundary_is_preserved_in_ls(self, sample_cvat_video_xml):
         cvat_sequence = load_cvat_from_xml_file(sample_cvat_video_xml)
-        ls_tasks = video_ir_to_ls_video_tasks(cvat_sequence)
+        ls_tasks = _ls_tasks(cvat_sequence)
         car_result = next(result for result in ls_tasks[0].annotations[0].result if "car" in result.value.labels)
 
         assert [(item.frame, item.enabled) for item in car_result.value.sequence] == [
@@ -382,7 +393,7 @@ class TestCVATVideoToLabelStudioRoundtrip:
         ).encode("utf-8")
 
         cvat_sequence = load_cvat_from_xml_bytes(xml_bytes)
-        ls_tasks = video_ir_to_ls_video_tasks(cvat_sequence)
+        ls_tasks = _ls_tasks(cvat_sequence)
         seq = ls_tasks[0].annotations[0].result[0].value.sequence
 
         assert [(item.frame, item.enabled) for item in seq] == [(6, True)]
@@ -415,19 +426,17 @@ class TestCrossFormatConversion:
             content = output_path.read_text()
             lines = [line for line in content.strip().split("\n") if line and not line.startswith("#")]
 
-            assert len(lines) == 10
+            assert len(lines) == 9
             for line in lines:
                 assert len(line.split(",")) == 9
 
     def test_all_formats_same_annotation_count(self, sample_cvat_video_xml, mot_context):
         cvat_sequence = load_cvat_from_xml_file(sample_cvat_video_xml)
-        ls_tasks = video_ir_to_ls_video_tasks(cvat_sequence)
+        ls_tasks = _ls_tasks(cvat_sequence)
         ls_sequence = ls_video_task_to_video_ir(ls_tasks[0])
 
-        cvat_keyframes_and_boundaries = [
-            ann for _, ann in flatten_sequence_with_track_ids(cvat_sequence) if ann.keyframe or ann.visibility <= 0.0
-        ]
-        assert len(ls_sequence.to_annotations()) == len(cvat_keyframes_and_boundaries)
+        cvat_annotations = [ann for _, ann in flatten_sequence_with_track_ids(cvat_sequence)]
+        assert len(ls_sequence.to_annotations()) == len(cvat_annotations)
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
             output_path = Path(f.name)
@@ -436,8 +445,7 @@ class TestCrossFormatConversion:
             mot_sequence = load_mot_from_file(output_path, mot_context)
             mot_total = len(mot_sequence.to_annotations())
 
-            assert mot_total >= len(cvat_keyframes_and_boundaries)
-            assert mot_total <= len(cvat_sequence.to_annotations())
+            assert mot_total >= len(cvat_annotations)
 
 
 class TestLabelStudioVideoLocalProbeFallback:

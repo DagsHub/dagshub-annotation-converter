@@ -52,7 +52,7 @@ def import_bbox_from_line(line: str, context: MOTContext) -> Optional[Tuple[int,
     return track_id, ann
 
 
-def export_bbox_to_line(ann: IRVideoBBoxFrameAnnotation, track_id: int, context: MOTContext) -> str:
+def _export_bbox_to_line(ann: IRVideoBBoxFrameAnnotation, track_id: int, context: MOTContext) -> str:
     """
     Export an IRVideoBBoxAnnotation to a MOT line.
 
@@ -61,16 +61,8 @@ def export_bbox_to_line(ann: IRVideoBBoxFrameAnnotation, track_id: int, context:
 
     MOT uses 1-based frame numbering; IR uses 0-based.
     """
-    if ann.coordinate_style == CoordinateStyle.NORMALIZED:
-        if (ann.video_width is None and context.video_width is not None) or (
-            ann.video_height is None and context.video_height is not None
-        ):
-            ann = ann.model_copy()
-            if ann.video_width is None and context.video_width is not None:
-                ann.video_width = context.video_width
-            if ann.video_height is None and context.video_height is not None:
-                ann.video_height = context.video_height
-        ann = ann.denormalized()
+    if ann.coordinate_style != CoordinateStyle.DENORMALIZED:
+        raise ValueError("_export_bbox_to_line expects a denormalized video annotation")
 
     category_name = ann.ensure_has_one_category()
     class_id = context.categories[category_name].id

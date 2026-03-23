@@ -25,3 +25,11 @@ class IRVideoFrameAnnotationBase(IRAnnotationBase):
 
     @abstractmethod
     def _denormalize(self): ...
+
+    @abstractmethod
+    def interpolate(
+        self,
+        next_annotation: "IRVideoFrameAnnotationBase",
+        step_ratio: float,
+    ) -> "IRVideoFrameAnnotationBase":
+        ...

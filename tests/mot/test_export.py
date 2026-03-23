@@ -12,16 +12,21 @@ from dagshub_annotation_converter.converters.mot import (
     export_to_mot,
     load_mot_from_file,
 )
-from dagshub_annotation_converter.formats.mot.bbox import export_bbox_to_line
+from dagshub_annotation_converter.formats.mot.bbox import _export_bbox_to_line
 from dagshub_annotation_converter.formats.mot.context import MOTContext
-from dagshub_annotation_converter.ir.video import CoordinateStyle, IRVideoBBoxFrameAnnotation
+from dagshub_annotation_converter.ir.video import (
+    CoordinateStyle,
+    IRVideoAnnotationTrack,
+    IRVideoBBoxFrameAnnotation,
+    IRVideoSequence,
+)
 from tests.video_helpers import sequence_from_annotations
 
 
 class TestMOTLineExport:
     def test_export_basic_annotation(self, mot_context):
         ann = IRVideoBBoxFrameAnnotation(
-            track_id=1,
+            imported_id="1",
             frame_number=0,  # 0-based IR frame
             left=100,
             top=150,
@@ -34,7 +39,7 @@ class TestMOTLineExport:
             visibility=1.0,
         )
 
-        line = export_bbox_to_line(ann, 1, mot_context)
+        line = _export_bbox_to_line(ann, 1, mot_context)
 
         # CVAT MOT 1.1: frame,track,x,y,w,h,not_ignored,class_id,visibility
         parts = line.split(",")
@@ -49,9 +54,9 @@ class TestMOTLineExport:
         assert parts[7] == "1"
         assert float(parts[8]) == 1.0
 
-    def test_export_normalized_annotation(self, mot_context):
+    def test_export_normalized_annotation_raises(self, mot_context):
         ann = IRVideoBBoxFrameAnnotation(
-            track_id=1,
+            imported_id="1",
             frame_number=0,
             left=0.1,
             top=0.1,
@@ -64,15 +69,12 @@ class TestMOTLineExport:
             visibility=1.0,
         )
 
-        line = export_bbox_to_line(ann, 1, mot_context)
-        parts = line.split(",")
-
-        assert math.isclose(float(parts[2]), 192, abs_tol=1)
-        assert math.isclose(float(parts[3]), 108, abs_tol=1)
+        with pytest.raises(ValueError, match="denormalized video annotation"):
+            _export_bbox_to_line(ann, 1, mot_context)
 
     def test_export_with_partial_visibility(self, mot_context):
         ann = IRVideoBBoxFrameAnnotation(
-            track_id=2,
+            imported_id="2",
             frame_number=3,
             left=120,
             top=154,
@@ -85,7 +87,7 @@ class TestMOTLineExport:
             visibility=0.5,
         )
 
-        line = export_bbox_to_line(ann, 2, mot_context)
+        line = _export_bbox_to_line(ann, 2, mot_context)
         parts = line.split(",")
 
         assert parts[7] == "2"
@@ -96,7 +98,7 @@ class TestMOTFileExport:
     def test_export_to_file(self, mot_context):
         annotations = [
             IRVideoBBoxFrameAnnotation(
-                track_id=1,
+                imported_id="1",
                 frame_number=0,  # 0-based IR frame
                 keyframe=False,
                 left=100,
@@ -109,7 +111,7 @@ class TestMOTFileExport:
                 coordinate_style=CoordinateStyle.DENORMALIZED,
             ),
             IRVideoBBoxFrameAnnotation(
-                track_id=2,
+                imported_id="2",
                 frame_number=0,  # 0-based IR frame
                 keyframe=False,
                 left=500,
@@ -122,7 +124,7 @@ class TestMOTFileExport:
                 coordinate_style=CoordinateStyle.DENORMALIZED,
             ),
             IRVideoBBoxFrameAnnotation(
-                track_id=1,
+                imported_id="1",
                 frame_number=1,  # 0-based IR frame
                 keyframe=False,
                 left=110,
@@ -149,6 +151,33 @@ class TestMOTFileExport:
             first_line_parts = lines[0].split(",")
             assert first_line_parts[0] == "1"
 
+    def test_export_to_file_denormalizes_normalized_track(self, mot_context):
+        annotations = [
+            IRVideoBBoxFrameAnnotation(
+                imported_id="1",
+                frame_number=0,
+                keyframe=False,
+                left=0.1,
+                top=0.1,
+                width=0.2,
+                height=0.2,
+                video_width=1920,
+                video_height=1080,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.NORMALIZED,
+            ),
+        ]
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
+            output_path = Path(f.name)
+
+            export_to_mot(sequence_from_annotations(annotations), mot_context, output_path)
+
+            line = output_path.read_text().strip()
+            parts = line.split(",")
+            assert math.isclose(float(parts[2]), 192, abs_tol=1)
+            assert math.isclose(float(parts[3]), 108, abs_tol=1)
+
     def test_export_roundtrip(self, mot_context, sample_mot_file):
         sequence = load_mot_from_file(sample_mot_file, mot_context)
 
@@ -164,10 +193,36 @@ class TestMOTFileExport:
             for frame_num, frame_entries in sequence.annotations_by_frame().items():
                 assert len(reimported.annotations_by_frame()[frame_num]) == len(frame_entries)
 
+    def test_export_converts_non_numeric_track_identifier_to_numeric_id(self, mot_context):
+        ann = IRVideoBBoxFrameAnnotation(
+            frame_number=0,
+            left=100,
+            top=150,
+            width=50,
+            height=120,
+            video_width=1920,
+            video_height=1080,
+            categories={"person": 1.0},
+            coordinate_style=CoordinateStyle.DENORMALIZED,
+            visibility=1.0,
+        )
+        sequence = IRVideoSequence(
+            tracks=[IRVideoAnnotationTrack.from_annotations([ann], track_id="track_person_1")]
+        )
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
+            output_path = Path(f.name)
+
+            export_to_mot(sequence, mot_context, output_path)
+
+            line = output_path.read_text().strip()
+            assert line
+            assert line.split(",")[1].isdigit()
+
     def test_export_interpolates_between_sparse_keyframes(self, mot_context):
         annotations = [
             IRVideoBBoxFrameAnnotation(
-                track_id=1,
+                imported_id="1",
                 frame_number=0,
                 keyframe=True,
                 left=100,
@@ -181,7 +236,7 @@ class TestMOTFileExport:
                 visibility=1.0,
             ),
             IRVideoBBoxFrameAnnotation(
-                track_id=1,
+                imported_id="1",
                 frame_number=4,
                 keyframe=True,
                 left=140,
@@ -210,7 +265,7 @@ class TestMOTFileExport:
     def test_export_hides_outside_ranges_between_keyframes(self, mot_context):
         annotations = [
             IRVideoBBoxFrameAnnotation(
-                track_id=1,
+                imported_id="1",
                 frame_number=0,
                 keyframe=True,
                 left=100,
@@ -224,7 +279,7 @@ class TestMOTFileExport:
                 visibility=1.0,
             ),
             IRVideoBBoxFrameAnnotation(
-                track_id=1,
+                imported_id="1",
                 frame_number=3,
                 keyframe=True,
                 left=130,
@@ -238,7 +293,7 @@ class TestMOTFileExport:
                 visibility=0.0,
             ),
             IRVideoBBoxFrameAnnotation(
-                track_id=1,
+                imported_id="1",
                 frame_number=5,
                 keyframe=True,
                 left=150,
@@ -269,7 +324,7 @@ class TestMOTFileExport:
         context.categories.add("person", 1)
         annotations = [
             IRVideoBBoxFrameAnnotation(
-                track_id=1,
+                imported_id="1",
                 frame_number=0,
                 keyframe=True,
                 left=100,
@@ -283,7 +338,7 @@ class TestMOTFileExport:
                 visibility=1.0,
             ),
             IRVideoBBoxFrameAnnotation(
-                track_id=1,
+                imported_id="1",
                 frame_number=3,
                 keyframe=True,
                 left=130,
@@ -311,7 +366,7 @@ class TestMOTFileExport:
         context.categories.add("person", 1)
         annotations = [
             IRVideoBBoxFrameAnnotation(
-                track_id=1,
+                imported_id="1",
                 frame_number=0,
                 left=100,
                 top=150,
@@ -354,7 +409,7 @@ class TestMOTFileExport:
         context.categories.add("person", 1)
         annotations = [
             IRVideoBBoxFrameAnnotation(
-                track_id=1,
+                imported_id="1",
                 frame_number=0,
                 left=100,
                 top=150,
@@ -379,7 +434,7 @@ class TestMOTFileExport:
         context.categories.add("person", 1)
         annotations = [
             IRVideoBBoxFrameAnnotation(
-                track_id=1,
+                imported_id="1",
                 frame_number=0,
                 left=100,
                 top=150,
@@ -424,7 +479,7 @@ class TestMOTFileExport:
         context.categories.add("person", 1)
         annotations = [
             IRVideoBBoxFrameAnnotation(
-                track_id=1,
+                imported_id="1",
                 frame_number=0,
                 left=100,
                 top=150,
@@ -445,7 +500,7 @@ class TestMOTFileExport:
         context = MOTContext(frame_rate=30, video_width=1920, video_height=1080, sequence_name="default")
         context.categories.add("person", 1)
         ann_a = IRVideoBBoxFrameAnnotation(
-            track_id=1,
+            imported_id="1",
             frame_number=0,
             left=100,
             top=150,
@@ -458,7 +513,7 @@ class TestMOTFileExport:
             filename="earth-space-small.mp4",
         )
         ann_b = IRVideoBBoxFrameAnnotation(
-            track_id=2,
+            imported_id="2",
             frame_number=0,
             left=500,
             top=200,
@@ -492,7 +547,7 @@ class TestMOTFileExport:
         context = MOTContext(frame_rate=30, video_width=None, video_height=None, sequence_name="default")
         context.categories.add("person", 1)
         ann = IRVideoBBoxFrameAnnotation(
-            track_id=1,
+            imported_id="1",
             frame_number=0,
             left=100,
             top=150,
@@ -537,7 +592,7 @@ class TestMOTFileExport:
         context.categories.add("woman", 1)
         annotations = [
             IRVideoBBoxFrameAnnotation(
-                track_id=1,
+                imported_id="1",
                 frame_number=377,
                 left=576,
                 top=209,
@@ -550,7 +605,7 @@ class TestMOTFileExport:
                 sequence_length=381,
             ),
             IRVideoBBoxFrameAnnotation(
-                track_id=2,
+                imported_id="2",
                 frame_number=366,
                 left=200,
                 top=84,

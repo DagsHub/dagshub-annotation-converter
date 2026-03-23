@@ -7,7 +7,6 @@ from dagshub_annotation_converter.ir.video import (
     IRVideoAnnotationTrack,
     IRVideoBBoxFrameAnnotation,
     IRVideoSequence,
-    track_id_from_identifier,
 )
 
 
@@ -125,6 +124,117 @@ def test_normalize_coordinates(epsilon):
     assert normalized.frame_number == 0
 
 
+def test_bbox_interpolate_between_frames(epsilon):
+    start = IRVideoBBoxFrameAnnotation(
+        frame_number=0,
+        keyframe=True,
+        left=100,
+        top=150,
+        width=50,
+        height=120,
+        video_width=1920,
+        video_height=1080,
+        categories={"person": 1.0},
+        coordinate_style=CoordinateStyle.DENORMALIZED,
+        rotation=0.0,
+        visibility=1.0,
+        timestamp=0.0,
+    )
+    end = IRVideoBBoxFrameAnnotation(
+        frame_number=4,
+        keyframe=True,
+        left=140,
+        top=158,
+        width=70,
+        height=100,
+        video_width=1920,
+        video_height=1080,
+        categories={"person": 1.0},
+        coordinate_style=CoordinateStyle.DENORMALIZED,
+        rotation=20.0,
+        visibility=0.5,
+        timestamp=0.4,
+    )
+
+    interpolated = start.interpolate(end, 0.5)
+
+    assert interpolated.frame_number == 2
+    assert interpolated.keyframe is False
+    assert math.isclose(interpolated.left, 120, abs_tol=epsilon)
+    assert math.isclose(interpolated.top, 154, abs_tol=epsilon)
+    assert math.isclose(interpolated.width, 60, abs_tol=epsilon)
+    assert math.isclose(interpolated.height, 110, abs_tol=epsilon)
+    assert math.isclose(interpolated.rotation, 10.0, abs_tol=epsilon)
+    assert math.isclose(interpolated.visibility, 0.75, abs_tol=epsilon)
+    assert math.isclose(interpolated.timestamp, 0.2, abs_tol=epsilon)
+
+
+def test_track_normalize_coordinates_uses_shared_dimensions(epsilon):
+    ann_a = IRVideoBBoxFrameAnnotation(
+        frame_number=0,
+        left=192,
+        top=108,
+        width=384,
+        height=216,
+        video_width=1920,
+        video_height=1080,
+        categories={"person": 1.0},
+        coordinate_style=CoordinateStyle.DENORMALIZED,
+    )
+    ann_b = IRVideoBBoxFrameAnnotation(
+        frame_number=1,
+        left=384,
+        top=216,
+        width=192,
+        height=108,
+        video_width=None,
+        video_height=None,
+        categories={"person": 1.0},
+        coordinate_style=CoordinateStyle.DENORMALIZED,
+    )
+
+    track = IRVideoAnnotationTrack.from_annotations([ann_a, ann_b], track_id="1")
+    normalized_track = track.normalized()
+
+    first = normalized_track.annotations[0]
+    second = normalized_track.annotations[1]
+
+    assert first.coordinate_style == CoordinateStyle.NORMALIZED
+    assert second.coordinate_style == CoordinateStyle.NORMALIZED
+    assert second.video_width == 1920
+    assert second.video_height == 1080
+    assert math.isclose(second.left, 0.2, abs_tol=epsilon)
+    assert math.isclose(second.top, 0.2, abs_tol=epsilon)
+    assert math.isclose(second.width, 0.1, abs_tol=epsilon)
+    assert math.isclose(second.height, 0.1, abs_tol=epsilon)
+
+
+def test_track_denormalize_coordinates_accepts_explicit_dimensions(epsilon):
+    ann = IRVideoBBoxFrameAnnotation(
+        frame_number=0,
+        left=0.1,
+        top=0.1,
+        width=0.2,
+        height=0.2,
+        video_width=None,
+        video_height=None,
+        categories={"person": 1.0},
+        coordinate_style=CoordinateStyle.NORMALIZED,
+    )
+
+    track = IRVideoAnnotationTrack.from_annotations([ann], track_id="1")
+    denormalized_track = track.denormalized(video_width=1920, video_height=1080)
+    first = denormalized_track.annotations[0]
+
+    assert first.coordinate_style == CoordinateStyle.DENORMALIZED
+    assert first.video_width == 1920
+    assert first.video_height == 1080
+    assert math.isclose(first.left, 192, abs_tol=epsilon)
+    assert math.isclose(first.top, 108, abs_tol=epsilon)
+    assert math.isclose(first.width, 384, abs_tol=epsilon)
+    assert math.isclose(first.height, 216, abs_tol=epsilon)
+
+
 def test_video_track_uses_track_level_identifier():
     ann = IRVideoBBoxFrameAnnotation(
         frame_number=3,
@@ -138,14 +248,13 @@ def test_video_track_uses_track_level_identifier():
         coordinate_style=CoordinateStyle.DENORMALIZED,
     )
 
-    track = IRVideoAnnotationTrack.from_annotations([ann], id="7")
+    track = IRVideoAnnotationTrack.from_annotations([ann], track_id="7")
 
-    assert track.id == "7"
-    assert track.track_id == 7
+    assert track.track_id == "7"
     assert track.annotations[0].imported_id == "7"
 
 
-def test_video_track_uses_hash_for_non_numeric_identifier():
+def test_video_track_preserves_non_numeric_identifier():
     ann = IRVideoBBoxFrameAnnotation(
         frame_number=0,
         left=0.1,
@@ -158,10 +267,10 @@ def test_video_track_uses_hash_for_non_numeric_identifier():
         coordinate_style=CoordinateStyle.NORMALIZED,
     )
 
-    track = IRVideoAnnotationTrack.from_annotations([ann], id="track_person_1")
+    track = IRVideoAnnotationTrack.from_annotations([ann], track_id="track_person_1")
     materialized = track.to_annotations()
 
-    assert track.track_id == track_id_from_identifier("track_person_1")
+    assert track.track_id == "track_person_1"
     assert materialized[0].imported_id == "track_person_1"
 
 
@@ -177,7 +286,7 @@ def test_video_sequence_resolves_sequence_metadata():
         categories={"person": 1.0},
         coordinate_style=CoordinateStyle.DENORMALIZED,
     )
-    track = IRVideoAnnotationTrack.from_annotations([ann], id="2")
+    track = IRVideoAnnotationTrack.from_annotations([ann], track_id="2")
     sequence = IRVideoSequence(
         tracks=[track],
         filename="video.mp4",
@@ -220,12 +329,12 @@ def test_video_sequence_groups_annotations_by_frame():
 
     sequence = IRVideoSequence(
         tracks=[
-            IRVideoAnnotationTrack.from_annotations([ann_a], id="1"),
-            IRVideoAnnotationTrack.from_annotations([ann_b], id="vehicle"),
+            IRVideoAnnotationTrack.from_annotations([ann_a], track_id="1"),
+            IRVideoAnnotationTrack.from_annotations([ann_b], track_id="vehicle"),
         ]
     )
 
     grouped = sequence.annotations_by_frame()
 
     assert list(grouped.keys()) == [0]
-    assert [track.id for track, _ in grouped[0]] == ["1", "vehicle"]
+    assert [track.track_id for track, _ in grouped[0]] == ["1", "vehicle"]

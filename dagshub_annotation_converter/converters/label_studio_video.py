@@ -1,5 +1,4 @@
-import logging
-from typing import List
+from typing import List, Optional
 
 from dagshub_annotation_converter.formats.label_studio.videorectangle import (
     VideoRectangleAnnotation,
@@ -11,15 +10,23 @@ from dagshub_annotation_converter.formats.label_studio.task import (
 )
 from dagshub_annotation_converter.ir.video import IRVideoSequence
 
-logger = logging.getLogger(__name__)
-
-# Register VideoRectangleAnnotation in task_lookup for proper parsing
 task_lookup["videorectangle"] = VideoRectangleAnnotation
+
+
+def _resolve_video_path_for_export(sequence: IRVideoSequence, video_path: Optional[str]) -> str:
+    if sequence.filename:
+        return sequence.filename
+    if video_path:
+        return video_path
+    raise ValueError(
+        "Cannot determine video path for Label Studio video export. "
+        "Provide video_path explicitly or set sequence.filename."
+    )
 
 
 def video_ir_to_ls_video_tasks(
     sequence: IRVideoSequence,
-    video_path: str = "/data/video.mp4",
+    video_path: Optional[str] = None,
 ) -> List[LabelStudioTask]:
     """
     Convert Video IR annotations to Label Studio Video tasks.
@@ -29,14 +36,15 @@ def video_ir_to_ls_video_tasks(
     if not sequence.tracks:
         return []
 
-    video_rectangles: List[VideoRectangleAnnotation] = []
-    for track in sorted(sequence.tracks, key=lambda item: item.track_id):
-        video_rect = VideoRectangleAnnotation.from_ir_track(track, frames_count=sequence.sequence_length)
-        video_rectangles.append(video_rect)
+    video_rectangles = [
+        VideoRectangleAnnotation.from_ir_track(track, frames_count=sequence.sequence_length)
+        for track in sequence.tracks
+    ]
 
-    # Use model_construct to bypass the BeforeValidator on result
+    resolved_video_path = _resolve_video_path_for_export(sequence, video_path)
+
     task = LabelStudioTask(
-        data={"video": sequence.filename or video_path},
+        data={"video": resolved_video_path},
     )
     container = AnnotationsContainer.model_construct(
         completed_by=None,
@@ -80,7 +88,7 @@ def ls_video_task_to_video_ir(task: LabelStudioTask) -> IRVideoSequence:
 
 def video_ir_to_ls_video_json(
     sequence: IRVideoSequence,
-    video_path: str = "/data/video.mp4",
+    video_path: Optional[str] = None,
 ) -> str:
     tasks = video_ir_to_ls_video_tasks(sequence, video_path)
     if not tasks:
