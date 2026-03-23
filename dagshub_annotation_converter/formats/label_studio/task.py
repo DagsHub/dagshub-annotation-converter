@@ -1,36 +1,40 @@
 import datetime
 import logging
 import random
-from typing import Any, Sequence, Type, Optional, Union, cast, List, Dict
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Sequence, Type, Union, cast
 
+from pydantic import BeforeValidator, Field, SerializeAsAny
 from typing_extensions import Annotated
 
-from pydantic import SerializeAsAny, Field, BeforeValidator
-
-from dagshub_annotation_converter.formats.label_studio.base import AnnotationResultABC, ImageAnnotationResultABC
+from dagshub_annotation_converter.formats.label_studio.base import AnnotationResultABC
 from dagshub_annotation_converter.formats.label_studio.ellipselabels import EllipseLabelsAnnotation
 from dagshub_annotation_converter.formats.label_studio.keypointlabels import KeyPointLabelsAnnotation
 from dagshub_annotation_converter.formats.label_studio.polygonlabels import PolygonLabelsAnnotation
 from dagshub_annotation_converter.formats.label_studio.rectanglelabels import RectangleLabelsAnnotation
+from dagshub_annotation_converter.formats.label_studio.videorectangle import VideoRectangleAnnotation
 from dagshub_annotation_converter.ir.image import (
+    CoordinateStyle,
+    IRBBoxImageAnnotation,
+    IREllipseImageAnnotation,
     IRImageAnnotationBase,
     IRPoseImageAnnotation,
-    IRBBoxImageAnnotation,
-    CoordinateStyle,
     IRPosePoint,
     IRSegmentationImageAnnotation,
-    IREllipseImageAnnotation,
 )
+from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
+from dagshub_annotation_converter.util.video import get_video_dimensions
 
 task_lookup: Dict[str, Type[AnnotationResultABC]] = {
     "polygonlabels": PolygonLabelsAnnotation,
     "rectanglelabels": RectangleLabelsAnnotation,
     "keypointlabels": KeyPointLabelsAnnotation,
     "ellipselabels": EllipseLabelsAnnotation,
+    "videorectangle": VideoRectangleAnnotation,
 }
 
-ir_annotation_lookup: Dict[Type[IRImageAnnotationBase], Type[ImageAnnotationResultABC]] = {
+ir_annotation_lookup: Dict[Type[IRAnnotationBase], Type[AnnotationResultABC]] = {
     IRPoseImageAnnotation: KeyPointLabelsAnnotation,
     IRBBoxImageAnnotation: RectangleLabelsAnnotation,
     IRSegmentationImageAnnotation: PolygonLabelsAnnotation,
@@ -111,10 +115,35 @@ class LabelStudioTask(ParentModel):
         self.data[PoseBBoxLookupKey].append(bbox.id)
         self.data[PosePointsLookupKey].append([point.id for point in keypoints])
 
-    def to_ir_annotations(self, filename: Optional[str] = None) -> Sequence[IRImageAnnotationBase]:
-        res: List[IRImageAnnotationBase] = []
+    def to_ir_annotations(
+        self,
+        filename: Optional[str] = None,
+        video_file: Optional[Union[str, Path]] = None,
+    ) -> List[IRAnnotationBase]:
+        """Convert task annotations to IR; probe video dims from local ``video_file`` if provided."""
+        res: List[IRAnnotationBase] = []
+        probed_width: Optional[int] = None
+        probed_height: Optional[int] = None
+        did_probe = False
         for anns in self.annotations:
             for ann in anns.result:
+                if getattr(ann, "type", None) == "videorectangle":
+                    if (
+                        not did_probe
+                        and video_file is not None
+                        and (ann.original_width is None or ann.original_height is None)
+                    ):
+                        did_probe = True
+                        try:
+                            probed_width, probed_height, _ = get_video_dimensions(Path(video_file))
+                        except Exception:
+                            # If probing fails, keep dimensions unset and defer failure to
+                            # dimension-dependent conversion/export operations.
+                            pass
+                    if ann.original_width is None and probed_width is not None:
+                        ann.original_width = probed_width
+                    if ann.original_height is None and probed_height is not None:
+                        ann.original_height = probed_height
                 to_add = ann.to_ir_annotation()
                 for a in to_add:
                     # Carry over extra values from the annotation
@@ -126,7 +155,7 @@ class LabelStudioTask(ParentModel):
         res = self._reimport_poses(res)
         return res
 
-    def _reimport_poses(self, annotations: List[IRImageAnnotationBase]) -> List[IRImageAnnotationBase]:
+    def _reimport_poses(self, annotations: List[IRAnnotationBase]) -> List[IRAnnotationBase]:
         if PosePointsLookupKey not in self.data or PoseBBoxLookupKey not in self.data:
             return annotations
 
@@ -218,7 +247,7 @@ class LabelStudioTask(ParentModel):
         annotations.extend(poses)
         return annotations
 
-    def add_ir_annotation(self, ann: IRImageAnnotationBase):
+    def add_ir_annotation(self, ann: IRAnnotationBase):
         ls_ann_type = ir_annotation_lookup.get(type(ann))
 
         if ls_ann_type is None:

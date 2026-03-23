@@ -1,0 +1,55 @@
+{
+  "id": 1,
+  "data": {
+    "video": "/data/upload/test_video.mp4"
+  },
+  "annotations": [
+    {
+      "id": 1,
+      "completed_by": 1,
+      "result": [
+        {
+          "id": "track_person_1",
+          "type": "videorectangle",
+          "from_name": "box",
+          "to_name": "video",
+          "original_width": 1920,
+          "original_height": 1080,
+          "value": {
+            "sequence": [
+              {"frame": 1, "enabled": true, "x": 5.208333, "y": 13.888889, "width": 2.604167, "height": 11.111111, "time": 0.033},
+              {"frame": 2, "enabled": true, "x": 5.729167, "y": 14.074074, "width": 2.604167, "height": 11.111111, "time": 0.067},
+              {"frame": 3, "enabled": true, "x": 6.250000, "y": 14.259259, "width": 2.604167, "height": 11.111111, "time": 0.100},
+              {"frame": 4, "enabled": true, "x": 6.770833, "y": 14.444444, "width": 2.604167, "height": 11.111111, "time": 0.133},
+              {"frame": 5, "enabled": true, "x": 7.291667, "y": 14.629630, "width": 2.604167, "height": 11.111111, "time": 0.167}
+            ],
+            "labels": ["person"]
+          }
+        },
+        {
+          "id": "track_car_2",
+          "type": "videorectangle",
+          "from_name": "box",
+          "to_name": "video",
+          "original_width": 1920,
+          "original_height": 1080,
+          "value": {
+            "sequence": [
+              {"frame": 1, "enabled": true, "x": 26.041667, "y": 18.518519, "width": 7.812500, "height": 9.259259, "time": 0.033},
+              {"frame": 2, "enabled": true, "x": 25.000000, "y": 18.518519, "width": 7.812500, "height": 9.259259, "time": 0.067},
+              {"frame": 3, "enabled": true, "x": 23.958333, "y": 18.518519, "width": 7.812500, "height": 9.259259, "time": 0.100},
+              {"frame": 4, "enabled": true, "x": 22.916667, "y": 18.518519, "width": 7.812500, "height": 9.259259, "time": 0.133},
+              {"frame": 5, "enabled": true, "x": 21.875000, "y": 18.518519, "width": 7.812500, "height": 9.259259, "time": 0.167}
+            ],
+            "labels": ["car"]
+          }
+        }
+      ],
+      "ground_truth": true
+    }
+  ],
+  "meta": {},
+  "created_at": "2024-01-15T10:30:00.000000Z",
+  "updated_at": "2024-01-15T10:30:00.000000Z",
+  "project": 1
+}
