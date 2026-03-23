@@ -1,3 +1,4 @@
+from typing import Optional
 from zipfile import ZipFile
 
 import pytest
@@ -28,7 +29,7 @@ def _make_sequence(
     image_height: int,
     *,
     track_id: str = "1",
-    filename: str | None = None,
+    filename: Optional[str] = None,
 ) -> IRVideoSequence:
     ann = IRVideoBBoxFrameAnnotation(
         frame_number=0,

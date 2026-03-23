@@ -2,7 +2,7 @@ import datetime
 import logging
 import random
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Type, Union, cast
+from typing import Any, Dict, List, Optional, Sequence, Set, Type, Union, cast
 
 from pydantic import BeforeValidator, Field, SerializeAsAny
 from typing_extensions import Annotated
@@ -165,7 +165,7 @@ class LabelStudioTask(ParentModel):
         pose_bboxes: List[str] = self.data[PoseBBoxLookupKey]
         pose_points: List[List[str]] = self.data[PosePointsLookupKey]
 
-        annotations_to_remove: set[str] = set()
+        annotations_to_remove: Set[str] = set()
         poses: List[IRPoseImageAnnotation] = []
 
         for bbox_id, point_ids in zip(pose_bboxes, pose_points):
