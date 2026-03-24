@@ -27,7 +27,6 @@ annotations = task_obj.to_ir_annotations()
 ```
 - [CVAT for image (BBox, Segmentation, Poses) and video (BBox)](https://docs.cvat.ai/docs/dataset_management/formats/format-cvat/): [`load_cvat_from_zip`](dagshub_annotation_converter/converters/cvat.py)
 - [MOT (Video BBox)](https://motchallenge.net) - [`load_mot_from_dir`](dagshub_annotation_converter/converters/mot.py)
-- [CVAT for video (BBox)](https://docs.cvat.ai/docs/dataset_management/formats/format-cvat/): [`load_cvat_from_zip`](dagshub_annotation_converter/converters/cvat.py)
 
 ## Exporters (Images and Video):
 - YOLO [BBox](https://docs.ultralytics.com/datasets/detect/), [Segmentation](https://docs.ultralytics.com/datasets/segment/) and [Poses](https://docs.ultralytics.com/datasets/pose/): [`export_to_fs`](dagshub_annotation_converter/converters/yolo.py)
