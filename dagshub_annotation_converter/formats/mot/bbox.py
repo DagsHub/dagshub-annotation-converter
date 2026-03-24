@@ -19,6 +19,8 @@ def import_bbox_from_line(line: str, context: MOTContext) -> Optional[Tuple[int,
     MOT uses 1-based frame numbering; IR uses 0-based.
     """
     parts = line.strip().split(",")
+    if len(parts) < 9:
+        raise ValueError(f"Invalid MOT line (expected 9 columns): {line}")
 
     frame_id = int(parts[0])
     track_id = int(parts[1])

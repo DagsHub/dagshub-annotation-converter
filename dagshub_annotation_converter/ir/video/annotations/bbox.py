@@ -17,7 +17,11 @@ class IRVideoBBoxFrameAnnotation(IRVideoFrameAnnotationBase):
 
     def _require_dimensions_for_coordinate_conversion(self):
         if self.video_width is None or self.video_height is None:
-            raise ValueError("Cannot normalize/denormalize video annotation without video_width/video_height")
+            raise ValueError(
+                "Cannot normalize/denormalize video annotation without video_width/video_height"
+            )
+        if self.video_width <= 0 or self.video_height <= 0:
+            raise ValueError("video_width/video_height must be > 0 for coordinate conversion")
 
     def _normalize(self):
         self._require_dimensions_for_coordinate_conversion()
