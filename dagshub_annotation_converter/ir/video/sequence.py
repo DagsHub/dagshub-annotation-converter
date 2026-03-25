@@ -1,4 +1,4 @@
-from typing import Dict, Iterator, List, Optional, Tuple
+from typing import Dict, Iterator, List, Optional, Sequence, Tuple
 
 from dagshub_annotation_converter.ir.video.annotations.base import IRVideoFrameAnnotationBase
 from dagshub_annotation_converter.ir.video.track import IRVideoAnnotationTrack
@@ -11,6 +11,32 @@ class IRVideoSequence(ParentModel):
     sequence_length: Optional[int] = None
     video_width: Optional[int] = None
     video_height: Optional[int] = None
+
+    @classmethod
+    def from_annotations(
+        cls,
+        annotations: Sequence[IRVideoFrameAnnotationBase],
+        filename: Optional[str] = None,
+    ) -> "IRVideoSequence":
+        if not annotations:
+            raise ValueError("Cannot create IRVideoSequence from empty annotations")
+
+        grouped: Dict[str, List[IRVideoFrameAnnotationBase]] = {}
+        resolved_filename = filename
+
+        for ann in annotations:
+            track_id = ann.imported_id or "0"
+            if track_id not in grouped:
+                grouped[track_id] = []
+            grouped[track_id].append(ann)
+            if resolved_filename is None and ann.filename:
+                resolved_filename = ann.filename
+
+        tracks = [
+            IRVideoAnnotationTrack.from_annotations(track_annotations, track_id=track_id)
+            for track_id, track_annotations in grouped.items()
+        ]
+        return cls(tracks=tracks, filename=resolved_filename)
 
     def iter_track_annotations(self) -> Iterator[Tuple[IRVideoAnnotationTrack, IRVideoFrameAnnotationBase]]:
         for track in self.tracks:
