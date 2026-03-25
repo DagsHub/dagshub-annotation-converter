@@ -440,7 +440,7 @@ def export_to_mot(
     if context.video_width is None or context.video_height is None:
         raise ValueError(
             "Cannot determine frame dimensions for MOT export. "
-            "Provide context.image_width/context.image_height, use annotations with valid dimensions, "
+            "Provide context.video_width/context.video_height, use annotations with valid dimensions, "
             "or provide video_file for probing."
         )
 

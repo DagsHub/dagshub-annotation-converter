@@ -23,6 +23,7 @@ class IRVideoSequence(ParentModel):
 
         grouped: Dict[str, List[IRVideoFrameAnnotationBase]] = {}
         resolved_filename = filename
+        resolved_sequence_length = None
 
         for ann in annotations:
             track_id = ann.imported_id or "0"
@@ -31,12 +32,20 @@ class IRVideoSequence(ParentModel):
             grouped[track_id].append(ann)
             if resolved_filename is None and ann.filename:
                 resolved_filename = ann.filename
+            if resolved_sequence_length is None:
+                ann_sequence_length = getattr(ann, "sequence_length", None)
+                if ann_sequence_length:
+                    resolved_sequence_length = ann_sequence_length
 
         tracks = [
             IRVideoAnnotationTrack.from_annotations(track_annotations, track_id=track_id)
             for track_id, track_annotations in grouped.items()
         ]
-        return cls(tracks=tracks, filename=resolved_filename)
+        return cls(
+            tracks=tracks,
+            filename=resolved_filename,
+            sequence_length=resolved_sequence_length,
+        )
 
     def iter_track_annotations(self) -> Iterator[Tuple[IRVideoAnnotationTrack, IRVideoFrameAnnotationBase]]:
         for track in self.tracks:
@@ -53,6 +62,8 @@ class IRVideoSequence(ParentModel):
                     ann.video_width = self.video_width
                 if ann.video_height is None and self.video_height is not None:
                     ann.video_height = self.video_height
+                if getattr(ann, "sequence_length", None) is None and self.sequence_length is not None:
+                    ann.sequence_length = self.sequence_length
                 annotations.append(ann)
         return annotations
 

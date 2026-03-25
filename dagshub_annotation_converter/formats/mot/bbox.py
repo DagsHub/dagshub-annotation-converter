@@ -32,7 +32,15 @@ def import_bbox_from_line(line: str, context: MOTContext) -> Optional[Tuple[int,
     class_id = int(parts[7])
     visibility = float(parts[8])
 
-    category_name = context.categories[class_id].name
+    if frame_id <= 0:
+        raise ValueError(f"Invalid MOT frame_id {frame_id}: expected 1-based positive frame numbering")
+
+    try:
+        category_name = context.categories[class_id].name
+    except KeyError as exc:
+        raise ValueError(
+            f"Unknown MOT class_id {class_id} in frame {frame_id} track {track_id}: missing labels.txt mapping"
+        ) from exc
 
     if not_ignored == 0:
         logger.warning(f"Skipping ignored annotation in frame {frame_id} track {track_id} category {category_name}")

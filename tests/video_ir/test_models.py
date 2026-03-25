@@ -235,6 +235,30 @@ def test_track_denormalize_coordinates_accepts_explicit_dimensions(epsilon):
     assert math.isclose(first.height, 216, abs_tol=epsilon)
 
 
+def test_track_denormalize_ignores_non_positive_explicit_dimensions(epsilon):
+    ann = IRVideoBBoxFrameAnnotation(
+        frame_number=0,
+        left=0.1,
+        top=0.1,
+        width=0.2,
+        height=0.2,
+        video_width=1920,
+        video_height=1080,
+        categories={"person": 1.0},
+        coordinate_style=CoordinateStyle.NORMALIZED,
+    )
+
+    track = IRVideoAnnotationTrack.from_annotations([ann], track_id="1")
+    denormalized_track = track.denormalized(video_width=0, video_height=0)
+    first = denormalized_track.annotations[0]
+
+    assert first.coordinate_style == CoordinateStyle.DENORMALIZED
+    assert first.video_width == 1920
+    assert first.video_height == 1080
+    assert math.isclose(first.left, 192, abs_tol=epsilon)
+    assert math.isclose(first.top, 108, abs_tol=epsilon)
+
+
 def test_video_track_uses_track_level_identifier():
     ann = IRVideoBBoxFrameAnnotation(
         frame_number=3,
@@ -395,6 +419,23 @@ def test_video_sequence_from_annotations_requires_annotations():
         IRVideoSequence.from_annotations([])
 
 
+def test_video_sequence_from_annotations_recovers_sequence_length_from_flattened_rows():
+    ann = IRVideoBBoxFrameAnnotation(
+        frame_number=4,
+        left=10,
+        top=20,
+        width=30,
+        height=40,
+        categories={"person": 1.0},
+        coordinate_style=CoordinateStyle.DENORMALIZED,
+        sequence_length=40,
+    )
+
+    rebuilt = IRVideoSequence.from_annotations([ann])
+
+    assert rebuilt.sequence_length == 40
+
+
 def test_video_sequence_resolves_sequence_metadata():
     ann = IRVideoBBoxFrameAnnotation(
         frame_number=4,
@@ -422,6 +463,7 @@ def test_video_sequence_resolves_sequence_metadata():
     assert flattened[0].filename == "video.mp4"
     assert flattened[0].video_width == 1280
     assert flattened[0].video_height == 720
+    assert flattened[0].sequence_length == 40
 
 
 def test_video_sequence_groups_annotations_by_frame():

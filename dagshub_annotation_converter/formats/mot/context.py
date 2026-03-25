@@ -72,7 +72,7 @@ class MOTContext(ParentModel):
     @staticmethod
     def load_labels_from_string(content: str) -> Categories:
         categories = Categories(start_index=1)
-        for idx, line in enumerate(content.split(), start=1):
+        for idx, line in enumerate(content.splitlines(), start=1):
             name = line.strip()
             if name:
                 categories.add(name, idx)

@@ -43,8 +43,10 @@ class IRVideoAnnotationTrack(ParentModel):
         video_width: Optional[int] = None,
         video_height: Optional[int] = None,
     ) -> List[IRVideoFrameAnnotationBase]:
-        resolved_width = video_width if video_width is not None else self.resolved_video_width()
-        resolved_height = video_height if video_height is not None else self.resolved_video_height()
+        resolved_width = video_width if video_width is not None and video_width > 0 else self.resolved_video_width()
+        resolved_height = (
+            video_height if video_height is not None and video_height > 0 else self.resolved_video_height()
+        )
 
         copied_annotations: List[IRVideoFrameAnnotationBase] = []
         for ann in self.annotations:

@@ -87,6 +87,8 @@ class VideoRectangleAnnotation(AnnotationResultABC):
 
             extra = seq_item.__pydantic_extra__ or {}
             visibility = extra.get("visibility", 1.0)
+            if not (0.0 <= visibility <= 1.0):
+                raise ValueError(f"Visibility must be in [0, 1], got {visibility}")
 
             ann = IRVideoBBoxFrameAnnotation(
                 frame_number=seq_item.frame - frame_base,

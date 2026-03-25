@@ -92,7 +92,10 @@ def _count_frames_slow(video_path: Path) -> int:
     if result.returncode != 0:
         return 0
 
-    info = json.loads(result.stdout)
+    try:
+        info = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return 0
     streams = info.get("streams", [])
     if not streams:
         return 0
@@ -127,7 +130,10 @@ def _probe_ffprobe(video_path: Path) -> VideoProbeResult:
     if result.returncode != 0:
         raise ValueError(f"ffprobe failed on {video_path}")
 
-    info = json.loads(result.stdout)
+    try:
+        info = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"ffprobe returned invalid JSON for {video_path}") from exc
     streams = info.get("streams", [])
     if not streams:
         raise ValueError(f"No video streams found in {video_path}")

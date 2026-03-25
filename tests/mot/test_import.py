@@ -4,6 +4,8 @@ import tempfile
 from pathlib import Path
 from zipfile import ZipFile
 
+import pytest
+
 from dagshub_annotation_converter.converters.mot import (
     load_mot_from_dir,
     load_mot_from_file,
@@ -11,6 +13,7 @@ from dagshub_annotation_converter.converters.mot import (
     load_mot_from_zip,
 )
 from dagshub_annotation_converter.formats.mot.bbox import _export_bbox_to_line, import_bbox_from_line
+from dagshub_annotation_converter.formats.mot.context import MOTContext
 from dagshub_annotation_converter.ir.video import CoordinateStyle, IRVideoBBoxFrameAnnotation
 
 
@@ -80,6 +83,22 @@ class TestMOTLineImport:
         assert ann.frame_number == 10
         assert ann.visibility == 0.0
         assert "outside" not in ann.meta
+
+    def test_parse_line_rejects_non_positive_frame_id(self, mot_context):
+        with pytest.raises(ValueError, match="Invalid MOT frame_id 0"):
+            import_bbox_from_line("0,1,100,150,50,120,1,1,1.0", mot_context)
+
+    def test_parse_line_rejects_unknown_class_id_with_context(self, mot_context):
+        with pytest.raises(ValueError, match="Unknown MOT class_id 999 in frame 1 track 2"):
+            import_bbox_from_line("1,2,100,150,50,120,1,999,1.0", mot_context)
+
+
+class TestMOTContext:
+    def test_load_labels_preserves_names_with_spaces(self):
+        categories = MOTContext.load_labels_from_string("traffic light\nfire hydrant\n")
+
+        assert categories[1].name == "traffic light"
+        assert categories[2].name == "fire hydrant"
 
 
 class TestMOTFileImport:
