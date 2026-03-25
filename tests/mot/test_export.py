@@ -95,6 +95,84 @@ class TestMOTLineExport:
 
 
 class TestMOTFileExport:
+    def test_export_to_file_populates_categories_from_fresh_context(self, tmp_path):
+        context = MOTContext(frame_rate=30, video_width=1920, video_height=1080, sequence_name="test_sequence")
+        annotations = [
+            IRVideoBBoxFrameAnnotation(
+                imported_id="1",
+                frame_number=0,
+                keyframe=False,
+                left=100,
+                top=150,
+                width=50,
+                height=120,
+                video_width=1920,
+                video_height=1080,
+                categories={"Man": 1.0},
+                coordinate_style=CoordinateStyle.DENORMALIZED,
+            )
+        ]
+
+        output_path = tmp_path / "gt.txt"
+        export_to_mot(sequence_from_annotations(annotations), context, output_path)
+
+        line = output_path.read_text().strip()
+        assert line
+        assert line.split(",")[7] == "1"
+        assert context.categories["Man"].id == 1
+
+    def test_export_to_file_populates_multiple_categories_in_stable_order(self, tmp_path):
+        context = MOTContext(frame_rate=30, video_width=1920, video_height=1080, sequence_name="test_sequence")
+        annotations = [
+            IRVideoBBoxFrameAnnotation(
+                imported_id="1",
+                frame_number=0,
+                keyframe=False,
+                left=100,
+                top=150,
+                width=50,
+                height=120,
+                video_width=1920,
+                video_height=1080,
+                categories={"Man": 1.0},
+                coordinate_style=CoordinateStyle.DENORMALIZED,
+            ),
+            IRVideoBBoxFrameAnnotation(
+                imported_id="2",
+                frame_number=0,
+                keyframe=False,
+                left=500,
+                top=200,
+                width=150,
+                height=100,
+                video_width=1920,
+                video_height=1080,
+                categories={"Woman": 1.0},
+                coordinate_style=CoordinateStyle.DENORMALIZED,
+            ),
+            IRVideoBBoxFrameAnnotation(
+                imported_id="1",
+                frame_number=1,
+                keyframe=False,
+                left=110,
+                top=152,
+                width=50,
+                height=120,
+                video_width=1920,
+                video_height=1080,
+                categories={"Man": 1.0},
+                coordinate_style=CoordinateStyle.DENORMALIZED,
+            ),
+        ]
+
+        output_path = tmp_path / "gt.txt"
+        export_to_mot(sequence_from_annotations(annotations), context, output_path)
+
+        lines = output_path.read_text().splitlines()
+        assert [line.split(",")[7] for line in lines] == ["1", "2", "1"]
+        assert context.categories["Man"].id == 1
+        assert context.categories["Woman"].id == 2
+
     def test_export_to_file(self, mot_context):
         annotations = [
             IRVideoBBoxFrameAnnotation(
@@ -406,7 +484,6 @@ class TestMOTFileExport:
 
     def test_export_to_dir_skips_seqinfo_by_default(self, tmp_path):
         context = MOTContext(frame_rate=30, video_width=1280, video_height=720, sequence_name="test_sequence")
-        context.categories.add("person", 1)
         annotations = [
             IRVideoBBoxFrameAnnotation(
                 imported_id="1",
@@ -417,7 +494,7 @@ class TestMOTFileExport:
                 height=120,
                 video_width=1280,
                 video_height=720,
-                categories={"person": 1.0},
+                categories={"Man": 1.0},
                 coordinate_style=CoordinateStyle.DENORMALIZED,
             )
         ]
@@ -427,7 +504,49 @@ class TestMOTFileExport:
 
         assert (out_dir / "gt" / "gt.txt").exists()
         assert (out_dir / "gt" / "labels.txt").exists()
+        assert (out_dir / "gt" / "labels.txt").read_text() == "Man\n"
         assert not (out_dir / "seqinfo.ini").exists()
+
+    def test_export_sequences_to_dirs_populates_categories_for_fresh_context(self, tmp_path):
+        context = MOTContext(frame_rate=30, video_width=1920, video_height=1080, sequence_name="default")
+        ann_a = IRVideoBBoxFrameAnnotation(
+            imported_id="1",
+            frame_number=0,
+            left=100,
+            top=150,
+            width=50,
+            height=120,
+            video_width=1920,
+            video_height=1080,
+            categories={"Man": 1.0},
+            coordinate_style=CoordinateStyle.DENORMALIZED,
+            filename="earth-space-small.mp4",
+        )
+        ann_b = IRVideoBBoxFrameAnnotation(
+            imported_id="2",
+            frame_number=0,
+            left=500,
+            top=200,
+            width=150,
+            height=100,
+            video_width=1920,
+            video_height=1080,
+            categories={"Woman": 1.0},
+            coordinate_style=CoordinateStyle.DENORMALIZED,
+            filename="jelly.mp4",
+        )
+
+        outputs = export_mot_sequences_to_dirs(
+            [sequence_from_annotations([ann_a]), sequence_from_annotations([ann_b])],
+            context,
+            tmp_path,
+        )
+
+        assert set(outputs.keys()) == {"earth-space-small.mp4", "jelly.mp4"}
+        with ZipFile(tmp_path / "earth-space-small.mp4.zip") as z:
+            assert z.read("gt/labels.txt").decode("utf-8") == "Man\n"
+        with ZipFile(tmp_path / "jelly.mp4.zip") as z:
+            assert z.read("gt/labels.txt").decode("utf-8") == "Woman\n"
 
     def test_export_to_dir_uses_probed_frame_count_for_seqinfo(self, tmp_path, monkeypatch):
         context = MOTContext(frame_rate=30, video_width=None, video_height=None, sequence_name="test_sequence")

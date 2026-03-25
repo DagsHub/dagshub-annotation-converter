@@ -464,6 +464,9 @@ def export_to_mot(
         exported_seq_length = max(ann.frame_number for _, ann in sorted_anns) + 1
         if context.sequence_length is None or context.sequence_length < exported_seq_length:
             context.sequence_length = exported_seq_length
+    for _, ann in sorted_anns:
+        category_name = ann.ensure_has_one_category()
+        context.categories.get_or_create(category_name)
     lines = [_export_bbox_to_line(ann, track_id, context) for track_id, ann in sorted_anns]
 
     with open(output_path, "w") as f:
