@@ -56,7 +56,7 @@ def _load_coco_dict(coco: Dict[str, Any]) -> Tuple[Dict[str, List[IRImageAnnotat
         image = image_lookup.get(image_id)
         if image is None:
             logger.warning(
-                "Skipping COCO annotation id=%s with unknown image_id=%s", raw_annotation.get("id"), image_id
+                f"Skipping COCO annotation id={raw_annotation.get("id")} with unknown image_id={image_id}"
             )
             continue
 
@@ -86,7 +86,7 @@ def load_coco_from_json_string(json_str: str) -> Tuple[Dict[str, List[IRImageAnn
 
 def _build_coco_dict(
     annotations: Sequence[IRImageAnnotationBase],
-    context: Optional[CocoContext] = None,
+    context: CocoContext = None,
 ) -> Dict[str, Any]:
     export_context = context.model_copy(deep=True) if context is not None else CocoContext()
     grouped = group_annotations_by_filename(annotations)
@@ -107,8 +107,8 @@ def _build_coco_dict(
             }
         )
 
-        segmentation_groups: List[List[IRSegmentationImageAnnotation]] = []
-        segmentation_group_lookup: Dict[Tuple[str, str], int] = {}
+        ungrouped_segmentations: List[List[IRSegmentationImageAnnotation]] = []
+        segmentation_groups: Dict[Tuple[str, str], List[IRSegmentationImageAnnotation]] = {}
 
         for ann in anns:
             if isinstance(ann, IRBBoxImageAnnotation):
@@ -118,25 +118,19 @@ def _build_coco_dict(
 
             if isinstance(ann, IRSegmentationImageAnnotation):
                 if ann.imported_id is None:
-                    segmentation_groups.append([ann])
+                    ungrouped_segmentations.append([ann])
                     continue
 
                 category_name = ann.ensure_has_one_category()
                 key = (ann.imported_id, category_name)
-                if key not in segmentation_group_lookup:
-                    segmentation_group_lookup[key] = len(segmentation_groups)
-                    segmentation_groups.append([ann])
-                else:
-                    segmentation_groups[segmentation_group_lookup[key]].append(ann)
+                segmentation_groups.setdefault(key, []).append(ann)
                 continue
 
             logger.warning(
-                "Skipping unsupported annotation type for COCO export: %s (file=%s)",
-                type(ann).__name__,
-                filename,
+                f"Skipping unsupported annotation type for COCO export: {type(ann).__name__} (file={filename})",
             )
 
-        for group in segmentation_groups:
+        for group in [*ungrouped_segmentations, *segmentation_groups.values()]:
             group_imported_id = group[0].imported_id
             ann_id, annotation_id = _consume_annotation_id(group_imported_id, used_annotation_ids, annotation_id)
             coco_annotations.append(export_segmentation_group(group, export_context, image_id, ann_id))
@@ -153,7 +147,7 @@ def _build_coco_dict(
 def export_to_coco_file(
     annotations: Sequence[IRImageAnnotationBase],
     output_path: Union[str, Path],
-    context: Optional[CocoContext] = None,
+    context: CocoContext = None,
 ) -> Path:
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)

@@ -12,6 +12,9 @@ logger = logging.getLogger(__name__)
 
 
 def _polygon_area(points: List[IRSegmentationPoint]) -> float:
+    """
+    Calculates the area of a polygon using the Shoelace formula
+    """
     if len(points) < 3:
         return 0.0
     total = 0.0
@@ -28,8 +31,8 @@ def import_segmentation(
 
     if not isinstance(segmentation, list):
         logger.warning(
-            "Skipping non-polygon COCO segmentation annotation id=%s (RLE segmentation is not supported)",
-            annotation.get("id"),
+            f"Skipping non-polygon COCO segmentation annotation id={annotation.get("id")} "
+            f"(RLE segmentation is not supported)"
         )
         return []
 
@@ -41,8 +44,7 @@ def import_segmentation(
     for polygon in segmentation:
         if not isinstance(polygon, list) or len(polygon) < 6 or len(polygon) % 2 != 0:
             logger.warning(
-                "Skipping invalid polygon in COCO segmentation annotation id=%s",
-                annotation.get("id"),
+                f"Skipping invalid polygon in COCO segmentation annotation id={annotation.get("id")}"
             )
             continue
 

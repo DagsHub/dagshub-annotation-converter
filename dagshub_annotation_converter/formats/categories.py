@@ -1,5 +1,7 @@
 from typing import Dict, List, Optional, Union
 
+from pydantic import Field, PrivateAttr, model_validator
+
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 
@@ -12,10 +14,15 @@ class Category(ParentModel):
 
 
 class Categories(ParentModel):
-    categories: List[Category] = []
+    categories: List[Category] = Field(default_factory=list)
     start_index: int = 0
-    _id_lookup: Dict[int, Category] = {}
-    _name_lookup: Dict[str, Category] = {}
+    _id_lookup: Dict[int, Category] = PrivateAttr(default_factory=dict)
+    _name_lookup: Dict[str, Category] = PrivateAttr(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _initialize_lookups(self) -> "Categories":
+        self.regenerate_dicts()
+        return self
 
     def __getitem__(self, item: Union[int, str]) -> Category:
         if isinstance(item, int):
