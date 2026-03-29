@@ -56,7 +56,7 @@ def _load_coco_dict(coco: Dict[str, Any]) -> Tuple[Dict[str, List[IRImageAnnotat
         image = image_lookup.get(image_id)
         if image is None:
             logger.warning(
-                f"Skipping COCO annotation id={raw_annotation.get("id")} with unknown image_id={image_id}"
+                f"Skipping COCO annotation id={raw_annotation.get('id')} with unknown image_id={image_id}"
             )
             continue
 
