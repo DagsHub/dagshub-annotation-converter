@@ -31,7 +31,7 @@ def import_segmentation(
 
     if not isinstance(segmentation, list):
         logger.warning(
-            f"Skipping non-polygon COCO segmentation annotation id={annotation.get("id")} "
+            f"Skipping non-polygon COCO segmentation annotation id={annotation.get('id')} "
             f"(RLE segmentation is not supported)"
         )
         return []
@@ -44,7 +44,7 @@ def import_segmentation(
     for polygon in segmentation:
         if not isinstance(polygon, list) or len(polygon) < 6 or len(polygon) % 2 != 0:
             logger.warning(
-                f"Skipping invalid polygon in COCO segmentation annotation id={annotation.get("id")}"
+                f"Skipping invalid polygon in COCO segmentation annotation id={annotation.get('id')}"
             )
             continue
 
