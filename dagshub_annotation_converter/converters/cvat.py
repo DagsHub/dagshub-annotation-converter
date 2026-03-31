@@ -77,6 +77,7 @@ def _maybe_group_poses(annotations: List[IRImageAnnotationBase]) -> List[IRImage
         bbox_count = sum((isinstance(ann, IRBBoxImageAnnotation) for ann in group_annotations))
         point_count = sum((isinstance(ann, IRPoseImageAnnotation) for ann in group_annotations))
 
+        # If we have more than one bbox or point annotation in the group, don't bother trying to group
         if bbox_count != 1 or point_count != 1:
             res.extend(group_annotations)
             continue
@@ -95,10 +96,12 @@ def _maybe_group_poses(annotations: List[IRImageAnnotationBase]) -> List[IRImage
 
         assert bbox_ann is not None and pose_ann is not None
 
+        # If there's somehow multiple labels (shouldn't be happening in CVAT), don't group
         if not (bbox_ann.has_one_category() and pose_ann.has_one_category()):
             res.extend(group_annotations)
             continue
 
+        # Different categories - don't group
         if bbox_ann.ensure_has_one_category() != pose_ann.ensure_has_one_category():
             res.extend(group_annotations)
             continue
@@ -136,7 +139,7 @@ def _detect_cvat_mode(root_elem: lxml.etree.ElementBase) -> str:
     return "image"
 
 
-def _parse_image_mode(root_elem: lxml.etree.ElementBase) -> CVATImageAnnotations:
+def _parse_cvat_images(root_elem: lxml.etree.ElementBase) -> CVATImageAnnotations:
     annotations: CVATImageAnnotations = {}
     for image_node in root_elem.xpath("//image"):
         image_info = parse_image_tag(image_node)
@@ -144,7 +147,7 @@ def _parse_image_mode(root_elem: lxml.etree.ElementBase) -> CVATImageAnnotations
     return annotations
 
 
-def _parse_video_mode(
+def _parse_cvat_videos(
     root_elem: lxml.etree.ElementBase,
     image_width: Optional[int],
     image_height: Optional[int],
@@ -169,9 +172,9 @@ def _parse_video_mode(
         if image_height is None:
             missing.append("image_height")
         raise ValueError(
-            f"Cannot determine frame dimensions for CVAT video annotations. "
-            f"Missing: {', '.join(missing)}. "
-            f"Provide {', '.join(missing)} explicitly."
+            f"Cannot determine frame dimensions for CVAT video annotations.\n"
+            f"Missing: {', '.join(missing)}.\n"
+            f"Pass {', '.join(missing)} to load_cvat_from_xml_bytes / load_cvat_from_xml_file / load_cvat_from_zip."
         )
 
     tracks: List[IRVideoAnnotationTrack] = []
@@ -197,9 +200,9 @@ def load_cvat_from_xml_bytes(
     mode = _detect_cvat_mode(root_elem)
 
     if mode == "video":
-        return _parse_video_mode(root_elem, image_width, image_height)
+        return _parse_cvat_videos(root_elem, image_width, image_height)
     else:
-        return _parse_image_mode(root_elem)
+        return _parse_cvat_images(root_elem)
 
 
 def load_cvat_from_xml_file(
@@ -228,17 +231,23 @@ def load_cvat_from_fs(
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
 ) -> Dict[str, CVATAnnotations]:
-    """Load CVAT annotations from all XML/ZIP files under a directory."""
+    """Load CVAT annotations from all XML/ZIP files in a directory and all subfolders."""
     import_dir = Path(import_dir)
     results: Dict[str, CVATAnnotations] = {}
 
     for xml_path in sorted(import_dir.rglob("*.xml")):
         rel = str(xml_path.relative_to(import_dir))
-        results[rel] = load_cvat_from_xml_file(xml_path, image_width, image_height)
+        try:
+            results[rel] = load_cvat_from_xml_file(xml_path, image_width, image_height)
+        except Exception as e:
+            logger.warning("Skipping %s: failed to parse as CVAT XML: %s", rel, e)
 
     for zip_path in sorted(import_dir.rglob("*.zip")):
         rel = str(zip_path.relative_to(import_dir))
-        results[rel] = load_cvat_from_zip(zip_path, image_width, image_height)
+        try:
+            results[rel] = load_cvat_from_zip(zip_path, image_width, image_height)
+        except Exception as e:
+            logger.warning("Skipping %s: failed to parse as CVAT ZIP: %s", rel, e)
 
     return results
 
@@ -254,17 +263,11 @@ def export_cvat_video_to_xml_bytes(
     """Export video annotations to CVAT XML bytes, resolving dimensions from args/sequence/video_file."""
     resolved_video_name = _resolve_video_name_for_export(sequence, video_name, video_file)
 
-    resolved_width = image_width if image_width is not None and image_width > 0 else None
-    resolved_height = image_height if image_height is not None and image_height > 0 else None
+    resolved_width = image_width if image_width is not None and image_width > 0 else sequence.resolved_video_width()
+    resolved_height = image_height if image_height is not None and image_height > 0 else sequence.resolved_video_height()
 
-    if resolved_width is None or resolved_height is None:
-        for _, ann in sequence.iter_track_annotations():
-            if resolved_width is None and ann.video_width is not None and ann.video_width > 0:
-                resolved_width = ann.video_width
-            if resolved_height is None and ann.video_height is not None and ann.video_height > 0:
-                resolved_height = ann.video_height
-            if resolved_width is not None and resolved_height is not None:
-                break
+    if seq_length is None:
+        seq_length = sequence.resolved_sequence_length()
 
     if (resolved_width is None or resolved_height is None) and video_file is not None:
         try:
@@ -291,9 +294,6 @@ def export_cvat_video_to_xml_bytes(
             "or provide video_file for probing."
         )
 
-    if seq_length is None:
-        seq_length = sequence.resolved_sequence_length()
-
     prepared_sequence = sequence.model_copy(deep=True)
     prepared_sequence.video_width = resolved_width
     prepared_sequence.video_height = resolved_height
@@ -301,9 +301,9 @@ def export_cvat_video_to_xml_bytes(
         prepared_sequence.sequence_length = seq_length
 
     for _, ann in prepared_sequence.iter_track_annotations():
-        if ann.video_width is None or ann.video_width <= 0:
+        if ann.video_width is None:
             ann.video_width = resolved_width
-        if ann.video_height is None or ann.video_height <= 0:
+        if ann.video_height is None:
             ann.video_height = resolved_height
 
     return cvat_video_xml_to_string(
@@ -414,14 +414,18 @@ def export_cvat_videos_to_zips(
         video_name = Path(sequence.filename).name
         zip_name = f"{video_name}.zip"
         output_path = output_dir / zip_name
-        export_cvat_video_to_zip(
-            sequence,
-            output_path,
-            video_name=video_name,
-            image_width=image_width,
-            image_height=image_height,
-            seq_length=seq_length,
-            video_file=resolve_video_file(video_name),
-        )
+        try:
+            export_cvat_video_to_zip(
+                sequence,
+                output_path,
+                video_name=video_name,
+                image_width=image_width,
+                image_height=image_height,
+                seq_length=seq_length,
+                video_file=resolve_video_file(video_name),
+            )
+        except Exception:
+            logger.warning("Failed to export sequence %s", sequence.filename)
+            raise
         outputs.append(output_path)
     return outputs

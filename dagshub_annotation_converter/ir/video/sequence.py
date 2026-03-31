@@ -1,8 +1,11 @@
+import logging
 from typing import Dict, Iterator, List, Optional, Sequence, Tuple
 
 from dagshub_annotation_converter.ir.video.annotations.base import IRVideoFrameAnnotationBase
 from dagshub_annotation_converter.ir.video.track import IRVideoAnnotationTrack
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
+
+logger = logging.getLogger(__name__)
 
 
 class IRVideoSequence(ParentModel):
@@ -22,20 +25,31 @@ class IRVideoSequence(ParentModel):
             raise ValueError("Cannot create IRVideoSequence from empty annotations")
 
         grouped: Dict[str, List[IRVideoFrameAnnotationBase]] = {}
-        resolved_filename = filename
-        resolved_sequence_length = None
+        resolved_filename: Optional[str] = filename
+        resolved_sequence_length: Optional[int] = None
 
+        seen_filenames = set()
         for ann in annotations:
             track_id = ann.imported_id or "0"
             if track_id not in grouped:
                 grouped[track_id] = []
             grouped[track_id].append(ann)
-            if resolved_filename is None and ann.filename:
-                resolved_filename = ann.filename
+            if ann.filename:
+                seen_filenames.add(ann.filename)
+                if resolved_filename is None:
+                    resolved_filename = ann.filename
             if resolved_sequence_length is None:
                 ann_sequence_length = getattr(ann, "sequence_length", None)
                 if ann_sequence_length:
                     resolved_sequence_length = ann_sequence_length
+
+        if len(seen_filenames) > 1:
+            logger.warning(
+                "from_annotations received annotations with multiple filenames: %s. "
+                "Using %r as the sequence filename.",
+                seen_filenames,
+                resolved_filename,
+            )
 
         tracks = [
             IRVideoAnnotationTrack.from_annotations(track_annotations, track_id=track_id)
@@ -80,7 +94,8 @@ class IRVideoSequence(ParentModel):
             return self.video_width
         for _, ann in self.iter_track_annotations():
             if ann.video_width is not None and ann.video_width > 0:
-                return ann.video_width
+                self.video_width = ann.video_width
+                return self.video_width
         return None
 
     def resolved_video_height(self) -> Optional[int]:
@@ -88,7 +103,8 @@ class IRVideoSequence(ParentModel):
             return self.video_height
         for _, ann in self.iter_track_annotations():
             if ann.video_height is not None and ann.video_height > 0:
-                return ann.video_height
+                self.video_height = ann.video_height
+                return self.video_height
         return None
 
     def resolved_sequence_length(self) -> Optional[int]:
@@ -99,4 +115,6 @@ class IRVideoSequence(ParentModel):
             max_frame_number = ann.frame_number if max_frame_number is None else max(max_frame_number, ann.frame_number)
         if max_frame_number is None:
             return None
-        return max_frame_number + 1
+        # frame_number is a zero-based index, so total count of frames is one higher
+        self.sequence_length = max_frame_number + 1
+        return self.sequence_length

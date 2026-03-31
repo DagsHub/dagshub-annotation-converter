@@ -6,11 +6,8 @@ from dagshub_annotation_converter.formats.label_studio.videorectangle import (
 from dagshub_annotation_converter.formats.label_studio.task import (
     LabelStudioTask,
     AnnotationsContainer,
-    task_lookup,
 )
 from dagshub_annotation_converter.ir.video import IRVideoSequence
-
-task_lookup["videorectangle"] = VideoRectangleAnnotation
 
 
 def _resolve_video_path_for_export(sequence: IRVideoSequence, video_path: Optional[str]) -> str:

@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from lxml import etree
 from lxml.etree import ElementBase
@@ -116,11 +116,11 @@ def parse_video_track(
     return IRVideoAnnotationTrack.from_annotations(canonical_annotations, track_id=track_id)
 
 
-def parse_video_meta(meta_elem: ElementBase) -> tuple:
+def parse_video_meta(meta_elem: ElementBase) -> Tuple[Optional[int], Optional[int], Optional[int]]:
     """Parse CVAT video XML meta element for frame dimensions and sequence length."""
-    width = None
-    height = None
-    seq_length = None
+    width: Optional[int] = None
+    height: Optional[int] = None
+    seq_length: Optional[int] = None
 
     task_elem = meta_elem.find(".//task")
     if task_elem is not None:
