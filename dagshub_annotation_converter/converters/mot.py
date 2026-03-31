@@ -163,7 +163,8 @@ def _interpolate_track_for_mot(
         video_height=context.video_height,
     )
     for ann in sorted(denormalized_track.annotations, key=lambda a: a.frame_number):
-        by_frame[ann.frame_number] = ann
+        if isinstance(ann, IRVideoBBoxFrameAnnotation):
+            by_frame[ann.frame_number] = ann
 
     ordered = [by_frame[frame] for frame in sorted(by_frame)]
     dense: List[IRVideoBBoxFrameAnnotation] = []

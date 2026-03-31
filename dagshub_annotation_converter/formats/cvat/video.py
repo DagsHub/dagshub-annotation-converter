@@ -158,9 +158,9 @@ def export_video_track_to_xml(
     track_elem.set("id", track.track_id)
     track_elem.set("label", label)
     track_elem.set("source", "manual")
-
-    sorted_anns = sorted(track.annotations, key=lambda a: a.frame_number)
-
+    sorted_anns = sorted(
+        (ann for ann in track.annotations if isinstance(ann, IRVideoBBoxFrameAnnotation)), key=lambda a: a.frame_number
+    )
     for idx, ann in enumerate(sorted_anns):
         xtl = ann.left
         ytl = ann.top
