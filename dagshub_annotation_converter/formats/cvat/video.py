@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple, Set
 
 from lxml import etree
 from lxml.etree import ElementBase

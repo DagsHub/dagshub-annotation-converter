@@ -264,7 +264,8 @@ def export_cvat_video_to_xml_bytes(
     resolved_video_name = _resolve_video_name_for_export(sequence, video_name, video_file)
 
     resolved_width = image_width if image_width is not None and image_width > 0 else sequence.resolved_video_width()
-    resolved_height = image_height if image_height is not None and image_height > 0 else sequence.resolved_video_height()
+    resolved_height = image_height if image_height is not None and image_height > 0 \
+        else sequence.resolved_video_height()
 
     if seq_length is None:
         seq_length = sequence.resolved_sequence_length()
