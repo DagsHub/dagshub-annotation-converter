@@ -167,7 +167,7 @@ def export_video_track_to_xml(
         xbr = ann.left + ann.width
         ybr = ann.top + ann.height
 
-        outside = 1 if ann.visibility <= 0.0 else 0
+        outside = 1 if ann.visibility == 0.0 else 0
         occluded = 0
         if not outside and ann.visibility < 1.0:
             occluded = 1
@@ -187,8 +187,7 @@ def export_video_track_to_xml(
 
         boundary_frame = ann.frame_number + 1
         max_frame = seq_length - 1 if isinstance(seq_length, int) and seq_length > 0 else None
-
-        has_future_annotation = any(next_ann.frame_number > ann.frame_number for next_ann in sorted_anns[idx + 1 :])
+        has_future_annotation = idx < len(sorted_anns) + 1
         has_known_room_for_boundary = max_frame is not None and boundary_frame <= max_frame
         should_add_stop_boundary = (
             not ann.keyframe and outside == 0 and (has_future_annotation or has_known_room_for_boundary)
@@ -252,10 +251,10 @@ def build_cvat_video_xml(
     height_elem = etree.SubElement(orig_size_elem, "height")
     height_elem.text = str(image_height)
 
-    labels: Dict[str, None] = {}
+    labels: Set[str] = set()
     for _, ann in sequence.iter_track_annotations():
         label = ann.ensure_has_one_category()
-        labels[label] = None
+        labels.add(label)
 
     labels_elem = etree.SubElement(task_elem, "labels")
     for label_name in labels:

@@ -63,13 +63,10 @@ def ls_video_task_to_video_ir(task: LabelStudioTask) -> IRVideoSequence:
         for result in container.result:
             if isinstance(result, VideoRectangleAnnotation):
                 track = result.to_ir_track()
-            elif hasattr(result, "type") and result.type == "videorectangle":
-                video_rect = VideoRectangleAnnotation.model_validate(result.model_dump())
-                track = video_rect.to_ir_track()
             else:
                 continue
 
-            if result.value.framesCount is not None and result.value.framesCount > 0:
+            if result.value.framesCount is not None:
                 if sequence_length is None:
                     sequence_length = result.value.framesCount
                 else:

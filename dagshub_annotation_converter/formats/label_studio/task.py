@@ -127,7 +127,7 @@ class LabelStudioTask(ParentModel):
         did_probe = False
         for anns in self.annotations:
             for ann in anns.result:
-                if getattr(ann, "type", None) == "videorectangle":
+                if isintance(ann, VideoRectangleAnnotation):
                     if (
                         not did_probe
                         and video_file is not None
