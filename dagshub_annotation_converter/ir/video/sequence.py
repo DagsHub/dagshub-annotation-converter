@@ -107,6 +107,23 @@ class IRVideoSequence(ParentModel):
                 return self.video_height
         return None
 
+    def fill_annotation_dimensions(
+        self,
+        video_width: Optional[int] = None,
+        video_height: Optional[int] = None,
+    ) -> None:
+        """Set video_width/video_height on all annotations that are missing them.
+
+        Falls back to the sequence's own dimensions if the explicit args are None.
+        """
+        width = video_width if video_width is not None else self.video_width
+        height = video_height if video_height is not None else self.video_height
+        for _, ann in self.iter_track_annotations():
+            if ann.video_width is None and width is not None:
+                ann.video_width = width
+            if ann.video_height is None and height is not None:
+                ann.video_height = height
+
     def resolved_sequence_length(self) -> Optional[int]:
         if self.sequence_length is not None and self.sequence_length > 0:
             return self.sequence_length

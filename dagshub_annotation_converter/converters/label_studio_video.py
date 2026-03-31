@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from dagshub_annotation_converter.formats.label_studio.videorectangle import (
     VideoRectangleAnnotation,
@@ -21,17 +21,18 @@ def _resolve_video_path_for_export(sequence: IRVideoSequence, video_path: Option
     )
 
 
-def video_ir_to_ls_video_tasks(
+def video_ir_to_ls_video_task(
     sequence: IRVideoSequence,
     video_path: Optional[str] = None,
-) -> List[LabelStudioTask]:
+) -> Optional[LabelStudioTask]:
     """
-    Convert Video IR annotations to Label Studio Video tasks.
+    Convert Video IR annotations to a Label Studio Video task.
 
     Creates one VideoRectangle per track and combines them into a single task.
+    Returns None if the sequence has no tracks.
     """
     if not sequence.tracks:
-        return []
+        return None
 
     video_rectangles = [
         VideoRectangleAnnotation.from_ir_track(track, frames_count=sequence.sequence_length)
@@ -43,14 +44,14 @@ def video_ir_to_ls_video_tasks(
     task = LabelStudioTask(
         data={"video": resolved_video_path},
     )
-    container = AnnotationsContainer.model_construct(
+    container = AnnotationsContainer(
         completed_by=None,
         result=video_rectangles,
         ground_truth=False,
     )
     task.annotations = [container]
 
-    return [task]
+    return task
 
 
 def ls_video_task_to_video_ir(task: LabelStudioTask) -> IRVideoSequence:
@@ -87,10 +88,10 @@ def video_ir_to_ls_video_json(
     sequence: IRVideoSequence,
     video_path: Optional[str] = None,
 ) -> str:
-    tasks = video_ir_to_ls_video_tasks(sequence, video_path)
-    if not tasks:
+    task = video_ir_to_ls_video_task(sequence, video_path)
+    if task is None:
         return "[]"
-    return tasks[0].model_dump_json(indent=2)
+    return task.model_dump_json(indent=2)
 
 
 def ls_video_json_to_video_ir(json_str: str) -> IRVideoSequence:

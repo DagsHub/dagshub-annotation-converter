@@ -406,14 +406,10 @@ def export_to_mot(
     video_file: Optional[Union[str, Path]] = None,
 ) -> Path:
     """Export annotations to MOT gt.txt format, resolving missing dimensions from annotations/video_file."""
-    if context.video_width is None or context.video_height is None:
-        for _, ann in sequence.iter_track_annotations():
-            if context.video_width is None and ann.video_width is not None and ann.video_width > 0:
-                context.video_width = ann.video_width
-            if context.video_height is None and ann.video_height is not None and ann.video_height > 0:
-                context.video_height = ann.video_height
-            if context.video_width is not None and context.video_height is not None:
-                break
+    if context.video_width is None:
+        context.video_width = sequence.resolved_video_width()
+    if context.video_height is None:
+        context.video_height = sequence.resolved_video_height()
 
     if (context.video_width is None or context.video_height is None) and video_file is not None:
         try:

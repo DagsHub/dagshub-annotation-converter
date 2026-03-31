@@ -300,11 +300,7 @@ def export_cvat_video_to_xml_bytes(
     if seq_length is not None and seq_length > 0:
         prepared_sequence.sequence_length = seq_length
 
-    for _, ann in prepared_sequence.iter_track_annotations():
-        if ann.video_width is None:
-            ann.video_width = resolved_width
-        if ann.video_height is None:
-            ann.video_height = resolved_height
+    prepared_sequence.fill_annotation_dimensions(resolved_width, resolved_height)
 
     return cvat_video_xml_to_string(
         prepared_sequence,
