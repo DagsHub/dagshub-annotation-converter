@@ -87,7 +87,7 @@ def video_ir_to_ls_video_json(
 ) -> str:
     task = video_ir_to_ls_video_task(sequence, video_path)
     if task is None:
-        return "[]"
+        return "{}"
     return task.model_dump_json(indent=2)
 
 

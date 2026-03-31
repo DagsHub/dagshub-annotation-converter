@@ -57,26 +57,8 @@ def load_mot_from_file(
 ) -> IRVideoSequence:
     """Load MOT annotations from a gt.txt file."""
     gt_path = Path(gt_path)
-    tracks: Dict[int, List[IRVideoBBoxFrameAnnotation]] = defaultdict(list)
     with open(gt_path, "r") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            parsed = import_bbox_from_line(line, context)
-            if parsed is None:
-                continue
-            track_id, ann = parsed
-            tracks[track_id].append(ann)
-    return IRVideoSequence(
-        tracks=[
-            IRVideoAnnotationTrack.from_annotations(track_annotations, track_id=str(track_id))
-            for track_id, track_annotations in sorted(tracks.items())
-        ],
-        sequence_length=context.sequence_length,
-        video_width=context.video_width,
-        video_height=context.video_height,
-    )
+        return _load_mot_from_gt_content(f.read(), context)
 
 
 def _try_fill_dimensions_from_video(
@@ -88,8 +70,16 @@ def _try_fill_dimensions_from_video(
 
     Looks for a video at *video_file* (if given), then falls back to a
     sibling of *source_path* with the same stem and a common video extension.
+    When *source_path* is a directory (e.g. the MOT sequence folder ``/data/seq1``),
+    the sibling video is expected at the same level as that directory
+    (e.g. ``/data/seq1.mp4``), which is the standard MOT dataset layout.
     """
-    if context.video_width is not None and context.video_height is not None:
+    if (
+        context.video_width is not None
+        and context.video_height is not None
+        and context.frame_rate is not None
+        and context.sequence_length is not None
+    ):
         return
 
     candidates: List[Path] = []
@@ -97,8 +87,8 @@ def _try_fill_dimensions_from_video(
         vf = Path(video_file)
         if vf.is_file():
             candidates.append(vf)
-        else:
-            sibling = source_path.parent / vf.name if not vf.is_absolute() else vf
+        elif not vf.is_absolute():
+            sibling = source_path.parent / vf.name
             if sibling.is_file():
                 candidates.append(sibling)
 
@@ -124,7 +114,7 @@ def _try_fill_dimensions_from_video(
             logger.info(f"Inferred dimensions {width}x{height} from {candidate}")
             return
         except (ImportError, ValueError) as e:
-            logger.debug(f"Could not read video {candidate}: {e}")
+            logger.warning(f"Could not read video {candidate}: {e}")
 
 
 def _validate_context_dimensions(context: MOTContext, source: str) -> None:
@@ -140,13 +130,6 @@ def _validate_context_dimensions(context: MOTContext, source: str) -> None:
             f"Provide {', '.join(missing)} explicitly, or place a video file "
             f"with the same name next to the annotation source."
         )
-
-def _is_visible(ann: IRVideoBBoxFrameAnnotation) -> bool:
-    return ann.visibility > 0.0
-
-
-def _interpolation_enabled(ann: IRVideoBBoxFrameAnnotation) -> bool:
-    return bool(ann.keyframe)
 
 
 def _interpolate_track_for_mot(
@@ -170,7 +153,7 @@ def _interpolate_track_for_mot(
     dense: List[IRVideoBBoxFrameAnnotation] = []
 
     for idx, curr in enumerate(ordered):
-        curr_visible = _is_visible(curr)
+        curr_visible = curr.is_visible
         dense.append(curr)
 
         if idx == len(ordered) - 1:
@@ -178,7 +161,7 @@ def _interpolate_track_for_mot(
 
         nxt = ordered[idx + 1]
         gap = nxt.frame_number - curr.frame_number - 1
-        if gap <= 0 or not curr_visible or not _interpolation_enabled(curr):
+        if gap <= 0 or not curr_visible or not curr.interpolation_enabled:
             continue
 
         for step in range(1, gap + 1):
@@ -188,7 +171,7 @@ def _interpolate_track_for_mot(
 
     if end_frame is not None:
         last = ordered[-1]
-        if _is_visible(last) and _interpolation_enabled(last) and last.frame_number < end_frame:
+        if last.is_visible and last.interpolation_enabled and last.frame_number < end_frame:
             for frame_number in range(last.frame_number + 1, end_frame + 1):
                 extrapolated = last.model_copy(deep=True)
                 extrapolated.frame_number = frame_number
@@ -263,7 +246,7 @@ def _load_mot_from_gt_content(gt_content: str, context: MOTContext) -> IRVideoSe
     return IRVideoSequence(
         tracks=[
             IRVideoAnnotationTrack.from_annotations(track_annotations, track_id=str(track_id))
-            for track_id, track_annotations in sorted(tracks.items())
+            for track_id, track_annotations in tracks.items()
         ],
         sequence_length=context.sequence_length,
         video_width=context.video_width,
@@ -336,29 +319,28 @@ def load_mot_from_fs(
     image_height: Optional[int] = None,
     video_files: Optional[Dict[str, Union[str, Path]]] = None,
     datasource_path: Optional[Union[str, Path]] = None,
-) -> Dict[str, Tuple[IRVideoSequence, MOTContext]]:
+) -> Dict[Path, Tuple[IRVideoSequence, MOTContext]]:
     """Load MOT annotations from all sequence directories/ZIPs under a directory."""
     import_dir = Path(import_dir)
-    results: Dict[str, Tuple[IRVideoSequence, MOTContext]] = {}
+    results: Dict[Path, Tuple[IRVideoSequence, MOTContext]] = {}
     normalized_datasource_path: Optional[Path] = None
     if datasource_path is not None:
         normalized_datasource_path = Path(str(datasource_path).lstrip("/"))
 
-    def _sequence_lookup_keys(sequence_key: str) -> List[str]:
-        seq_path = Path(sequence_key)
-        keys = [sequence_key, seq_path.as_posix(), seq_path.name, seq_path.stem]
-        second_stem = Path(seq_path.stem).stem
+    def _sequence_lookup_keys(sequence_key: Path) -> List[str]:
+        keys = [str(sequence_key), sequence_key.as_posix(), sequence_key.name, sequence_key.stem]
+        second_stem = Path(sequence_key.stem).stem
         if second_stem not in keys:
             keys.append(second_stem)
         return [key for key in keys if key]
 
-    def _sequence_video_filename(sequence_key: str) -> str:
-        name = Path(sequence_key).name
+    def _sequence_video_filename(sequence_key: Path) -> str:
+        name = sequence_key.name
         if name.lower().endswith(".zip"):
             return Path(name).stem
         return name
 
-    def _resolve_video_file(sequence_key: str) -> Optional[Path]:
+    def _resolve_video_file(sequence_key: Path) -> Optional[Path]:
         lookup_keys = _sequence_lookup_keys(sequence_key)
 
         if video_files is not None:
@@ -388,12 +370,12 @@ def load_mot_from_fs(
 
     seq_roots = {gt_path.parent.parent for gt_path in import_dir.rglob("gt.txt") if gt_path.parent.name == "gt"}
     for seq_root in sorted(seq_roots):
-        key = str(seq_root.relative_to(import_dir))
+        key = seq_root.relative_to(import_dir)
         video_file = _resolve_video_file(key)
         results[key] = load_mot_from_dir(seq_root, image_width, image_height, video_file)
 
     for zip_path in sorted(import_dir.rglob("*.zip")):
-        key = str(zip_path.relative_to(import_dir))
+        key = zip_path.relative_to(import_dir)
         video_file = _resolve_video_file(key)
         results[key] = load_mot_from_zip(zip_path, image_width, image_height, video_file)
 

@@ -26,7 +26,6 @@ class IRVideoSequence(ParentModel):
 
         grouped: Dict[str, List[IRVideoFrameAnnotationBase]] = {}
         resolved_filename: Optional[str] = filename
-        resolved_sequence_length: Optional[int] = None
 
         seen_filenames = set()
         for ann in annotations:
@@ -38,10 +37,6 @@ class IRVideoSequence(ParentModel):
                 seen_filenames.add(ann.filename)
                 if resolved_filename is None:
                     resolved_filename = ann.filename
-            if resolved_sequence_length is None:
-                ann_sequence_length = getattr(ann, "sequence_length", None)
-                if ann_sequence_length:
-                    resolved_sequence_length = ann_sequence_length
 
         if len(seen_filenames) > 1:
             logger.warning(
@@ -58,7 +53,6 @@ class IRVideoSequence(ParentModel):
         return cls(
             tracks=tracks,
             filename=resolved_filename,
-            sequence_length=resolved_sequence_length,
         )
 
     def iter_track_annotations(self) -> Iterator[Tuple[IRVideoAnnotationTrack, IRVideoFrameAnnotationBase]]:

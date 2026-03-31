@@ -11,10 +11,6 @@ from dagshub_annotation_converter.ir.video import (
 )
 
 
-def _is_visible(annotation: IRVideoBBoxFrameAnnotation) -> bool:
-    return annotation.visibility > 0.0
-
-
 def _canonicalize_track_annotations(
     annotations: List[IRVideoBBoxFrameAnnotation],
 ) -> List[IRVideoBBoxFrameAnnotation]:
@@ -24,26 +20,26 @@ def _canonicalize_track_annotations(
         prev_ann = annotations[idx - 1] if idx > 0 else None
         next_ann = annotations[idx + 1] if idx + 1 < len(annotations) else None
 
-        if not _is_visible(ann):
+        if not ann.is_visible:
             continue
 
         keep = ann.keyframe or ann.visibility < 1.0
-        if prev_ann is None or not _is_visible(prev_ann):
+        if prev_ann is None or not prev_ann.is_visible:
             keep = True
-        if next_ann is not None and not _is_visible(next_ann):
+        if next_ann is not None and not next_ann.is_visible:
             keep = True
 
         if not keep:
             continue
 
         canonical_ann = ann.model_copy(deep=True)
-        if next_ann is not None and not _is_visible(next_ann):
+        if next_ann is not None and not next_ann.is_visible:
             canonical_ann.keyframe = False
         elif (
             ann.keyframe
             and next_ann is not None
             and next_ann.keyframe
-            and _is_visible(next_ann)
+            and next_ann.is_visible
             and next_ann.frame_number == ann.frame_number + 1
         ):
             canonical_ann.keyframe = False

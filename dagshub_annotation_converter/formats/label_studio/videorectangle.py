@@ -135,17 +135,14 @@ class VideoRectangleAnnotation(AnnotationResultABC):
         track = track.normalized()
         sorted_anns = sorted(track.annotations, key=lambda a: a.frame_number)
 
-        def _is_visible(annotation: IRVideoBBoxFrameAnnotation) -> bool:
-            return annotation.visibility > 0.0
-
         sequence = []
         for idx, ann in enumerate(sorted_anns):
-            if not _is_visible(ann):
+            if not ann.is_visible:
                 continue
 
             enabled = ann.keyframe
             next_ann = sorted_anns[idx + 1] if idx + 1 < len(sorted_anns) else None
-            if enabled and next_ann is not None and not _is_visible(next_ann):
+            if enabled and next_ann is not None and not next_ann.is_visible:
                 enabled = False
 
             seq_item = VideoRectangleSequenceItem(

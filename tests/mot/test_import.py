@@ -177,7 +177,7 @@ class TestMOTDirectoryImport:
         shutil.copytree(sample_mot_dir, tmp_path / "seq_b")
 
         loaded = load_mot_from_fs(tmp_path)
-        assert set(loaded.keys()) == {"seq_a", "seq_b"}
+        assert set(loaded.keys()) == {Path("seq_a"), Path("seq_b")}
         assert all(len(sequence.tracks) > 0 for sequence, _ in loaded.values())
 
     def test_load_from_fs_uses_datasource_path_layout(self, tmp_path, monkeypatch):
@@ -205,7 +205,7 @@ class TestMOTDirectoryImport:
         )
 
         loaded = load_mot_from_fs(labels_dir, datasource_path="data/videos")
-        sequence, context = loaded["earth-space-small.mp4.zip"]
+        sequence, context = loaded[Path("earth-space-small.mp4.zip")]
 
         assert context.video_width == 720
         assert context.video_height == 480

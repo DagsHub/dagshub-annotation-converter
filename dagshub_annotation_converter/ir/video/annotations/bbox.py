@@ -15,6 +15,14 @@ class IRVideoBBoxFrameAnnotation(IRVideoFrameAnnotationBase):
     visibility: float = 1.0
     """Visibility/occlusion ratio (0-1). 1.0 = fully visible."""
 
+    @property
+    def is_visible(self) -> bool:
+        return self.visibility > 0.0
+
+    @property
+    def interpolation_enabled(self) -> bool:
+        return bool(self.keyframe)
+
     def _require_dimensions_for_coordinate_conversion(self):
         if self.video_width is None or self.video_height is None:
             raise ValueError(
