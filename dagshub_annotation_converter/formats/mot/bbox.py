@@ -71,17 +71,18 @@ def _export_bbox_to_line(ann: IRVideoBBoxFrameAnnotation, track_id: int, context
 
     MOT uses 1-based frame numbering; IR uses 0-based.
     """
-    if ann.coordinate_style != CoordinateStyle.DENORMALIZED:
-        raise ValueError("_export_bbox_to_line expects a denormalized video annotation")
+    if ann.coordinate_style == CoordinateStyle.NORMALIZED:
+        ann = ann.model_copy(update={"video_width": context.video_width, "video_height": context.video_height})
+        ann = ann.denormalized()
 
     category_name = ann.ensure_has_one_category()
     class_id = context.categories[category_name].id
     not_ignored = 1
 
-    x = int(ann.left) if ann.left == int(ann.left) else ann.left
-    y = int(ann.top) if ann.top == int(ann.top) else ann.top
-    w = int(ann.width) if ann.width == int(ann.width) else ann.width
-    h = int(ann.height) if ann.height == int(ann.height) else ann.height
+    x = int(round(ann.left))
+    y = int(round(ann.top))
+    w = int(round(ann.width))
+    h = int(round(ann.height))
 
     mot_frame_id = ann.frame_number + 1
 

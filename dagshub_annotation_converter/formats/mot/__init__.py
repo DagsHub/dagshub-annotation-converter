@@ -11,6 +11,6 @@ from dagshub_annotation_converter.formats.mot.context import MOTContext
 from dagshub_annotation_converter.formats.mot.bbox import import_bbox_from_line
 
 __all__ = [
-    "MOTContext",
-    "import_bbox_from_line",
+    MOTContext.__name__,
+    import_bbox_from_line.__name__,
 ]

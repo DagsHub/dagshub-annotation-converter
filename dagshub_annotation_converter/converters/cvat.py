@@ -17,7 +17,7 @@ from dagshub_annotation_converter.formats.cvat.video import (
 )
 from dagshub_annotation_converter.ir.image import IRBBoxImageAnnotation, IRImageAnnotationBase, IRPoseImageAnnotation
 from dagshub_annotation_converter.ir.video import IRVideoAnnotationTrack, IRVideoSequence
-from dagshub_annotation_converter.util.video import get_video_dimensions, get_video_frame_count
+from dagshub_annotation_converter.util.video import probe_video
 
 logger = logging.getLogger(__name__)
 
@@ -268,25 +268,24 @@ def export_cvat_video_to_xml_bytes(
         else sequence.resolved_video_height()
 
     if seq_length is None:
-        seq_length = sequence.resolved_sequence_length()
+        seq_length = sequence.sequence_length
 
-    if (resolved_width is None or resolved_height is None) and video_file is not None:
+    # Probe video before falling back to annotation coverage — probed frame count
+    # reflects the actual video length, not just how far annotations reach.
+    if ((resolved_width is None or resolved_height is None) or seq_length is None) and video_file is not None:
         try:
-            probed_width, probed_height, _ = get_video_dimensions(Path(video_file))
+            probe = probe_video(Path(video_file))
             if resolved_width is None:
-                resolved_width = probed_width
+                resolved_width = probe.width
             if resolved_height is None:
-                resolved_height = probed_height
+                resolved_height = probe.height
+            if seq_length is None and probe.frame_count > 0:
+                seq_length = probe.frame_count
         except (ImportError, ValueError) as e:
-            logger.warning(f"Could not probe video dimensions from {video_file}: {e}")
+            logger.warning(f"Could not probe video from {video_file}: {e}")
 
-    if seq_length is None and video_file is not None:
-        try:
-            frame_count = get_video_frame_count(Path(video_file))
-            if frame_count is not None and frame_count > 0:
-                seq_length = frame_count
-        except (ImportError, ValueError) as e:
-            logger.warning(f"Could not probe video frame count from {video_file}: {e}")
+    if seq_length is None:
+        seq_length = sequence.resolved_sequence_length()
 
     if resolved_width is None or resolved_height is None:
         raise ValueError(

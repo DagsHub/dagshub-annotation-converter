@@ -3,6 +3,7 @@ from typing import List, Optional, Tuple, Set
 from lxml import etree
 from lxml.etree import ElementBase
 
+from dagshub_annotation_converter.formats.cvat.box import calculate_bbox
 from dagshub_annotation_converter.ir.video import (
     CoordinateStyle,
     IRVideoAnnotationTrack,
@@ -14,6 +15,22 @@ from dagshub_annotation_converter.ir.video import (
 def _canonicalize_track_annotations(
     annotations: List[IRVideoBBoxFrameAnnotation],
 ) -> List[IRVideoBBoxFrameAnnotation]:
+    """Filter and adjust a raw list of CVAT box annotations into a minimal canonical form.
+
+    CVAT tracks contain every interpolated frame plus explicit keyframes and
+    ``outside`` markers.  When converting *to* the IR we want to keep only the
+    frames that carry real information:
+
+    * Invisible (``outside``) frames are dropped entirely.
+    * A visible frame is kept if it is a keyframe, occluded (visibility < 1),
+      the first visible frame after a gap/outside, or the last visible frame
+      before an outside marker.
+    * ``keyframe`` is cleared when the next annotation is an outside marker
+      (the stop boundary is implicit) or when two consecutive keyframes are
+      adjacent (no interpolation needed between them).
+    * ``keyframe`` is forced on for occluded frames so they are preserved
+      as explicit waypoints during export.
+    """
     canonical: List[IRVideoBBoxFrameAnnotation] = []
 
     for idx, ann in enumerate(annotations):
@@ -81,6 +98,7 @@ def parse_video_track(
         ytl = float(box_elem.attrib["ytl"])
         xbr = float(box_elem.attrib["xbr"])
         ybr = float(box_elem.attrib["ybr"])
+        rotation = float(box_elem.attrib.get("rotation", 0.0))
 
         if outside == 1:
             visibility = 0.0
@@ -89,15 +107,20 @@ def parse_video_track(
         else:
             visibility = 1.0
 
-        meta = {"z_order": int(box_elem.attrib.get("z_order", 0))}
+        meta = {}
+        if "z_order" in box_elem.attrib:
+            meta["z_order"] = int(box_elem.attrib["z_order"])
+
+        left, top, width, height, rotation = calculate_bbox(xtl, ytl, xbr, ybr, rotation)
 
         ann = IRVideoBBoxFrameAnnotation(
             frame_number=frame_number,
             keyframe=keyframe == 1,
-            left=xtl,
-            top=ytl,
-            width=xbr - xtl,
-            height=ybr - ytl,
+            left=left,
+            top=top,
+            width=width,
+            height=height,
+            rotation=rotation,
             video_width=image_width,
             video_height=image_height,
             categories={label: 1.0},
@@ -157,6 +180,7 @@ def export_video_track_to_xml(
     sorted_anns = sorted(
         (ann for ann in track.annotations if isinstance(ann, IRVideoBBoxFrameAnnotation)), key=lambda a: a.frame_number
     )
+    max_frame = None if seq_length is None else seq_length - 1
     for idx, ann in enumerate(sorted_anns):
         xtl = ann.left
         ytl = ann.top
@@ -180,9 +204,18 @@ def export_video_track_to_xml(
         box_elem.set("xbr", f"{xbr:.2f}")
         box_elem.set("ybr", f"{ybr:.2f}")
         box_elem.set("z_order", str(z_order))
+        if ann.rotation != 0.0:
+            box_elem.set("rotation", f"{ann.rotation:.2f}")
 
+        # A "stop boundary" is a synthetic outside=1 box on the frame immediately
+        # after a non-keyframe visible annotation.  CVAT uses these to mark where
+        # interpolation should stop: without them the annotation would be
+        # interpolated forward indefinitely.  We only emit one when:
+        #   - the current annotation is not a keyframe (keyframes handle their own spans),
+        #   - the current annotation is visible (outside == 0),
+        #   - and there is room for the boundary frame (either more annotations follow
+        #     or the boundary frame fits within the known sequence length).
         boundary_frame = ann.frame_number + 1
-        max_frame = seq_length - 1 if isinstance(seq_length, int) and seq_length > 0 else None
         has_future_annotation = idx < len(sorted_anns) + 1
         has_known_room_for_boundary = max_frame is not None and boundary_frame <= max_frame
         should_add_stop_boundary = (

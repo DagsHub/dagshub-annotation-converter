@@ -1,11 +1,9 @@
-import logging
 from typing import Dict, Iterator, List, Optional, Sequence, Tuple
 
 from dagshub_annotation_converter.ir.video.annotations.base import IRVideoFrameAnnotationBase
 from dagshub_annotation_converter.ir.video.track import IRVideoAnnotationTrack
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
-logger = logging.getLogger(__name__)
 
 
 class IRVideoSequence(ParentModel):
@@ -18,42 +16,12 @@ class IRVideoSequence(ParentModel):
     @classmethod
     def from_annotations(
         cls,
-        annotations: Sequence[IRVideoFrameAnnotationBase],
+        tracks: Sequence[IRVideoAnnotationTrack],
         filename: Optional[str] = None,
     ) -> "IRVideoSequence":
-        if not annotations:
-            raise ValueError("Cannot create IRVideoSequence from empty annotations")
-
-        grouped: Dict[str, List[IRVideoFrameAnnotationBase]] = {}
-        resolved_filename: Optional[str] = filename
-
-        seen_filenames = set()
-        for ann in annotations:
-            track_id = ann.imported_id or "0"
-            if track_id not in grouped:
-                grouped[track_id] = []
-            grouped[track_id].append(ann)
-            if ann.filename:
-                seen_filenames.add(ann.filename)
-                if resolved_filename is None:
-                    resolved_filename = ann.filename
-
-        if len(seen_filenames) > 1:
-            logger.warning(
-                "from_annotations received annotations with multiple filenames: %s. "
-                "Using %r as the sequence filename.",
-                seen_filenames,
-                resolved_filename,
-            )
-
-        tracks = [
-            IRVideoAnnotationTrack.from_annotations(track_annotations, track_id=track_id)
-            for track_id, track_annotations in grouped.items()
-        ]
-        return cls(
-            tracks=tracks,
-            filename=resolved_filename,
-        )
+        if not tracks:
+            raise ValueError("Cannot create IRVideoSequence from empty tracks")
+        return cls(tracks=list(tracks), filename=filename)
 
     def iter_track_annotations(self) -> Iterator[Tuple[IRVideoAnnotationTrack, IRVideoFrameAnnotationBase]]:
         for track in self.tracks:

@@ -48,14 +48,12 @@ def _make_sequence(
 
 class TestCVATVideoExport:
     def test_export_uses_probed_dimensions_when_missing(self, monkeypatch):
+        from dagshub_annotation_converter.util.video import VideoProbeResult
+
         sequence = _make_sequence(image_width=0, image_height=0)
         monkeypatch.setattr(
-            "dagshub_annotation_converter.converters.cvat.get_video_dimensions",
-            lambda _: (1280, 720, 24.0),
-        )
-        monkeypatch.setattr(
-            "dagshub_annotation_converter.converters.cvat.get_video_frame_count",
-            lambda _: 100,
+            "dagshub_annotation_converter.converters.cvat.probe_video",
+            lambda _: VideoProbeResult(width=1280, height=720, fps=24.0, frame_count=100),
         )
 
         xml_bytes = export_cvat_video_to_xml_bytes(sequence, video_file="local_video.mp4")
@@ -64,10 +62,12 @@ class TestCVATVideoExport:
         assert "<height>720</height>" in xml_text
 
     def test_export_uses_probed_frame_count_when_seq_length_missing(self, monkeypatch):
+        from dagshub_annotation_converter.util.video import VideoProbeResult
+
         sequence = _make_sequence(image_width=1920, image_height=1080)
         monkeypatch.setattr(
-            "dagshub_annotation_converter.converters.cvat.get_video_frame_count",
-            lambda _: 400,
+            "dagshub_annotation_converter.converters.cvat.probe_video",
+            lambda _: VideoProbeResult(width=1920, height=1080, fps=30.0, frame_count=400),
         )
 
         xml_bytes = export_cvat_video_to_xml_bytes(sequence, video_file="local_video.mp4")
@@ -146,19 +146,17 @@ class TestCVATVideoExport:
         seq_a = _make_sequence(image_width=0, image_height=0, track_id="1", filename="earth-space-small.mp4")
         seq_b = _make_sequence(image_width=0, image_height=0, track_id="2", filename="jelly.mp4")
 
-        def fake_dimensions(path):
+        from dagshub_annotation_converter.util.video import VideoProbeResult
+
+        def fake_probe(path):
             name = path.name
             if name == "earth-space-small.mp4":
-                return 1920, 1080, 24.0
+                return VideoProbeResult(width=1920, height=1080, fps=24.0, frame_count=100)
             if name == "jelly.mp4":
-                return 640, 360, 25.0
+                return VideoProbeResult(width=640, height=360, fps=25.0, frame_count=100)
             raise AssertionError(f"Unexpected probe path: {path}")
 
-        monkeypatch.setattr("dagshub_annotation_converter.converters.cvat.get_video_dimensions", fake_dimensions)
-        monkeypatch.setattr(
-            "dagshub_annotation_converter.converters.cvat.get_video_frame_count",
-            lambda _: 100,
-        )
+        monkeypatch.setattr("dagshub_annotation_converter.converters.cvat.probe_video", fake_probe)
 
         outputs = export_cvat_videos_to_zips(
             [seq_a, seq_b],

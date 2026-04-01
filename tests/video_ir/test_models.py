@@ -299,141 +299,72 @@ def test_video_track_preserves_non_numeric_identifier():
 
 
 def test_video_sequence_from_annotations_roundtrip():
-    ann_a = IRVideoBBoxFrameAnnotation(
-        frame_number=0,
-        left=10,
-        top=20,
-        width=30,
-        height=40,
-        video_width=1920,
-        video_height=1080,
-        categories={"person": 1.0},
-        coordinate_style=CoordinateStyle.DENORMALIZED,
-    )
-    ann_b = IRVideoBBoxFrameAnnotation(
-        frame_number=4,
-        left=50,
-        top=60,
-        width=70,
-        height=80,
-        video_width=1920,
-        video_height=1080,
-        categories={"car": 1.0},
-        coordinate_style=CoordinateStyle.DENORMALIZED,
-    )
-    sequence = IRVideoSequence(
-        tracks=[
-            IRVideoAnnotationTrack.from_annotations([ann_a], track_id="track_a"),
-            IRVideoAnnotationTrack.from_annotations([ann_b], track_id="track_b"),
+    track_a = IRVideoAnnotationTrack.from_annotations(
+        [
+            IRVideoBBoxFrameAnnotation(
+                frame_number=0,
+                left=10,
+                top=20,
+                width=30,
+                height=40,
+                video_width=1920,
+                video_height=1080,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.DENORMALIZED,
+            )
         ],
-        filename="video.mp4",
+        track_id="track_a",
+    )
+    track_b = IRVideoAnnotationTrack.from_annotations(
+        [
+            IRVideoBBoxFrameAnnotation(
+                frame_number=4,
+                left=50,
+                top=60,
+                width=70,
+                height=80,
+                video_width=1920,
+                video_height=1080,
+                categories={"car": 1.0},
+                coordinate_style=CoordinateStyle.DENORMALIZED,
+            )
+        ],
+        track_id="track_b",
     )
 
-    rebuilt = IRVideoSequence.from_annotations(sequence.to_annotations())
+    sequence = IRVideoSequence.from_annotations([track_a, track_b], filename="video.mp4")
 
-    assert rebuilt.filename == "video.mp4"
-    assert [track.track_id for track in rebuilt.tracks] == ["track_a", "track_b"]
-    assert [ann.frame_number for ann in rebuilt.tracks[0].annotations] == [0]
-    assert [ann.frame_number for ann in rebuilt.tracks[1].annotations] == [4]
-
-
-def test_video_sequence_from_annotations_groups_distinct_imported_ids():
-    annotations = [
-        IRVideoBBoxFrameAnnotation(
-            frame_number=0,
-            imported_id="track_a",
-            left=10,
-            top=20,
-            width=30,
-            height=40,
-            categories={"person": 1.0},
-            coordinate_style=CoordinateStyle.DENORMALIZED,
-        ),
-        IRVideoBBoxFrameAnnotation(
-            frame_number=1,
-            imported_id="track_b",
-            left=11,
-            top=21,
-            width=31,
-            height=41,
-            categories={"car": 1.0},
-            coordinate_style=CoordinateStyle.DENORMALIZED,
-        ),
-    ]
-
-    sequence = IRVideoSequence.from_annotations(annotations)
-
+    assert sequence.filename == "video.mp4"
     assert [track.track_id for track in sequence.tracks] == ["track_a", "track_b"]
-
-
-def test_video_sequence_from_annotations_groups_missing_imported_id_under_zero():
-    annotations = [
-        IRVideoBBoxFrameAnnotation(
-            frame_number=0,
-            left=10,
-            top=20,
-            width=30,
-            height=40,
-            categories={"person": 1.0},
-            coordinate_style=CoordinateStyle.DENORMALIZED,
-        ),
-        IRVideoBBoxFrameAnnotation(
-            frame_number=1,
-            left=11,
-            top=21,
-            width=31,
-            height=41,
-            categories={"person": 1.0},
-            coordinate_style=CoordinateStyle.DENORMALIZED,
-        ),
-    ]
-
-    sequence = IRVideoSequence.from_annotations(annotations)
-
-    assert [track.track_id for track in sequence.tracks] == ["0"]
-    assert [ann.frame_number for ann in sequence.tracks[0].annotations] == [0, 1]
+    assert [ann.frame_number for ann in sequence.tracks[0].annotations] == [0]
+    assert [ann.frame_number for ann in sequence.tracks[1].annotations] == [4]
 
 
 def test_video_sequence_from_annotations_prefers_explicit_filename():
-    annotations = [
-        IRVideoBBoxFrameAnnotation(
-            frame_number=0,
-            filename="source.mp4",
-            imported_id="track_a",
-            left=10,
-            top=20,
-            width=30,
-            height=40,
-            categories={"person": 1.0},
-            coordinate_style=CoordinateStyle.DENORMALIZED,
-        ),
-    ]
+    track = IRVideoAnnotationTrack.from_annotations(
+        [
+            IRVideoBBoxFrameAnnotation(
+                frame_number=0,
+                filename="source.mp4",
+                left=10,
+                top=20,
+                width=30,
+                height=40,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.DENORMALIZED,
+            )
+        ],
+        track_id="track_a",
+    )
 
-    sequence = IRVideoSequence.from_annotations(annotations, filename="override.mp4")
+    sequence = IRVideoSequence.from_annotations([track], filename="override.mp4")
 
     assert sequence.filename == "override.mp4"
 
 
 def test_video_sequence_from_annotations_requires_annotations():
-    with pytest.raises(ValueError, match="Cannot create IRVideoSequence from empty annotations"):
+    with pytest.raises(ValueError, match="Cannot create IRVideoSequence from empty tracks"):
         IRVideoSequence.from_annotations([])
-
-
-def test_video_sequence_from_annotations_recovers_sequence_length_from_flattened_rows():
-    ann = IRVideoBBoxFrameAnnotation(
-        frame_number=4,
-        left=10,
-        top=20,
-        width=30,
-        height=40,
-        categories={"person": 1.0},
-        coordinate_style=CoordinateStyle.DENORMALIZED,
-        sequence_length=40,
-    )
-
-    rebuilt = IRVideoSequence.from_annotations([ann])
-
-    assert rebuilt.sequence_length == 40
 
 
 def test_video_sequence_resolves_sequence_metadata():

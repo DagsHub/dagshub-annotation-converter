@@ -5,9 +5,9 @@ from dagshub_annotation_converter.ir.video.sequence import IRVideoSequence
 from dagshub_annotation_converter.ir.video.track import IRVideoAnnotationTrack
 
 __all__ = [
-    "CoordinateStyle",
-    "IRVideoFrameAnnotationBase",
-    "IRVideoBBoxFrameAnnotation",
-    "IRVideoSequence",
-    "IRVideoAnnotationTrack",
+    CoordinateStyle.__name__,
+    IRVideoFrameAnnotationBase.__name__,
+    IRVideoBBoxFrameAnnotation.__name__,
+    IRVideoSequence.__name__,
+    IRVideoAnnotationTrack.__name__,
 ]

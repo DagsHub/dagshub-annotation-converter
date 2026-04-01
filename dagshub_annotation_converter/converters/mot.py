@@ -16,8 +16,7 @@ from dagshub_annotation_converter.ir.video import (
 )
 from dagshub_annotation_converter.util.video import (
     find_video_sibling,
-    get_video_dimensions,
-    get_video_frame_count,
+    probe_video,
 )
 
 logger = logging.getLogger(__name__)
@@ -98,20 +97,18 @@ def _try_fill_dimensions_from_video(
 
     for candidate in candidates:
         try:
-            width, height, fps = get_video_dimensions(candidate)
+            probe = probe_video(candidate)
             if context.video_width is None:
-                context.video_width = width
+                context.video_width = probe.width
             if context.video_height is None:
-                context.video_height = height
-            if fps > 0:
-                if not fps.is_integer():
-                    logger.warning(f"Non-integer frame rate {fps} in video {candidate}, using rounded value")
-                context.frame_rate = int(round(fps))
-            if context.sequence_length is None:
-                frame_count = get_video_frame_count(candidate)
-                if frame_count is not None and frame_count > 0:
-                    context.sequence_length = frame_count
-            logger.info(f"Inferred dimensions {width}x{height} from {candidate}")
+                context.video_height = probe.height
+            if probe.fps > 0:
+                if not probe.fps.is_integer():
+                    logger.warning(f"Non-integer frame rate {probe.fps} in video {candidate}, using rounded value")
+                context.frame_rate = int(round(probe.fps))
+            if context.sequence_length is None and probe.frame_count > 0:
+                context.sequence_length = probe.frame_count
+            logger.info(f"Inferred dimensions {probe.width}x{probe.height} from {candidate}")
             return
         except (ImportError, ValueError) as e:
             logger.warning(f"Could not read video {candidate}: {e}")
@@ -320,7 +317,27 @@ def load_mot_from_fs(
     video_files: Optional[Dict[str, Union[str, Path]]] = None,
     datasource_path: Optional[Union[str, Path]] = None,
 ) -> Dict[Path, Tuple[IRVideoSequence, MOTContext]]:
-    """Load MOT annotations from all sequence directories/ZIPs under a directory."""
+    """Load MOT annotations from all sequence directories/ZIPs under a directory.
+
+    Recursively searches *import_dir* for MOT sequences (directories containing
+    ``gt/gt.txt``) and ZIP archives, loading each one with :func:`load_mot_from_dir`
+    or :func:`load_mot_from_zip`. Returns a dict keyed by the path of each sequence
+    relative to *import_dir*.
+
+    Args:
+        import_dir: Root directory to search for MOT sequences.
+        image_width: Override frame width for all sequences (skips video probing).
+        image_height: Override frame height for all sequences (skips video probing).
+        video_files: Optional mapping from sequence key (name, stem, or relative path)
+            to a video file path. Used to probe frame dimensions and FPS when they are
+            not present in ``seqinfo.ini``. Keys are matched loosely against each
+            sequence's name, stem, and relative path.
+        datasource_path: Optional DagsHub datasource sub-path. When provided, the
+            function also looks for a matching video at
+            ``import_dir.parent / "data" / datasource_path / <sequence_name>``,
+            which follows the DagsHub convention where annotations live under
+            ``labels/`` and videos under ``data/<datasource>/``.
+    """
     import_dir = Path(import_dir)
     results: Dict[Path, Tuple[IRVideoSequence, MOTContext]] = {}
     normalized_datasource_path: Optional[Path] = None
@@ -341,13 +358,19 @@ def load_mot_from_fs(
         return name
 
     def _resolve_video_file(sequence_key: Path) -> Optional[Path]:
+        # Build a set of string variants for this sequence (relative path, posix, name, stem,
+        # double-stem for double-extensions like "foo.mp4.zip" → "foo") so that video_files
+        # keys can be specified in any of these forms and still match.
         lookup_keys = _sequence_lookup_keys(sequence_key)
 
         if video_files is not None:
+            # Fast path: exact match on any of the lookup variants.
             for key in lookup_keys:
                 if key in video_files:
                     return Path(video_files[key])
 
+            # Slow path: check whether any video_files key matches any lookup variant,
+            # building the same variant set for each key in video_files.
             for raw_key, raw_value in video_files.items():
                 key_path = Path(str(raw_key))
                 candidates = [
@@ -394,27 +417,25 @@ def export_to_mot(
     if context.video_height is None:
         context.video_height = sequence.resolved_video_height()
 
-    if (context.video_width is None or context.video_height is None) and video_file is not None:
+    if video_file is not None and (
+        context.video_width is None
+        or context.video_height is None
+        or context.sequence_length is None
+    ):
         try:
-            width, height, fps = get_video_dimensions(Path(video_file))
+            probe = probe_video(Path(video_file))
             if context.video_width is None:
-                context.video_width = width
+                context.video_width = probe.width
             if context.video_height is None:
-                context.video_height = height
-            if fps > 0:
-                if not fps.is_integer():
-                    logger.warning(f"Non-integer frame rate {fps} in video {video_file}, using rounded value")
-                context.frame_rate = int(round(fps))
+                context.video_height = probe.height
+            if probe.fps > 0:
+                if not probe.fps.is_integer():
+                    logger.warning(f"Non-integer frame rate {probe.fps} in video {video_file}, using rounded value")
+                context.frame_rate = int(round(probe.fps))
+            if context.sequence_length is None and probe.frame_count > 0:
+                context.sequence_length = probe.frame_count
         except (ImportError, ValueError) as e:
-            logger.warning(f"Could not probe video dimensions from {video_file}: {e}")
-
-    if context.sequence_length is None and video_file is not None:
-        try:
-            frame_count = get_video_frame_count(Path(video_file))
-            if frame_count is not None and frame_count > 0:
-                context.sequence_length = frame_count
-        except (ImportError, ValueError) as e:
-            logger.warning(f"Could not probe video frame count from {video_file}: {e}")
+            logger.warning(f"Could not probe video from {video_file}: {e}")
 
     if context.video_width is None or context.video_height is None:
         raise ValueError(
@@ -441,7 +462,9 @@ def export_to_mot(
     sorted_anns = sorted(expanded_annotations, key=lambda item: (item[1].frame_number, item[0]))
     if sorted_anns:
         exported_seq_length = max(ann.frame_number for _, ann in sorted_anns) + 1
-        if context.sequence_length is None or context.sequence_length < exported_seq_length:
+        # non-empty sorted_anns implies non-empty tracks, so resolved_sequence_length() is non-None
+        assert context.sequence_length is not None
+        if context.sequence_length < exported_seq_length:
             context.sequence_length = exported_seq_length
     for _, ann in sorted_anns:
         category_name = ann.ensure_has_one_category()

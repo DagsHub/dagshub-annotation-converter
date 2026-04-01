@@ -192,17 +192,15 @@ class TestMOTDirectoryImport:
             z.writestr("gt/gt.txt", "1,1,100,150,50,120,1,1,1.0\n")
             z.writestr("gt/labels.txt", "person\n")
 
+        from dagshub_annotation_converter.util.video import VideoProbeResult
+
         probed_paths = []
 
-        def fake_dimensions(path):
+        def fake_probe(path):
             probed_paths.append(Path(path))
-            return 720, 480, 24.0
+            return VideoProbeResult(width=720, height=480, fps=24.0, frame_count=400)
 
-        monkeypatch.setattr("dagshub_annotation_converter.converters.mot.get_video_dimensions", fake_dimensions)
-        monkeypatch.setattr(
-            "dagshub_annotation_converter.converters.mot.get_video_frame_count",
-            lambda _: 400,
-        )
+        monkeypatch.setattr("dagshub_annotation_converter.converters.mot.probe_video", fake_probe)
 
         loaded = load_mot_from_fs(labels_dir, datasource_path="data/videos")
         sequence, context = loaded[Path("earth-space-small.mp4.zip")]

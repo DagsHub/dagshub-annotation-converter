@@ -399,6 +399,34 @@ class TestCVATVideoToLabelStudioRoundtrip:
         assert [(item.frame, item.enabled) for item in seq] == [(6, True)]
         assert ls_task.annotations[0].result[0].value.framesCount == 10
 
+    def test_frames_count_roundtrips_through_ir(self):
+        """sequence_length on IRVideoSequence should appear as framesCount in LS export
+        and be restored on import."""
+        sequence = IRVideoSequence(
+            tracks=[],
+            filename="/data/video.mp4",
+            sequence_length=42,
+        )
+        # Add a minimal track so the task is non-None
+        from dagshub_annotation_converter.ir.video import IRVideoBBoxFrameAnnotation, IRVideoAnnotationTrack
+        from dagshub_annotation_converter.ir.image.common import CoordinateStyle
+        ann = IRVideoBBoxFrameAnnotation(
+            frame_number=0,
+            left=0.1, top=0.1, width=0.2, height=0.2,
+            video_width=1920, video_height=1080,
+            categories={"person": 1.0},
+            coordinate_style=CoordinateStyle.NORMALIZED,
+        )
+        track = IRVideoAnnotationTrack.from_annotations([ann], track_id="0")
+        sequence.tracks = [track]
+
+        ls_task = video_ir_to_ls_video_task(sequence, video_path="/data/video.mp4")
+        assert ls_task is not None
+        assert ls_task.annotations[0].result[0].value.framesCount == 42
+
+        restored = ls_video_task_to_video_ir(ls_task)
+        assert restored.sequence_length == 42
+
 
 class TestCrossFormatConversion:
     @pytest.fixture
@@ -475,15 +503,17 @@ class TestLabelStudioVideoLocalProbeFallback:
         local_video = tmp_path / "video.mp4"
         local_video.write_text("stub")
 
+        from dagshub_annotation_converter.util.video import VideoProbeResult
+
         monkeypatch.setattr(
-            "dagshub_annotation_converter.formats.label_studio.task.get_video_dimensions",
-            lambda _: (1920, 1080, 30.0),
+            "dagshub_annotation_converter.formats.label_studio.task.probe_video",
+            lambda _: VideoProbeResult(width=1920, height=1080, fps=30.0, frame_count=0),
         )
 
         task = LabelStudioTask.model_validate(task_data)
         annotations = task.to_ir_annotations(
             filename="repo/remote/path/video.mp4",
-            video_file=str(local_video),
+            local_video_to_probe=str(local_video),
         )
         assert len(annotations) == 10
         assert all(ann.video_width == 1920 for ann in annotations)

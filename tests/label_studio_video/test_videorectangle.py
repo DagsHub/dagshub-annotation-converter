@@ -294,25 +294,6 @@ class TestVideoRectangleFrameNumberConversion:
         frame_numbers = sorted([a.frame_number for a in ir_annotations])
         assert frame_numbers == [0, 1, 9]  # LS 1,2,10 -> IR 0,1,9
 
-    def test_ls_to_ir_frame_conversion_supports_zero_based_sequences(self):
-        ls_ann = VideoRectangleAnnotation(
-            original_width=1920,
-            original_height=1080,
-            value=VideoRectangleValue(
-                sequence=[
-                    VideoRectangleSequenceItem(frame=0, x=10.0, y=20.0, width=5.0, height=10.0),
-                    VideoRectangleSequenceItem(frame=1, x=11.0, y=21.0, width=5.0, height=10.0),
-                    VideoRectangleSequenceItem(frame=9, x=15.0, y=25.0, width=5.0, height=10.0),
-                ],
-                labels=["object"],
-            ),
-        )
-
-        ir_annotations = ls_ann.to_ir_annotations()
-
-        frame_numbers = sorted([a.frame_number for a in ir_annotations])
-        assert frame_numbers == [0, 1, 9]
-
     def test_ir_to_ls_frame_conversion(self):
         ir_annotations = [
             IRVideoBBoxFrameAnnotation(

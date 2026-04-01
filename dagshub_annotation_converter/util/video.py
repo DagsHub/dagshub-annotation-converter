@@ -3,23 +3,13 @@ import logging
 import subprocess
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional
 
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
 VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".wmv", ".m4v"}
-
-
-def get_video_dimensions(video_path: Path) -> Tuple[int, int, float]:
-    video_probe_result = probe_video(video_path)
-    return video_probe_result.width, video_probe_result.height, video_probe_result.fps
-
-
-def get_video_frame_count(video_path: Path) -> Optional[int]:
-    video_probe_result = probe_video(video_path)
-    return video_probe_result.frame_count
 
 
 class VideoProbeResult(BaseModel):

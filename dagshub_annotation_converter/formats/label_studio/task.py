@@ -24,7 +24,7 @@ from dagshub_annotation_converter.ir.image import (
 )
 from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
-from dagshub_annotation_converter.util.video import get_video_dimensions
+from dagshub_annotation_converter.util.video import probe_video
 
 task_lookup: Dict[str, Type[AnnotationResultABC]] = {
     "polygonlabels": PolygonLabelsAnnotation,
@@ -50,6 +50,9 @@ def ls_annotation_validator(v: Any) -> List[AnnotationResultABC]:
     annotations: List[AnnotationResultABC] = []
 
     for raw_annotation in v:
+        if isinstance(raw_annotation, AnnotationResultABC):
+            annotations.append(raw_annotation)
+            continue
         assert isinstance(raw_annotation, dict)
         assert "type" in raw_annotation
         assert raw_annotation["type"] in task_lookup
@@ -118,9 +121,9 @@ class LabelStudioTask(ParentModel):
     def to_ir_annotations(
         self,
         filename: Optional[str] = None,
-        video_file: Optional[Union[str, Path]] = None,
+        local_video_to_probe: Optional[Union[str, Path]] = None,
     ) -> List[IRAnnotationBase]:
-        """Convert task annotations to IR; probe video dims from local ``video_file`` if provided."""
+        """Convert task annotations to IR; probe video dims from ``local_video_to_probe`` if provided."""
         res: List[IRAnnotationBase] = []
         probed_width: Optional[int] = None
         probed_height: Optional[int] = None
@@ -130,16 +133,15 @@ class LabelStudioTask(ParentModel):
                 if isinstance(ann, VideoRectangleAnnotation):
                     if (
                         not did_probe
-                        and video_file is not None
+                        and local_video_to_probe is not None
                         and (ann.original_width is None or ann.original_height is None)
                     ):
                         did_probe = True
                         try:
-                            probed_width, probed_height, _ = get_video_dimensions(Path(video_file))
-                        except Exception:
-                            # If probing fails, keep dimensions unset and defer failure to
-                            # dimension-dependent conversion/export operations.
-                            pass
+                            probe = probe_video(Path(local_video_to_probe))
+                            probed_width, probed_height = probe.width, probe.height
+                        except Exception as e:
+                            logger.warning(f"Could not probe video {local_video_to_probe}: {e}")
                     if ann.original_width is None and probed_width is not None:
                         ann.original_width = probed_width
                     if ann.original_height is None and probed_height is not None:

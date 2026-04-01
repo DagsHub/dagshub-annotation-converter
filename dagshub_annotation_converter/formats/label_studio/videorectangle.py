@@ -67,16 +67,12 @@ class VideoRectangleAnnotation(AnnotationResultABC):
         return self.to_ir_track().to_annotations()
 
     def to_ir_track(self) -> IRVideoAnnotationTrack:
-        label = self.value.labels[0] if self.value.labels else "object"
-
-        frame_base = 0 if any(item.frame == 0 for item in self.value.sequence) else 1
+        if not self.value.labels:
+            raise ValueError("VideoRectangleAnnotation has no labels")
+        label = self.value.labels[0]
 
         annotations = []
         for seq_item in self.value.sequence:
-            if seq_item.frame < frame_base:
-                if frame_base == 0:
-                    raise ValueError("Frame numbers must be 0-based (>= 0)")
-                raise ValueError("Frame numbers must be 1-based (>= 1)")
             if not (
                 0.0 <= seq_item.x <= 100.0
                 and 0.0 <= seq_item.y <= 100.0
@@ -91,7 +87,7 @@ class VideoRectangleAnnotation(AnnotationResultABC):
                 raise ValueError(f"Visibility must be in [0, 1], got {visibility}")
 
             ann = IRVideoBBoxFrameAnnotation(
-                frame_number=seq_item.frame - frame_base,
+                frame_number=seq_item.frame - 1,
                 keyframe=seq_item.enabled,
                 left=seq_item.x / 100.0,
                 top=seq_item.y / 100.0,
@@ -128,12 +124,15 @@ class VideoRectangleAnnotation(AnnotationResultABC):
         if not track.annotations:
             raise ValueError("Cannot create VideoRectangleAnnotation from empty track")
 
+        if not all(isinstance(ann, IRVideoBBoxFrameAnnotation) for ann in track.annotations):
+            raise ValueError("All annotations in the track must be IRVideoBBoxFrameAnnotation")
+
         first = track.annotations[0]
         ls_id = track.track_id
         label = first.ensure_has_one_category()
 
         track = track.normalized()
-        sorted_anns = sorted(track.annotations, key=lambda a: a.frame_number)
+        sorted_anns: List[IRVideoBBoxFrameAnnotation] = sorted(track.annotations, key=lambda a: a.frame_number)  # type: ignore[assignment]
 
         sequence = []
         for idx, ann in enumerate(sorted_anns):

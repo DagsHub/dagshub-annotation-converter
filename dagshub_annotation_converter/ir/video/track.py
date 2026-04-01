@@ -6,6 +6,21 @@ from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 
 class IRVideoAnnotationTrack(ParentModel):
+    """A single object track across video frames.
+
+    Assumptions:
+      - A track follows **one object** throughout the video.
+      - All annotations in the track share the same category / label.
+      - ``annotations`` is a list of per-frame snapshots (bbox, keypoint, etc.)
+        ordered by ``frame_number``.  Not every frame needs an entry — gaps are
+        filled by interpolation at export time where the format requires it.
+      - ``track_id`` is a stable identifier for the object within the sequence.
+        It is propagated to each annotation's ``imported_id`` on construction.
+      - Coordinate style (normalized vs. denormalized) may vary across
+        annotations; use :meth:`normalized` / :meth:`denormalized` to ensure
+        a uniform style before export.
+    """
+
     track_id: str
     annotations: List[IRVideoFrameAnnotationBase]
 
@@ -30,7 +45,10 @@ class IRVideoAnnotationTrack(ParentModel):
         if not annotations:
             raise ValueError("Cannot create IRVideoAnnotationTrack from empty annotations")
 
-        copied_annotations = [ann.model_copy(deep=True) for ann in annotations]
+        copied_annotations = sorted(
+            (ann.model_copy(deep=True) for ann in annotations),
+            key=lambda a: a.frame_number,
+        )
         for ann in copied_annotations:
             ann.imported_id = track_id
         return cls(
@@ -42,30 +60,28 @@ class IRVideoAnnotationTrack(ParentModel):
         self,
         video_width: Optional[int] = None,
         video_height: Optional[int] = None,
-    ) -> List[IRVideoFrameAnnotationBase]:
+    ) -> "IRVideoAnnotationTrack":
         resolved_width = video_width if video_width is not None and video_width > 0 else self.resolved_video_width()
         resolved_height = (
             video_height if video_height is not None and video_height > 0 else self.resolved_video_height()
         )
 
-        copied_annotations: List[IRVideoFrameAnnotationBase] = []
         for ann in self.annotations:
-            copied = ann.model_copy(deep=True)
-            copied.imported_id = self.track_id
-            if copied.video_width is None and resolved_width is not None:
-                copied.video_width = resolved_width
-            if copied.video_height is None and resolved_height is not None:
-                copied.video_height = resolved_height
-            copied_annotations.append(copied)
-        return copied_annotations
+            ann.imported_id = self.track_id
+            if ann.video_width is None and resolved_width is not None:
+                ann.video_width = resolved_width
+            if ann.video_height is None and resolved_height is not None:
+                ann.video_height = resolved_height
+        return self
 
     def normalized(
         self,
         video_width: Optional[int] = None,
         video_height: Optional[int] = None,
     ) -> "IRVideoAnnotationTrack":
+        self._with_resolved_dimensions(video_width, video_height)
         normalized_annotations: List[IRVideoFrameAnnotationBase] = []
-        for ann in self._with_resolved_dimensions(video_width, video_height):
+        for ann in self.annotations:
             if ann.coordinate_style == CoordinateStyle.DENORMALIZED:
                 ann = ann.normalized()
             normalized_annotations.append(ann)
@@ -76,8 +92,9 @@ class IRVideoAnnotationTrack(ParentModel):
         video_width: Optional[int] = None,
         video_height: Optional[int] = None,
     ) -> "IRVideoAnnotationTrack":
+        self._with_resolved_dimensions(video_width, video_height)
         denormalized_annotations: List[IRVideoFrameAnnotationBase] = []
-        for ann in self._with_resolved_dimensions(video_width, video_height):
+        for ann in self.annotations:
             if ann.coordinate_style == CoordinateStyle.NORMALIZED:
                 ann = ann.denormalized()
             denormalized_annotations.append(ann)

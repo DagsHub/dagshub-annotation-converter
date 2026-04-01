@@ -13,6 +13,7 @@ from dagshub_annotation_converter.converters.mot import (
     load_mot_from_file,
 )
 from dagshub_annotation_converter.formats.mot.bbox import _export_bbox_to_line
+from dagshub_annotation_converter.util.video import VideoProbeResult
 from dagshub_annotation_converter.formats.mot.context import MOTContext
 from dagshub_annotation_converter.ir.video import (
     CoordinateStyle,
@@ -54,7 +55,7 @@ class TestMOTLineExport:
         assert parts[7] == "1"
         assert float(parts[8]) == 1.0
 
-    def test_export_normalized_annotation_raises(self, mot_context):
+    def test_export_normalized_annotation_auto_denormalizes(self, mot_context):
         ann = IRVideoBBoxFrameAnnotation(
             imported_id="1",
             frame_number=0,
@@ -69,8 +70,12 @@ class TestMOTLineExport:
             visibility=1.0,
         )
 
-        with pytest.raises(ValueError, match="denormalized video annotation"):
-            _export_bbox_to_line(ann, 1, mot_context)
+        line = _export_bbox_to_line(ann, 1, mot_context)
+        parts = line.split(",")
+        assert float(parts[2]) == pytest.approx(0.1 * 1920)  # x
+        assert float(parts[3]) == pytest.approx(0.1 * 1080)  # y
+        assert float(parts[4]) == pytest.approx(0.2 * 1920)  # w
+        assert float(parts[5]) == pytest.approx(0.2 * 1080)  # h
 
     def test_export_with_partial_visibility(self, mot_context):
         ann = IRVideoBBoxFrameAnnotation(
@@ -458,12 +463,8 @@ class TestMOTFileExport:
         ]
 
         monkeypatch.setattr(
-            "dagshub_annotation_converter.converters.mot.get_video_dimensions",
-            lambda _: (1280, 720, 25.0),
-        )
-        monkeypatch.setattr(
-            "dagshub_annotation_converter.converters.mot.get_video_frame_count",
-            lambda _: 100,
+            "dagshub_annotation_converter.converters.mot.probe_video",
+            lambda _: VideoProbeResult(width=1280, height=720, fps=25.0, frame_count=100),
         )
 
         out_dir = tmp_path / "mot_out"
@@ -567,12 +568,8 @@ class TestMOTFileExport:
         ]
 
         monkeypatch.setattr(
-            "dagshub_annotation_converter.converters.mot.get_video_dimensions",
-            lambda _: (1280, 720, 25.0),
-        )
-        monkeypatch.setattr(
-            "dagshub_annotation_converter.converters.mot.get_video_frame_count",
-            lambda _: 40,
+            "dagshub_annotation_converter.converters.mot.probe_video",
+            lambda _: VideoProbeResult(width=1280, height=720, fps=25.0, frame_count=40),
         )
 
         out_dir = tmp_path / "mot_out"
@@ -680,12 +677,8 @@ class TestMOTFileExport:
         )
 
         monkeypatch.setattr(
-            "dagshub_annotation_converter.converters.mot.get_video_dimensions",
-            lambda _: (1280, 720, 25.0),
-        )
-        monkeypatch.setattr(
-            "dagshub_annotation_converter.converters.mot.get_video_frame_count",
-            lambda _: 100,
+            "dagshub_annotation_converter.converters.mot.probe_video",
+            lambda _: VideoProbeResult(width=1280, height=720, fps=25.0, frame_count=100),
         )
 
         outputs = export_mot_sequences_to_dirs(
