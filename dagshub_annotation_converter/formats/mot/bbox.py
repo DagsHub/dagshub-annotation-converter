@@ -76,7 +76,12 @@ def _export_bbox_to_line(ann: IRVideoBBoxFrameAnnotation, track_id: int, context
         ann = ann.denormalized()
 
     category_name = ann.ensure_has_one_category()
-    class_id = context.categories[category_name].id
+    try:
+        class_id = context.categories[category_name].id
+    except KeyError as exc:
+        raise ValueError(
+            f"Unknown category '{category_name}' at frame {ann.frame_number}: missing labels.txt mapping"
+        ) from exc
     not_ignored = 1
 
     x = int(round(ann.left))

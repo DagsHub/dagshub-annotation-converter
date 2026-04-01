@@ -11,10 +11,10 @@ from dagshub_annotation_converter.ir.video import IRVideoSequence
 
 
 def _resolve_video_path_for_export(sequence: IRVideoSequence, video_path: Optional[str]) -> str:
-    if sequence.filename:
-        return sequence.filename
     if video_path:
         return video_path
+    if sequence.filename:
+        return sequence.filename
     raise ValueError(
         "Cannot determine video path for Label Studio video export. "
         "Provide video_path explicitly or set sequence.filename."

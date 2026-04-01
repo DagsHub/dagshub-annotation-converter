@@ -1,7 +1,5 @@
 import configparser
 import math
-import tempfile
-from pathlib import Path
 from zipfile import ZipFile
 
 import pytest
@@ -178,7 +176,7 @@ class TestMOTFileExport:
         assert context.categories["Man"].id == 1
         assert context.categories["Woman"].id == 2
 
-    def test_export_to_file(self, mot_context):
+    def test_export_to_file(self, mot_context, tmp_path):
         annotations = [
             IRVideoBBoxFrameAnnotation(
                 imported_id="1",
@@ -221,20 +219,18 @@ class TestMOTFileExport:
             ),
         ]
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
-            output_path = Path(f.name)
+        output_path = tmp_path / "gt.txt"
+        export_to_mot(sequence_from_annotations(annotations), mot_context, output_path)
 
-            export_to_mot(sequence_from_annotations(annotations), mot_context, output_path)
+        content = output_path.read_text()
+        lines = [line for line in content.strip().split("\n") if line and not line.startswith("#")]
 
-            content = output_path.read_text()
-            lines = [line for line in content.strip().split("\n") if line and not line.startswith("#")]
+        assert len(lines) == 3
 
-            assert len(lines) == 3
+        first_line_parts = lines[0].split(",")
+        assert first_line_parts[0] == "1"
 
-            first_line_parts = lines[0].split(",")
-            assert first_line_parts[0] == "1"
-
-    def test_export_to_file_denormalizes_normalized_track(self, mot_context):
+    def test_export_to_file_denormalizes_normalized_track(self, mot_context, tmp_path):
         annotations = [
             IRVideoBBoxFrameAnnotation(
                 imported_id="1",
@@ -251,32 +247,28 @@ class TestMOTFileExport:
             ),
         ]
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
-            output_path = Path(f.name)
+        output_path = tmp_path / "gt.txt"
+        export_to_mot(sequence_from_annotations(annotations), mot_context, output_path)
 
-            export_to_mot(sequence_from_annotations(annotations), mot_context, output_path)
+        line = output_path.read_text().strip()
+        parts = line.split(",")
+        assert math.isclose(float(parts[2]), 192, abs_tol=1)
+        assert math.isclose(float(parts[3]), 108, abs_tol=1)
 
-            line = output_path.read_text().strip()
-            parts = line.split(",")
-            assert math.isclose(float(parts[2]), 192, abs_tol=1)
-            assert math.isclose(float(parts[3]), 108, abs_tol=1)
-
-    def test_export_roundtrip(self, mot_context, sample_mot_file):
+    def test_export_roundtrip(self, mot_context, sample_mot_file, tmp_path):
         sequence = load_mot_from_file(sample_mot_file, mot_context)
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
-            output_path = Path(f.name)
+        output_path = tmp_path / "gt.txt"
+        export_to_mot(sequence, mot_context, output_path)
 
-            export_to_mot(sequence, mot_context, output_path)
+        reimported = load_mot_from_file(output_path, mot_context)
 
-            reimported = load_mot_from_file(output_path, mot_context)
+        assert len(reimported.annotations_by_frame()) == len(sequence.annotations_by_frame())
 
-            assert len(reimported.annotations_by_frame()) == len(sequence.annotations_by_frame())
+        for frame_num, frame_entries in sequence.annotations_by_frame().items():
+            assert len(reimported.annotations_by_frame()[frame_num]) == len(frame_entries)
 
-            for frame_num, frame_entries in sequence.annotations_by_frame().items():
-                assert len(reimported.annotations_by_frame()[frame_num]) == len(frame_entries)
-
-    def test_export_converts_non_numeric_track_identifier_to_numeric_id(self, mot_context):
+    def test_export_converts_non_numeric_track_identifier_to_numeric_id(self, mot_context, tmp_path):
         ann = IRVideoBBoxFrameAnnotation(
             frame_number=0,
             left=100,
@@ -293,16 +285,14 @@ class TestMOTFileExport:
             tracks=[IRVideoAnnotationTrack.from_annotations([ann], track_id="track_person_1")]
         )
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
-            output_path = Path(f.name)
+        output_path = tmp_path / "gt.txt"
+        export_to_mot(sequence, mot_context, output_path)
 
-            export_to_mot(sequence, mot_context, output_path)
+        line = output_path.read_text().strip()
+        assert line
+        assert line.split(",")[1].isdigit()
 
-            line = output_path.read_text().strip()
-            assert line
-            assert line.split(",")[1].isdigit()
-
-    def test_export_interpolates_between_sparse_keyframes(self, mot_context):
+    def test_export_interpolates_between_sparse_keyframes(self, mot_context, tmp_path):
         annotations = [
             IRVideoBBoxFrameAnnotation(
                 imported_id="1",
@@ -334,18 +324,16 @@ class TestMOTFileExport:
             ),
         ]
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
-            output_path = Path(f.name)
+        output_path = tmp_path / "gt.txt"
+        export_to_mot(sequence_from_annotations(annotations), mot_context, output_path)
+        lines = [line for line in output_path.read_text().splitlines() if line and not line.startswith("#")]
 
-            export_to_mot(sequence_from_annotations(annotations), mot_context, output_path)
-            lines = [line for line in output_path.read_text().splitlines() if line and not line.startswith("#")]
+        # Frames should be densified from 0..4 (MOT 1..5)
+        assert len(lines) == 5
+        mot_frames = [int(line.split(",")[0]) for line in lines]
+        assert mot_frames == [1, 2, 3, 4, 5]
 
-            # Frames should be densified from 0..4 (MOT 1..5)
-            assert len(lines) == 5
-            mot_frames = [int(line.split(",")[0]) for line in lines]
-            assert mot_frames == [1, 2, 3, 4, 5]
-
-    def test_export_hides_outside_ranges_between_keyframes(self, mot_context):
+    def test_export_hides_outside_ranges_between_keyframes(self, mot_context, tmp_path):
         annotations = [
             IRVideoBBoxFrameAnnotation(
                 imported_id="1",
@@ -391,18 +379,16 @@ class TestMOTFileExport:
             ),
         ]
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
-            output_path = Path(f.name)
+        output_path = tmp_path / "gt.txt"
+        export_to_mot(sequence_from_annotations(annotations), mot_context, output_path)
+        lines = [line for line in output_path.read_text().splitlines() if line and not line.startswith("#")]
 
-            export_to_mot(sequence_from_annotations(annotations), mot_context, output_path)
-            lines = [line for line in output_path.read_text().splitlines() if line and not line.startswith("#")]
+        # Frame 3 is emitted as a hidden boundary marker, frame 4 remains hidden until re-appearance at frame 5.
+        mot_frames = [int(line.split(",")[0]) for line in lines]
+        assert mot_frames == [1, 2, 3, 4, 6]
+        assert float(lines[3].split(",")[8]) == 0.0
 
-            # Frame 3 is emitted as a hidden boundary marker, frame 4 remains hidden until re-appearance at frame 5.
-            mot_frames = [int(line.split(",")[0]) for line in lines]
-            assert mot_frames == [1, 2, 3, 4, 6]
-            assert float(lines[3].split(",")[8]) == 0.0
-
-    def test_export_extends_last_visible_segment_to_seq_length(self):
+    def test_export_extends_last_visible_segment_to_seq_length(self, tmp_path):
         context = MOTContext(frame_rate=30, video_width=1920, video_height=1080, sequence_length=12)
         context.categories.add("person", 1)
         annotations = [
@@ -436,13 +422,11 @@ class TestMOTFileExport:
             ),
         ]
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as f:
-            output_path = Path(f.name)
-
-            export_to_mot(sequence_from_annotations(annotations, sequence_length=12), context, output_path)
-            lines = [line for line in output_path.read_text().splitlines() if line and not line.startswith("#")]
-            mot_frames = [int(line.split(",")[0]) for line in lines]
-            assert mot_frames == list(range(1, 13))
+        output_path = tmp_path / "gt.txt"
+        export_to_mot(sequence_from_annotations(annotations, sequence_length=12), context, output_path)
+        lines = [line for line in output_path.read_text().splitlines() if line and not line.startswith("#")]
+        mot_frames = [int(line.split(",")[0]) for line in lines]
+        assert mot_frames == list(range(1, 13))
 
     def test_export_to_dir_uses_probed_dimensions_for_seqinfo(self, tmp_path, monkeypatch):
         context = MOTContext(frame_rate=30, video_width=None, video_height=None, sequence_name="test_sequence")
