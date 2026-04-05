@@ -1,5 +1,6 @@
 import configparser
 import math
+from pathlib import Path
 from zipfile import ZipFile
 
 import pytest
@@ -8,6 +9,7 @@ from dagshub_annotation_converter.converters.mot import (
     export_mot_sequences_to_dirs,
     export_mot_to_dir,
     export_to_mot,
+    load_mot_from_fs,
     load_mot_from_file,
 )
 from dagshub_annotation_converter.formats.mot.bbox import _export_bbox_to_line
@@ -528,9 +530,9 @@ class TestMOTFileExport:
         )
 
         assert set(outputs.keys()) == {"earth-space-small.mp4", "jelly.mp4"}
-        with ZipFile(tmp_path / "earth-space-small.mp4.zip") as z:
+        with ZipFile(tmp_path / "labels" / "earth-space-small.mp4.zip") as z:
             assert z.read("gt/labels.txt").decode("utf-8") == "Man\n"
-        with ZipFile(tmp_path / "jelly.mp4.zip") as z:
+        with ZipFile(tmp_path / "labels" / "jelly.mp4.zip") as z:
             assert z.read("gt/labels.txt").decode("utf-8") == "Woman\n"
 
     def test_export_to_dir_uses_probed_frame_count_for_seqinfo(self, tmp_path, monkeypatch):
@@ -632,13 +634,13 @@ class TestMOTFileExport:
             tmp_path,
         )
         assert set(outputs.keys()) == {"earth-space-small.mp4", "jelly.mp4"}
-        assert (tmp_path / "earth-space-small.mp4.zip").exists()
-        assert (tmp_path / "jelly.mp4.zip").exists()
-        with ZipFile(tmp_path / "earth-space-small.mp4.zip") as z:
+        assert (tmp_path / "labels" / "earth-space-small.mp4.zip").exists()
+        assert (tmp_path / "labels" / "jelly.mp4.zip").exists()
+        with ZipFile(tmp_path / "labels" / "earth-space-small.mp4.zip") as z:
             assert "gt/gt.txt" in z.namelist()
             assert "gt/labels.txt" in z.namelist()
             assert "seqinfo.ini" not in z.namelist()
-        with ZipFile(tmp_path / "jelly.mp4.zip") as z:
+        with ZipFile(tmp_path / "labels" / "jelly.mp4.zip") as z:
             assert "gt/gt.txt" in z.namelist()
             assert "gt/labels.txt" in z.namelist()
             assert "seqinfo.ini" not in z.namelist()
@@ -673,7 +675,7 @@ class TestMOTFileExport:
             create_seqinfo=True,
         )
         assert "earth-space-small.mp4" in outputs
-        with ZipFile(tmp_path / "earth-space-small.mp4.zip") as z:
+        with ZipFile(tmp_path / "labels" / "earth-space-small.mp4.zip") as z:
             seqinfo_text = z.read("seqinfo.ini").decode("utf-8")
         seqinfo = configparser.ConfigParser()
         seqinfo.read_string(seqinfo_text)
@@ -681,6 +683,57 @@ class TestMOTFileExport:
         assert seq["imWidth"] == "1280"
         assert seq["imHeight"] == "720"
         assert seq["frameRate"] == "25"
+
+    def test_export_sequences_to_dirs_roundtrips_via_load_from_fs(self, tmp_path, monkeypatch):
+        context = MOTContext(frame_rate=30, video_width=1920, video_height=1080, sequence_name="default")
+        context.categories.add("person", 1)
+
+        videos_dir = tmp_path / "videos"
+        videos_dir.mkdir()
+        (videos_dir / "earth-space-small.mp4").write_bytes(b"fake-video-a")
+        (videos_dir / "jelly.mp4").write_bytes(b"fake-video-b")
+
+        ann_a = IRVideoBBoxFrameAnnotation(
+            imported_id="1",
+            frame_number=0,
+            left=100,
+            top=150,
+            width=50,
+            height=120,
+            video_width=1920,
+            video_height=1080,
+            categories={"person": 1.0},
+            coordinate_style=CoordinateStyle.DENORMALIZED,
+            filename="earth-space-small.mp4",
+        )
+        ann_b = IRVideoBBoxFrameAnnotation(
+            imported_id="2",
+            frame_number=0,
+            left=500,
+            top=200,
+            width=150,
+            height=100,
+            video_width=1920,
+            video_height=1080,
+            categories={"person": 1.0},
+            coordinate_style=CoordinateStyle.DENORMALIZED,
+            filename="jelly.mp4",
+        )
+
+        monkeypatch.setattr(
+            "dagshub_annotation_converter.converters.mot.probe_video",
+            lambda _: VideoProbeResult(width=1920, height=1080, fps=30.0, frame_count=1),
+        )
+
+        export_mot_sequences_to_dirs(
+            [sequence_from_annotations([ann_a]), sequence_from_annotations([ann_b])],
+            context,
+            tmp_path,
+        )
+        loaded = load_mot_from_fs(tmp_path)
+
+        assert set(loaded.keys()) == {Path("earth-space-small.mp4"), Path("jelly.mp4")}
+        assert {sequence.filename for sequence, _ in loaded.values()} == {"earth-space-small.mp4", "jelly.mp4"}
 
     def test_export_to_dir_seq_length_matches_exported_gt(self, tmp_path):
         context = MOTContext(frame_rate=30, video_width=720, video_height=480, sequence_name="test_sequence")

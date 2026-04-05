@@ -328,93 +328,95 @@ def load_mot_from_fs(
     import_dir: Union[str, Path],
     image_width: Optional[int] = None,
     image_height: Optional[int] = None,
-    video_files: Optional[Dict[str, Union[str, Path]]] = None,
-    datasource_path: Optional[Union[str, Path]] = None,
+    video_dir_name: str = "videos",
+    label_dir_name: str = "labels",
 ) -> Dict[Path, Tuple[IRVideoSequence, MOTContext]]:
-    """Load MOT annotations from all sequence directories/ZIPs under a directory.
+    """Load MOT annotations from a dataset root containing video and label directories.
 
-    Recursively searches *import_dir* for MOT sequences (directories containing
-    ``gt/gt.txt``) and ZIP archives, loading each one with :func:`load_mot_from_dir`
-    or :func:`load_mot_from_zip`. Returns a dict keyed by the path of each sequence
-    relative to *import_dir*.
+    Expected layout::
+
+        data/
+          videos/
+            video1.mp4
+            nested/video2.mp4
+            nested/video3.mp4
+          labels/
+            video1.mp4.zip
+            nested/video2.mp4.zip
+            nested/video3/
+              gt/gt.txt
+              gt/labels.txt
+
+    By default, the function expects ``videos/`` and ``labels/`` under
+    *import_dir*, but both directory names are configurable.
+
+    It mirrors label paths back to videos:
+
+    - ``labels/<path>/<video>.ext.zip`` maps to ``videos/<path>/<video>.ext``
+    - ``labels/<path>/<video-stem>/`` maps to the video in ``videos/<path>/``
+      with the same stem and any supported video extension
 
     Args:
-        import_dir: Root directory to search for MOT sequences.
-        image_width: Override frame width for all sequences (skips video probing).
-        image_height: Override frame height for all sequences (skips video probing).
-        video_files: Optional mapping from sequence key (name, stem, or relative path)
-            to a video file path. Used to probe frame dimensions and FPS when they are
-            not present in ``seqinfo.ini``. Keys are matched loosely against each
-            sequence's name, stem, and relative path.
-        datasource_path: Optional DagsHub datasource sub-path. When provided, the
-            function also looks for a matching video at
-            ``import_dir.parent / "data" / datasource_path / <sequence_name>``,
-            which follows the DagsHub convention where annotations live under
-            ``labels/`` and videos under ``data/<datasource>/``.
+        import_dir: Dataset root containing the video and label directories.
+        image_width: Override frame width for all sequences instead of probing it.
+        image_height: Override frame height for all sequences instead of probing it.
+        video_dir_name: Name of the directory under *import_dir* that contains videos.
+        label_dir_name: Name of the directory under *import_dir* that contains MOT labels.
+
+    Returns a dict keyed by each matched video path relative to
+    ``import_dir / video_dir_name``.
+    Each imported sequence also gets that same relative video path in
+    ``sequence.filename`` and on its frame annotations.
     """
     import_dir = Path(import_dir)
+    video_dir = import_dir / video_dir_name
+    labels_dir = import_dir / label_dir_name
+    if not video_dir.is_dir():
+        raise FileNotFoundError(f"Could not find video directory {video_dir}")
+    if not labels_dir.is_dir():
+        raise FileNotFoundError(f"Could not find label directory {labels_dir}")
+
     results: Dict[Path, Tuple[IRVideoSequence, MOTContext]] = {}
-    normalized_datasource_path: Optional[Path] = None
-    if datasource_path is not None:
-        normalized_datasource_path = Path(str(datasource_path).lstrip("/"))
 
-    def _sequence_lookup_keys(sequence_key: Path) -> List[str]:
-        keys = [str(sequence_key), sequence_key.as_posix(), sequence_key.name, sequence_key.stem]
-        second_stem = Path(sequence_key.stem).stem
-        if second_stem not in keys:
-            keys.append(second_stem)
-        return [key for key in keys if key]
+    def _resolve_video_for_annotation_source(annotation_source: Path) -> Tuple[Path, Path]:
+        relative_annotation_path = annotation_source.relative_to(labels_dir)
 
-    def _sequence_video_filename(sequence_key: Path) -> str:
-        name = sequence_key.name
-        if name.lower().endswith(".zip"):
-            return Path(name).stem
-        return name
+        if annotation_source.is_file():
+            relative_video_path = relative_annotation_path.with_suffix("")
+            video_file = video_dir / relative_video_path
+            if not video_file.is_file():
+                raise FileNotFoundError(
+                    f"Could not find video {relative_video_path} for annotation archive {annotation_source}"
+                )
+            return relative_video_path, video_file
 
-    def _resolve_video_file(sequence_key: Path) -> Optional[Path]:
-        # Build a set of string variants for this sequence (relative path, posix, name, stem,
-        # double-stem for double-extensions like "foo.mp4.zip" → "foo") so that video_files
-        # keys can be specified in any of these forms and still match.
-        lookup_keys = _sequence_lookup_keys(sequence_key)
+        # Directory annotations intentionally drop the video extension
+        # (e.g. ``labels/foo/bar/earth.mp4.zip`` vs ``labels/foo/bar/earth/``).
+        # Resolve the real video file by looking for a sibling in ``videos/``
+        # with the same stem and any supported video extension.
+        video_file = find_video_sibling(video_dir / relative_annotation_path)
+        if video_file is None:
+            raise FileNotFoundError(
+                f"Could not find a video matching annotation directory {annotation_source} under {video_dir}"
+            )
+        return video_file.relative_to(video_dir), video_file
 
-        if video_files is not None:
-            # Fast path: exact match on any of the lookup variants.
-            for key in lookup_keys:
-                if key in video_files:
-                    return Path(video_files[key])
+    def _store_result(relative_video_path: Path, loaded: Tuple[IRVideoSequence, MOTContext]) -> None:
+        if relative_video_path in results:
+            raise ValueError(f"Found multiple MOT annotation sources for {relative_video_path}")
 
-            # Slow path: check whether any video_files key matches any lookup variant,
-            # building the same variant set for each key in video_files.
-            for raw_key, raw_value in video_files.items():
-                key_path = Path(str(raw_key))
-                candidates = [
-                    str(raw_key),
-                    key_path.as_posix(),
-                    key_path.name,
-                    key_path.stem,
-                    Path(key_path.stem).stem,
-                ]
-                if any(candidate in lookup_keys for candidate in candidates if candidate):
-                    return Path(raw_value)
+        sequence, context = loaded
+        display_path = relative_video_path.as_posix()
+        results[relative_video_path] = (_apply_sequence_filename(sequence, display_path), context)
 
-        if normalized_datasource_path is not None:
-            video_filename = _sequence_video_filename(sequence_key)
-            candidate = import_dir.parent / "data" / normalized_datasource_path / video_filename
-            if candidate.is_file():
-                return candidate
-
-        return None
-
-    seq_roots = {gt_path.parent.parent for gt_path in import_dir.rglob("gt.txt") if gt_path.parent.name == "gt"}
+    seq_roots = {gt_path.parent.parent for gt_path in labels_dir.rglob("gt.txt") if gt_path.parent.name == "gt"}
     for seq_root in sorted(seq_roots):
-        key = seq_root.relative_to(import_dir)
-        video_file = _resolve_video_file(key)
-        results[key] = load_mot_from_dir(seq_root, image_width, image_height, video_file)
+        relative_video_path, video_file = _resolve_video_for_annotation_source(seq_root)
+        _store_result(relative_video_path, load_mot_from_dir(seq_root, image_width, image_height, video_file))
 
-    for zip_path in sorted(import_dir.rglob("*.zip")):
-        key = zip_path.relative_to(import_dir)
-        video_file = _resolve_video_file(key)
-        results[key] = load_mot_from_zip(zip_path, image_width, image_height, video_file)
+    for zip_path in sorted(labels_dir.rglob("*.zip")):
+        relative_video_path, video_file = _resolve_video_for_annotation_source(zip_path)
+        _store_result(relative_video_path, load_mot_from_zip(zip_path, image_width, image_height, video_file))
 
     return results
 
@@ -566,12 +568,18 @@ def export_mot_sequences_to_dirs(
     output_dir: Union[str, Path],
     video_files: Optional[Dict[str, Union[str, Path]]] = None,
     create_seqinfo: bool = False,
+    video_dir_name: str = "videos",
+    label_dir_name: str = "labels",
 ) -> Dict[str, Path]:
-    """Export multiple MOT sequences to one zip per source filename."""
+    """Export multiple MOT sequences to a dataset layout compatible with ``load_mot_from_fs``."""
 
-    def resolve_video_file(sequence_name: str) -> Optional[Union[str, Path]]:
+    def resolve_video_file(relative_video_path: Path) -> Optional[Union[str, Path]]:
+        dataset_video = output_dir / video_dir_name / relative_video_path
+        if dataset_video.is_file():
+            return dataset_video
         if video_files is None:
             return None
+        sequence_name = relative_video_path.as_posix()
         if sequence_name in video_files:
             return video_files[sequence_name]
         sequence_stem = Path(sequence_name).stem
@@ -582,18 +590,34 @@ def export_mot_sequences_to_dirs(
             return video_files[sequence_basename]
         return None
 
+    def resolve_relative_video_path(sequence: IRVideoSequence) -> Path:
+        if sequence.filename:
+            filename_path = Path(sequence.filename)
+            if filename_path.is_absolute():
+                return Path(filename_path.name)
+            return filename_path
+        return Path(context.sequence_name or "sequence")
+
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / video_dir_name).mkdir(parents=True, exist_ok=True)
+    labels_root = output_dir / label_dir_name
+    labels_root.mkdir(parents=True, exist_ok=True)
     outputs: Dict[str, Path] = {}
     for sequence in sequences:
-        sequence_name = Path(sequence.filename).name if sequence.filename else context.sequence_name or "sequence"
+        relative_video_path = resolve_relative_video_path(sequence)
+        sequence_name = relative_video_path.name
         seq_context = context.model_copy(deep=True)
         seq_context.sequence_name = sequence_name
-        outputs[sequence_name] = export_mot_to_zip(
+        # Mirror the video path under the labels directory so load_mot_from_fs()
+        # can map ``labels/<relative-video>.zip`` back to ``videos/<relative-video>``.
+        output_path = labels_root / relative_video_path.parent / f"{relative_video_path.name}.zip"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        outputs[relative_video_path.as_posix()] = export_mot_to_zip(
             sequence,
             seq_context,
-            output_dir / f"{sequence_name}.zip",
-            video_file=resolve_video_file(sequence_name),
+            output_path,
+            video_file=resolve_video_file(relative_video_path),
             create_seqinfo=create_seqinfo,
         )
     return outputs

@@ -211,17 +211,26 @@ class TestMOTDirectoryImport:
             load_mot_from_dir(tmp_path)
 
     def test_load_from_fs_multiple_sequences(self, sample_mot_dir, tmp_path):
-        shutil.copytree(sample_mot_dir, tmp_path / "seq_a")
-        shutil.copytree(sample_mot_dir, tmp_path / "seq_b")
+        labels_dir = tmp_path / "labels"
+        videos_dir = tmp_path / "videos"
+        labels_dir.mkdir()
+        videos_dir.mkdir()
+
+        shutil.copytree(sample_mot_dir, labels_dir / "seq_a")
+        shutil.copytree(sample_mot_dir, labels_dir / "seq_b")
+        (videos_dir / "seq_a.mp4").write_bytes(b"fake-video-a")
+        (videos_dir / "seq_b.mp4").write_bytes(b"fake-video-b")
 
         loaded = load_mot_from_fs(tmp_path)
-        assert set(loaded.keys()) == {Path("seq_a"), Path("seq_b")}
+        assert set(loaded.keys()) == {Path("seq_a.mp4"), Path("seq_b.mp4")}
         assert all(len(sequence.tracks) > 0 for sequence, _ in loaded.values())
+        assert {sequence.filename for sequence, _ in loaded.values()} == {"seq_a.mp4", "seq_b.mp4"}
 
-    def test_load_from_fs_uses_datasource_path_layout(self, tmp_path, monkeypatch):
-        labels_dir = tmp_path / "labels"
-        labels_dir.mkdir()
-        video_path = tmp_path / "data" / "data" / "videos" / "earth-space-small.mp4"
+    def test_load_from_fs_uses_sibling_labels_layout(self, tmp_path, monkeypatch):
+        labels_dir = tmp_path / "labels" / "nested"
+        videos_dir = tmp_path / "videos"
+        labels_dir.mkdir(parents=True)
+        video_path = videos_dir / "nested" / "earth-space-small.mp4"
         video_path.parent.mkdir(parents=True, exist_ok=True)
         video_path.write_bytes(b"fake-video")
 
@@ -240,14 +249,40 @@ class TestMOTDirectoryImport:
 
         monkeypatch.setattr("dagshub_annotation_converter.converters.mot.probe_video", fake_probe)
 
-        loaded = load_mot_from_fs(labels_dir, datasource_path="data/videos")
-        sequence, context = loaded[Path("earth-space-small.mp4.zip")]
+        loaded = load_mot_from_fs(tmp_path)
+        sequence, context = loaded[Path("nested/earth-space-small.mp4")]
 
         assert context.video_width == 720
         assert context.video_height == 480
         assert context.sequence_length == 400
         assert 0 in sequence.annotations_by_frame()
+        assert sequence.filename == "nested/earth-space-small.mp4"
         assert probed_paths == [video_path]
+
+    def test_load_from_fs_supports_custom_video_and_label_dir_names(self, tmp_path, monkeypatch):
+        labels_dir = tmp_path / "annotations"
+        videos_dir = tmp_path / "clips"
+        labels_dir.mkdir()
+        videos_dir.mkdir()
+
+        video_path = videos_dir / "earth-space-small.mp4"
+        video_path.write_bytes(b"fake-video")
+
+        zip_path = labels_dir / "earth-space-small.mp4.zip"
+        with ZipFile(zip_path, "w") as z:
+            z.writestr("gt/gt.txt", "1,1,100,150,50,120,1,1,1.0\n")
+            z.writestr("gt/labels.txt", "person\n")
+
+        from dagshub_annotation_converter.util.video import VideoProbeResult
+
+        monkeypatch.setattr(
+            "dagshub_annotation_converter.converters.mot.probe_video",
+            lambda _: VideoProbeResult(width=720, height=480, fps=24.0, frame_count=400),
+        )
+
+        loaded = load_mot_from_fs(tmp_path, video_dir_name="clips", label_dir_name="annotations")
+
+        assert set(loaded.keys()) == {Path("earth-space-small.mp4")}
 
 
 class TestMOTFrameNumberConversion:
