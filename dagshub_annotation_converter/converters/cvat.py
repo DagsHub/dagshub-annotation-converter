@@ -181,13 +181,18 @@ def _parse_cvat_videos(
     for track_elem in root_elem.findall(".//track"):
         tracks.append(parse_video_track(track_elem, image_width, image_height))
 
-    return IRVideoSequence(
+    sequence = IRVideoSequence(
         tracks=tracks,
         filename=source_name,
         sequence_length=seq_length,
         video_width=image_width,
         video_height=image_height,
     )
+    if source_name is not None:
+        for _, ann in sequence.iter_track_annotations():
+            if ann.filename is None:
+                ann.filename = source_name
+    return sequence
 
 
 def load_cvat_from_xml_bytes(

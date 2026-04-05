@@ -58,6 +58,7 @@ def ls_video_task_to_video_ir(task: LabelStudioTask) -> IRVideoSequence:
     """Convert a Label Studio Video task to a Video IR sequence."""
     tracks = []
     sequence_length = None
+    video_path = task.data.get("video")
 
     for container in task.annotations:
         for result in container.result:
@@ -71,9 +72,12 @@ def ls_video_task_to_video_ir(task: LabelStudioTask) -> IRVideoSequence:
                     sequence_length = result.value.framesCount
                 else:
                     sequence_length = max(sequence_length, result.value.framesCount)
+            if video_path is not None:
+                for annotation in track.annotations:
+                    if annotation.filename is None:
+                        annotation.filename = video_path
             tracks.append(track)
 
-    video_path = task.data.get("video")
     return IRVideoSequence(
         tracks=tracks,
         filename=video_path,

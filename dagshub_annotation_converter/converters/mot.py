@@ -50,6 +50,16 @@ def _find_mot_prefix_in_zip(z: ZipFile) -> str:
     raise FileNotFoundError("Could not find gt/gt.txt in zip")
 
 
+def _apply_sequence_filename(sequence: IRVideoSequence, filename: Optional[str]) -> IRVideoSequence:
+    sequence.filename = filename
+    if filename is None:
+        return sequence
+    for _, ann in sequence.iter_track_annotations():
+        if ann.filename is None:
+            ann.filename = filename
+    return sequence
+
+
 def load_mot_from_file(
     gt_path: Union[str, Path],
     context: MOTContext,
@@ -57,7 +67,8 @@ def load_mot_from_file(
     """Load MOT annotations from a gt.txt file."""
     gt_path = Path(gt_path)
     with open(gt_path, "r") as f:
-        return _load_mot_from_gt_content(f.read(), context)
+        sequence = _load_mot_from_gt_content(f.read(), context)
+    return _apply_sequence_filename(sequence, context.sequence_name)
 
 
 def _try_fill_dimensions_from_video(
@@ -169,11 +180,14 @@ def _interpolate_track_for_mot(
     if end_frame is not None:
         last = ordered[-1]
         if last.is_visible and last.interpolation_enabled and last.frame_number < end_frame:
+            # MOT expects dense rows through the known sequence end. When the
+            # final visible keyframe keeps interpolation enabled, freeze that
+            # last box forward rather than trying to extrapolate new motion.
             for frame_number in range(last.frame_number + 1, end_frame + 1):
-                extrapolated = last.model_copy(deep=True)
-                extrapolated.frame_number = frame_number
-                extrapolated.keyframe = False
-                dense.append(extrapolated)
+                frozen = last.model_copy(deep=True)
+                frozen.frame_number = frame_number
+                frozen.keyframe = False
+                dense.append(frozen)
 
     return dense
 
@@ -192,7 +206,7 @@ def load_mot_from_dir(
         mot_dir/
           gt/
             gt.txt
-            labels.txt (optional)
+            labels.txt
           seqinfo.ini (optional)
 
     If dimensions are missing from seqinfo.ini and not provided explicitly,
@@ -215,8 +229,9 @@ def load_mot_from_dir(
         context.video_height = image_height
 
     labels_path = gt_dir / "labels.txt"
-    if labels_path.exists():
-        context.categories = MOTContext.load_labels(labels_path)
+    if not labels_path.exists():
+        raise FileNotFoundError(f"Could not find labels.txt in {gt_dir}")
+    context.categories = MOTContext.load_labels(labels_path)
 
     gt_path = gt_dir / "gt.txt"
     if not gt_path.exists():
@@ -225,8 +240,7 @@ def load_mot_from_dir(
     _try_fill_dimensions_from_video(context, mot_dir, video_file)
     _validate_context_dimensions(context, str(mot_dir))
     sequence = load_mot_from_file(gt_path, context)
-    sequence.filename = context.sequence_name or mot_dir.name
-    return sequence, context
+    return _apply_sequence_filename(sequence, context.sequence_name or mot_dir.name), context
 
 
 def _load_mot_from_gt_content(gt_content: str, context: MOTContext) -> IRVideoSequence:
@@ -264,7 +278,7 @@ def load_mot_from_zip(
 
         gt/
           gt.txt
-          labels.txt (optional)
+          labels.txt
         seqinfo.ini (optional)
 
     Or nested: ``seqname/gt/gt.txt``, ``seqname/seqinfo.ini``, etc.
@@ -295,9 +309,10 @@ def load_mot_from_zip(
         if image_height is not None:
             context.video_height = image_height
 
-        if labels_key in z.namelist():
-            with z.open(labels_key) as f:
-                context.categories = MOTContext.load_labels_from_string(f.read().decode("utf-8"))
+        if labels_key not in z.namelist():
+            raise FileNotFoundError(f"Could not find {labels_key} in {zip_path}")
+        with z.open(labels_key) as f:
+            context.categories = MOTContext.load_labels_from_string(f.read().decode("utf-8"))
 
         _try_fill_dimensions_from_video(context, zip_path, video_file)
         _validate_context_dimensions(context, str(zip_path))
@@ -306,8 +321,7 @@ def load_mot_from_zip(
             gt_content = f.read().decode("utf-8")
         sequence = _load_mot_from_gt_content(gt_content, context)
 
-    sequence.filename = context.sequence_name or zip_path.stem
-    return sequence, context
+    return _apply_sequence_filename(sequence, context.sequence_name or zip_path.stem), context
 
 
 def load_mot_from_fs(

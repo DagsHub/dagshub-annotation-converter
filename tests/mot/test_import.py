@@ -126,6 +126,18 @@ class TestMOTFileImport:
         sequence = load_mot_from_file(sample_mot_file, mot_context)
         assert len(sequence.to_annotations()) == 10
 
+    def test_load_from_file_sets_annotation_filenames_when_context_has_sequence_name(
+            self,
+            sample_mot_file,
+            mot_context
+    ):
+        mot_context.sequence_name = "test_sequence"
+
+        sequence = load_mot_from_file(sample_mot_file, mot_context)
+
+        assert sequence.filename == "test_sequence"
+        assert all(ann.filename == "test_sequence" for _, ann in sequence.iter_track_annotations())
+
 
 class TestMOTZipImport:
     def test_load_from_zip_same_as_dir(self, sample_mot_dir):
@@ -158,6 +170,19 @@ class TestMOTZipImport:
             assert zip_ctx.categories[1].name == "person"
             assert zip_ctx.categories[2].name == "car"
 
+    def test_load_from_zip_requires_labels_file(self):
+        with tempfile.NamedTemporaryFile(suffix=".zip") as f:
+            zip_path = Path(f.name)
+            with ZipFile(zip_path, "w") as z:
+                z.writestr("gt/gt.txt", "1,1,100,150,50,120,1,1,1.0\n")
+                z.writestr(
+                    "seqinfo.ini",
+                    "[Sequence]\nname=test_sequence\nframeRate=30\nseqLength=1\nimWidth=1920\nimHeight=1080\n",
+                )
+
+            with pytest.raises(FileNotFoundError, match="Could not find gt/labels.txt"):
+                load_mot_from_zip(zip_path)
+
 
 class TestMOTDirectoryImport:
     def test_load_from_dir(self, sample_mot_dir):
@@ -171,6 +196,19 @@ class TestMOTDirectoryImport:
 
         assert context.categories[1].name == "person"
         assert context.categories[2].name == "car"
+        assert all(ann.filename == "test_sequence" for _, ann in sequence.iter_track_annotations())
+
+    def test_load_from_dir_requires_labels_file(self, tmp_path):
+        gt_dir = tmp_path / "gt"
+        gt_dir.mkdir()
+        (gt_dir / "gt.txt").write_text("1,1,100,150,50,120,1,1,1.0\n", encoding="utf-8")
+        (tmp_path / "seqinfo.ini").write_text(
+            "[Sequence]\nname=test_sequence\nframeRate=30\nseqLength=1\nimWidth=1920\nimHeight=1080\n",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(FileNotFoundError, match="Could not find labels.txt"):
+            load_mot_from_dir(tmp_path)
 
     def test_load_from_fs_multiple_sequences(self, sample_mot_dir, tmp_path):
         shutil.copytree(sample_mot_dir, tmp_path / "seq_a")

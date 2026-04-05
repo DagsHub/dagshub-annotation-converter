@@ -15,7 +15,7 @@ from dagshub_annotation_converter.converters.label_studio_video import (
     video_ir_to_ls_video_task,
 )
 from dagshub_annotation_converter.converters.mot import export_to_mot, load_mot_from_file
-from dagshub_annotation_converter.formats.label_studio.task import LabelStudioTask
+from dagshub_annotation_converter.formats.label_studio.task import AnnotationsContainer, LabelStudioTask
 from dagshub_annotation_converter.formats.label_studio.videorectangle import (
     VideoRectangleAnnotation,
     VideoRectangleSequenceItem,
@@ -426,6 +426,29 @@ class TestCVATVideoToLabelStudioRoundtrip:
 
         restored = ls_video_task_to_video_ir(ls_task)
         assert restored.sequence_length == 42
+
+    def test_import_sets_filename_on_track_annotations(self):
+        ls_ann = VideoRectangleAnnotation(
+            id="track_1",
+            original_width=1920,
+            original_height=1080,
+            value=VideoRectangleValue(
+                sequence=[
+                    VideoRectangleSequenceItem(frame=1, x=10.0, y=20.0, width=5.0, height=10.0, enabled=True),
+                ],
+                labels=["person"],
+                framesCount=10,
+            ),
+        )
+        task = LabelStudioTask(data={"video": "/data/video.mp4"})
+        task.annotations = [
+            AnnotationsContainer.model_construct(completed_by=None, result=[ls_ann], ground_truth=False),
+        ]
+
+        restored = ls_video_task_to_video_ir(task)
+
+        assert restored.filename == "/data/video.mp4"
+        assert restored.tracks[0].annotations[0].filename == "/data/video.mp4"
 
 
 class TestCrossFormatConversion:

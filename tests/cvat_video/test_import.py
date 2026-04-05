@@ -6,7 +6,11 @@ from dagshub_annotation_converter.formats.cvat.video import (
     parse_video_track,
     export_video_track_to_xml,
 )
-from dagshub_annotation_converter.converters.cvat import load_cvat_from_xml_file, load_cvat_from_fs
+from dagshub_annotation_converter.converters.cvat import (
+    load_cvat_from_fs,
+    load_cvat_from_xml_bytes,
+    load_cvat_from_xml_file,
+)
 
 
 class TestCVATVideoTrackParsing:
@@ -139,6 +143,29 @@ class TestCVATVideoFileImport:
         # Frame 0 should have 2 annotations (person and car tracks)
         frame_0_anns = sequence.annotations_by_frame().get(0, [])
         assert len(frame_0_anns) == 2
+
+    def test_load_from_xml_bytes_sets_annotation_filenames_when_source_is_present(self):
+        xml_str = b"""<?xml version="1.0" encoding="utf-8"?>
+<annotations>
+  <version>1.1</version>
+  <meta>
+    <task>
+      <size>1</size>
+      <mode>interpolation</mode>
+      <source>earth-space-small.mp4</source>
+      <original_size><width>1920</width><height>1080</height></original_size>
+    </task>
+  </meta>
+  <track id="0" label="person" source="manual">
+    <box frame="0" outside="0" occluded="0" keyframe="1"
+         xtl="10" ytl="20" xbr="110" ybr="120" z_order="0"/>
+  </track>
+</annotations>"""
+
+        sequence = load_cvat_from_xml_bytes(xml_str)
+
+        assert sequence.filename == "earth-space-small.mp4"
+        assert all(ann.filename == "earth-space-small.mp4" for _, ann in sequence.iter_track_annotations())
 
     def test_load_extracts_image_dimensions(self, sample_cvat_video_xml):
         sequence = load_cvat_from_xml_file(sample_cvat_video_xml)
