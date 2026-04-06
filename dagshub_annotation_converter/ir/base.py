@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Any, Dict, Optional, TypeAlias
+from typing import Any, Dict, Optional, Union
 
 from pydantic import Field
 from typing_extensions import Self
@@ -90,4 +90,4 @@ class IRAnnotationCollection(ParentModel):
     object_id: str
 
 
-IRTaskAnnotation: TypeAlias = IRAnnotationBase | IRAnnotationCollection
+IRTaskAnnotation = Union[IRAnnotationBase, IRAnnotationCollection]
