@@ -335,7 +335,7 @@ def load_mot_from_fs(
 
     Expected layout::
 
-        data/
+        import_dir/
           videos/
             video1.mp4
             nested/video2.mp4
