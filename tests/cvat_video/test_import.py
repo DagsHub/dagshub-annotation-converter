@@ -20,7 +20,7 @@ class TestCVATVideoTrackParsing:
 
         track = parse_video_track(tracks[0], image_width=1920, image_height=1080)
 
-        assert track.track_id == "0"
+        assert track.object_id == "0"
         assert len(track.annotations) == 3
 
         first_ann = track.annotations[0]
@@ -178,7 +178,7 @@ class TestCVATVideoFileImport:
     def test_track_ids_consistent(self, sample_cvat_video_xml):
         sequence = load_cvat_from_xml_file(sample_cvat_video_xml)
 
-        all_track_ids = {track.track_id for track in sequence.tracks}
+        all_track_ids = {track.object_id for track in sequence.tracks}
 
         # Should have exactly 2 tracks
         assert len(all_track_ids) == 2
@@ -187,7 +187,7 @@ class TestCVATVideoFileImport:
     def test_categories_from_labels(self, sample_cvat_video_xml):
         sequence = load_cvat_from_xml_file(sample_cvat_video_xml)
         categories_by_track = {
-            track.track_id: track.annotations[0].ensure_has_one_category()
+            track.object_id: track.annotations[0].ensure_has_one_category()
             for track in sequence.tracks
         }
 

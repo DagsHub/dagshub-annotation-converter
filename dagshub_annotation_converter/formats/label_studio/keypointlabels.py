@@ -10,7 +10,7 @@ from dagshub_annotation_converter.ir.image import (
     IRPoseImageAnnotation,
     IRPosePoint,
 )
-from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
+from dagshub_annotation_converter.ir.base import IRAnnotationBase
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 

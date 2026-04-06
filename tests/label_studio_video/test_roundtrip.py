@@ -22,10 +22,19 @@ from dagshub_annotation_converter.formats.label_studio.videorectangle import (
     VideoRectangleValue,
 )
 from dagshub_annotation_converter.formats.mot import MOTContext
-from dagshub_annotation_converter.ir.video import IRVideoSequence
+from dagshub_annotation_converter.ir.video import (
+    CoordinateStyle,
+    IRVideoAnnotationTrack,
+    IRVideoBBoxFrameAnnotation,
+    IRVideoSequence
+)
 from tests.video_helpers import annotations_by_track_frame, flatten_sequence_with_track_ids
 
 LS_VIDEO_PATH = "/data/video.mp4"
+
+
+class DerivedLabelStudioTask(LabelStudioTask):
+    pass
 
 
 def _sequence_from_ls_results(results, filename: str = "/data/video.mp4") -> IRVideoSequence:
@@ -125,10 +134,10 @@ class TestMOTToLabelStudioRoundtrip:
                 assert len(final_entries) == len(original_entries)
 
                 orig_frame = sorted(
-                    ((track.track_id, ann) for track, ann in original_entries),
+                    ((track.object_id, ann) for track, ann in original_entries),
                     key=lambda item: item[0],
                 )
-                final_frame = sorted(((track.track_id, ann) for track, ann in final_entries), key=lambda item: item[0])
+                final_frame = sorted(((track.object_id, ann) for track, ann in final_entries), key=lambda item: item[0])
 
                 for (orig_track_id, orig), (final_track_id, final) in zip(orig_frame, final_frame):
                     assert orig_track_id == final_track_id
@@ -417,7 +426,7 @@ class TestCVATVideoToLabelStudioRoundtrip:
             categories={"person": 1.0},
             coordinate_style=CoordinateStyle.NORMALIZED,
         )
-        track = IRVideoAnnotationTrack.from_annotations([ann], track_id="0")
+        track = IRVideoAnnotationTrack.from_annotations([ann], object_id="0")
         sequence.tracks = [track]
 
         ls_task = video_ir_to_ls_video_task(sequence, video_path="/data/video.mp4")
@@ -449,6 +458,74 @@ class TestCVATVideoToLabelStudioRoundtrip:
 
         assert restored.filename == "/data/video.mp4"
         assert restored.tracks[0].annotations[0].filename == "/data/video.mp4"
+
+    def test_task_add_ir_annotations_accepts_video_tracks(self):
+        track = IRVideoAnnotationTrack.from_annotations(
+            [
+                IRVideoBBoxFrameAnnotation(
+                    frame_number=0,
+                    keyframe=True,
+                    left=0.1,
+                    top=0.2,
+                    width=0.05,
+                    height=0.1,
+                    video_width=1920,
+                    video_height=1080,
+                    categories={"person": 1.0},
+                    coordinate_style=CoordinateStyle.NORMALIZED,
+                ),
+                IRVideoBBoxFrameAnnotation(
+                    frame_number=4,
+                    keyframe=True,
+                    left=0.15,
+                    top=0.25,
+                    width=0.05,
+                    height=0.1,
+                    video_width=1920,
+                    video_height=1080,
+                    categories={"person": 1.0},
+                    coordinate_style=CoordinateStyle.NORMALIZED,
+                ),
+            ],
+            object_id="track_person_1",
+        )
+
+        task = LabelStudioTask()
+        task.add_ir_annotations([track])
+
+        assert len(task.annotations) == 1
+        assert len(task.annotations[0].result) == 1
+
+        result = task.annotations[0].result[0]
+        assert isinstance(result, VideoRectangleAnnotation)
+        assert result.id == "track_person_1"
+        assert result.value.labels == ["person"]
+        assert [item.frame for item in result.value.sequence] == [1, 5]
+
+    def test_from_ir_annotations_preserves_task_subclass_for_video_tracks(self):
+        track = IRVideoAnnotationTrack.from_annotations(
+            [
+                IRVideoBBoxFrameAnnotation(
+                    frame_number=0,
+                    keyframe=True,
+                    left=0.1,
+                    top=0.2,
+                    width=0.05,
+                    height=0.1,
+                    video_width=1920,
+                    video_height=1080,
+                    categories={"person": 1.0},
+                    coordinate_style=CoordinateStyle.NORMALIZED,
+                ),
+            ],
+            object_id="track_person_1",
+        )
+
+        task = DerivedLabelStudioTask.from_ir_annotations([track])
+
+        assert isinstance(task, DerivedLabelStudioTask)
+        assert len(task.annotations) == 1
+        assert isinstance(task.annotations[0].result[0], VideoRectangleAnnotation)
 
 
 class TestCrossFormatConversion:
@@ -507,10 +584,14 @@ class TestLabelStudioVideoLocalProbeFallback:
             del result["original_height"]
 
         task = LabelStudioTask.model_validate(task_data)
-        annotations = task.to_ir_annotations(filename="repo/remote/path/video.mp4")
-        assert len(annotations) == 10
-        assert all(ann.video_width is None for ann in annotations)
-        assert all(ann.video_height is None for ann in annotations)
+        tracks = task.to_ir_annotations(filename="repo/remote/path/video.mp4")
+        assert len(tracks) == 2
+        assert all(isinstance(track, IRVideoAnnotationTrack) for track in tracks)
+        flattened = [ann for track in tracks for ann in track.annotations]
+        assert len(flattened) == 10
+        assert all(ann.filename == "repo/remote/path/video.mp4" for ann in flattened)
+        assert all(ann.video_width is None for ann in flattened)
+        assert all(ann.video_height is None for ann in flattened)
 
     def test_task_to_ir_uses_video_file_argument_for_probing(
         self,
@@ -534,10 +615,14 @@ class TestLabelStudioVideoLocalProbeFallback:
         )
 
         task = LabelStudioTask.model_validate(task_data)
-        annotations = task.to_ir_annotations(
+        tracks = task.to_ir_annotations(
             filename="repo/remote/path/video.mp4",
             local_video_to_probe=str(local_video),
         )
-        assert len(annotations) == 10
-        assert all(ann.video_width == 1920 for ann in annotations)
-        assert all(ann.video_height == 1080 for ann in annotations)
+        assert len(tracks) == 2
+        assert all(isinstance(track, IRVideoAnnotationTrack) for track in tracks)
+        flattened = [ann for track in tracks for ann in track.annotations]
+        assert len(flattened) == 10
+        assert all(ann.filename == "repo/remote/path/video.mp4" for ann in flattened)
+        assert all(ann.video_width == 1920 for ann in flattened)
+        assert all(ann.video_height == 1080 for ann in flattened)

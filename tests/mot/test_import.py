@@ -110,13 +110,13 @@ class TestMOTFileImport:
         frame_0 = sequence.annotations_by_frame().get(0, [])
         assert len(frame_0) == 2
 
-        track_ids = {track.track_id for track, _ in frame_0}
+        track_ids = {track.object_id for track, _ in frame_0}
         assert track_ids == {"1", "2"}
 
     def test_load_from_file_track_consistency(self, sample_mot_file, mot_context):
         sequence = load_mot_from_file(sample_mot_file, mot_context)
 
-        track_1 = next(track for track in sequence.tracks if track.track_id == "1")
+        track_1 = next(track for track in sequence.tracks if track.object_id == "1")
         track_1_frames = [ann.frame_number for ann in track_1.annotations]
 
         assert len(track_1_frames) == 5

@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Sequence
 
 from .context import YoloAnnotationTypes
-from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
+from dagshub_annotation_converter.ir.base import IRAnnotationBase
 from dagshub_annotation_converter.ir.image import (
     IRBBoxImageAnnotation,
     IRPoseImageAnnotation,

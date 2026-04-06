@@ -10,7 +10,7 @@ from dagshub_annotation_converter.ir.image import (
     IRSegmentationImageAnnotation,
     IRPoseImageAnnotation,
 )
-from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
+from dagshub_annotation_converter.ir.base import IRAnnotationBase
 
 # Type actually has to be IRAnnotationBase, but it messes up MyPy
 YoloExportFunctionType = Callable[[Any, YoloContext], str]

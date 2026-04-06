@@ -5,7 +5,23 @@ from dagshub_annotation_converter.formats.label_studio.videorectangle import (
     VideoRectangleSequenceItem,
     VideoRectangleValue,
 )
-from dagshub_annotation_converter.ir.video import CoordinateStyle, IRVideoBBoxFrameAnnotation
+from dagshub_annotation_converter.ir.video import CoordinateStyle, IRVideoAnnotationTrack, IRVideoBBoxFrameAnnotation
+
+
+def _track_from_annotations(
+    annotations: list[IRVideoBBoxFrameAnnotation],
+    object_id: str | None = None,
+) -> IRVideoAnnotationTrack:
+    if not annotations:
+        raise ValueError("Cannot create a track from empty annotations")
+    resolved_object_id = object_id or annotations[0].imported_id or "0"
+    return IRVideoAnnotationTrack.from_annotations(annotations, object_id=resolved_object_id)
+
+
+def _single_track(annotation: VideoRectangleAnnotation) -> IRVideoAnnotationTrack:
+    tracks = annotation.to_ir_annotation()
+    assert len(tracks) == 1
+    return tracks[0]
 
 
 class TestVideoRectangleAnnotation:
@@ -21,22 +37,23 @@ class TestVideoRectangleAnnotation:
         assert len(ann.value.sequence) == 5
         assert ann.value.labels == ["person"]
 
-    def test_to_ir_annotations(self, sample_ls_video_task_data):
+    def test_to_ir_annotation_returns_track(self, sample_ls_video_task_data):
         result = sample_ls_video_task_data["annotations"][0]["result"][0]
         ann = VideoRectangleAnnotation.model_validate(result)
 
-        ir_annotations = ann.to_ir_annotations()
+        track = _single_track(ann)
 
-        assert len(ir_annotations) == 5
+        assert track.object_id == "track_person_1"
+        assert len(track.annotations) == 5
 
-        assert {a.imported_id for a in ir_annotations} == {"track_person_1"}
+        assert {a.imported_id for a in track.annotations} == {"track_person_1"}
 
-        for ir_ann in ir_annotations:
+        for ir_ann in track.annotations:
             assert "person" in ir_ann.categories
             assert ir_ann.keyframe
             assert ir_ann.visibility == 1.0
 
-    def test_to_ir_annotations_enabled_controls_interpolation_state(self):
+    def test_to_ir_annotation_enabled_controls_interpolation_state(self):
         ann = VideoRectangleAnnotation(
             original_width=1920,
             original_height=1080,
@@ -56,44 +73,44 @@ class TestVideoRectangleAnnotation:
             ),
         )
 
-        ir_annotations = ann.to_ir_annotations()
-        assert len(ir_annotations) == 1
-        assert ir_annotations[0].keyframe is False
-        assert "ls_enabled" not in ir_annotations[0].meta
-        assert "outside" not in ir_annotations[0].meta
-        assert ir_annotations[0].visibility == 0.75
+        track = _single_track(ann)
+        assert len(track.annotations) == 1
+        assert track.annotations[0].keyframe is False
+        assert "ls_enabled" not in track.annotations[0].meta
+        assert "outside" not in track.annotations[0].meta
+        assert track.annotations[0].visibility == 0.75
 
-    def test_to_ir_annotations_coordinate_conversion(self, sample_ls_video_task_data, epsilon):
+    def test_to_ir_annotation_coordinate_conversion(self, sample_ls_video_task_data, epsilon):
         result = sample_ls_video_task_data["annotations"][0]["result"][0]
         ann = VideoRectangleAnnotation.model_validate(result)
 
-        ir_annotations = ann.to_ir_annotations()
+        track = _single_track(ann)
 
-        first = ir_annotations[0]
+        first = track.annotations[0]
 
         assert first.coordinate_style == CoordinateStyle.NORMALIZED
         assert math.isclose(first.left, 0.05208333, abs_tol=epsilon)
         assert math.isclose(first.top, 0.13888889, abs_tol=epsilon)
 
-    def test_to_ir_annotations_frame_numbers(self, sample_ls_video_task_data):
+    def test_to_ir_annotation_frame_numbers(self, sample_ls_video_task_data):
         result = sample_ls_video_task_data["annotations"][0]["result"][0]
         ann = VideoRectangleAnnotation.model_validate(result)
 
-        ir_annotations = ann.to_ir_annotations()
+        track = _single_track(ann)
 
-        frame_numbers = sorted([a.frame_number for a in ir_annotations])
+        frame_numbers = sorted([a.frame_number for a in track.annotations])
         assert frame_numbers == [0, 1, 2, 3, 4]
 
-    def test_to_ir_annotations_timestamps(self, sample_ls_video_task_data, epsilon):
+    def test_to_ir_annotation_timestamps(self, sample_ls_video_task_data, epsilon):
         result = sample_ls_video_task_data["annotations"][0]["result"][0]
         ann = VideoRectangleAnnotation.model_validate(result)
 
-        ir_annotations = ann.to_ir_annotations()
+        track = _single_track(ann)
 
-        first = [a for a in ir_annotations if a.frame_number == 0][0]
+        first = [a for a in track.annotations if a.frame_number == 0][0]
         assert math.isclose(first.timestamp, 0.033, abs_tol=epsilon)
 
-    def test_from_ir_annotations(self):
+    def test_from_ir_annotation(self):
         ir_annotations = [
             IRVideoBBoxFrameAnnotation(
                 frame_number=0,  # 0-based (IR format)
@@ -122,7 +139,7 @@ class TestVideoRectangleAnnotation:
             ),
         ]
 
-        ls_ann = VideoRectangleAnnotation.from_ir_annotations(ir_annotations)
+        ls_ann = VideoRectangleAnnotation.from_ir_annotation(_track_from_annotations(ir_annotations))[0]
 
         assert ls_ann.type == "videorectangle"
         assert ls_ann.original_width == 1920
@@ -137,7 +154,7 @@ class TestVideoRectangleAnnotation:
         assert not ls_ann.value.sequence[0].enabled
         assert ls_ann.value.sequence[1].enabled
 
-    def test_from_ir_annotations_sparse_keyframes_keep_interpolation(self):
+    def test_from_ir_annotation_sparse_keyframes_keep_interpolation(self):
         ir_annotations = [
             IRVideoBBoxFrameAnnotation(
                 frame_number=0,
@@ -167,11 +184,11 @@ class TestVideoRectangleAnnotation:
             ),
         ]
 
-        ls_ann = VideoRectangleAnnotation.from_ir_annotations(ir_annotations)
+        ls_ann = VideoRectangleAnnotation.from_ir_annotation(_track_from_annotations(ir_annotations))[0]
         assert ls_ann.value.sequence[0].enabled
         assert ls_ann.value.sequence[1].enabled
 
-    def test_from_ir_annotations_outside_row_disables_previous_visible_keyframe(self):
+    def test_from_ir_annotation_outside_row_disables_previous_visible_keyframe(self):
         ir_annotations = [
             IRVideoBBoxFrameAnnotation(
                 frame_number=2,
@@ -202,12 +219,12 @@ class TestVideoRectangleAnnotation:
             ),
         ]
 
-        ls_ann = VideoRectangleAnnotation.from_ir_annotations(ir_annotations)
+        ls_ann = VideoRectangleAnnotation.from_ir_annotation(_track_from_annotations(ir_annotations))[0]
         assert len(ls_ann.value.sequence) == 1
         assert ls_ann.value.sequence[0].frame == 3
         assert not ls_ann.value.sequence[0].enabled
 
-    def test_from_ir_annotations_coordinate_conversion(self, epsilon):
+    def test_from_ir_annotation_coordinate_conversion(self, epsilon):
         ir_annotations = [
             IRVideoBBoxFrameAnnotation(
                 frame_number=0,  # 0-based (IR format)
@@ -222,14 +239,14 @@ class TestVideoRectangleAnnotation:
             ),
         ]
 
-        ls_ann = VideoRectangleAnnotation.from_ir_annotations(ir_annotations)
+        ls_ann = VideoRectangleAnnotation.from_ir_annotation(_track_from_annotations(ir_annotations))[0]
 
         seq_item = ls_ann.value.sequence[0]
         assert math.isclose(seq_item.x, 10.0, abs_tol=epsilon)
         assert math.isclose(seq_item.y, 20.0, abs_tol=epsilon)
         assert seq_item.frame == 1  # Should be 1-based in LS
 
-    def test_from_ir_annotations_denormalized(self, epsilon):
+    def test_from_ir_annotation_denormalized(self, epsilon):
         ir_annotations = [
             IRVideoBBoxFrameAnnotation(
                 frame_number=0,  # 0-based (IR format)
@@ -244,14 +261,14 @@ class TestVideoRectangleAnnotation:
             ),
         ]
 
-        ls_ann = VideoRectangleAnnotation.from_ir_annotations(ir_annotations)
+        ls_ann = VideoRectangleAnnotation.from_ir_annotation(_track_from_annotations(ir_annotations))[0]
 
         seq_item = ls_ann.value.sequence[0]
         assert math.isclose(seq_item.x, 10.0, abs_tol=epsilon)
         assert math.isclose(seq_item.y, 20.0, abs_tol=epsilon)
         assert seq_item.frame == 1  # Should be 1-based in LS
 
-    def test_from_ir_annotations_uses_ls_standard_sequence_keys(self):
+    def test_from_ir_annotation_uses_ls_standard_sequence_keys(self):
         ir_annotations = [
             IRVideoBBoxFrameAnnotation(
                 frame_number=0,
@@ -269,7 +286,7 @@ class TestVideoRectangleAnnotation:
             ),
         ]
 
-        ls_ann = VideoRectangleAnnotation.from_ir_annotations(ir_annotations)
+        ls_ann = VideoRectangleAnnotation.from_ir_annotation(_track_from_annotations(ir_annotations))[0]
         seq_dump = ls_ann.model_dump()["value"]["sequence"][0]
         assert set(seq_dump.keys()) == {"frame", "x", "y", "width", "height", "enabled", "time", "rotation"}
 
@@ -289,9 +306,9 @@ class TestVideoRectangleFrameNumberConversion:
             ),
         )
 
-        ir_annotations = ls_ann.to_ir_annotations()
+        track = _single_track(ls_ann)
 
-        frame_numbers = sorted([a.frame_number for a in ir_annotations])
+        frame_numbers = sorted([a.frame_number for a in track.annotations])
         assert frame_numbers == [0, 1, 9]  # LS 1,2,10 -> IR 0,1,9
 
     def test_ir_to_ls_frame_conversion(self):
@@ -331,7 +348,7 @@ class TestVideoRectangleFrameNumberConversion:
             ),
         ]
 
-        ls_ann = VideoRectangleAnnotation.from_ir_annotations(ir_annotations)
+        ls_ann = VideoRectangleAnnotation.from_ir_annotation(_track_from_annotations(ir_annotations))[0]
 
         # LS should have 1-based frames
         ls_frames = [item.frame for item in ls_ann.value.sequence]
@@ -363,12 +380,12 @@ class TestVideoRectangleFrameNumberConversion:
             ),
         ]
 
-        ls_ann = VideoRectangleAnnotation.from_ir_annotations(original_ir)
+        ls_ann = VideoRectangleAnnotation.from_ir_annotation(_track_from_annotations(original_ir))[0]
 
         assert ls_ann.value.sequence[0].frame == 1
         assert ls_ann.value.sequence[1].frame == 6
 
-        recovered_ir = ls_ann.to_ir_annotations()
+        recovered_ir = _single_track(ls_ann).annotations
 
         recovered_frames = sorted([a.frame_number for a in recovered_ir])
         assert recovered_frames == [0, 5]  # Frame 0 is preserved!
@@ -379,9 +396,9 @@ class TestVideoRectangleRoundtrip:
         result = sample_ls_video_task_data["annotations"][0]["result"][0]
         original = VideoRectangleAnnotation.model_validate(result)
 
-        ir_annotations = original.to_ir_annotations()
+        ir_annotations = _single_track(original).annotations
 
-        reconstructed = VideoRectangleAnnotation.from_ir_annotations(ir_annotations)
+        reconstructed = VideoRectangleAnnotation.from_ir_annotation(_track_from_annotations(ir_annotations))[0]
 
         assert len(reconstructed.value.sequence) == len(original.value.sequence)
 

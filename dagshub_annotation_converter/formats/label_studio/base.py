@@ -4,13 +4,13 @@ from typing import Any, Dict, Optional, Sequence
 
 from pydantic import Field
 
-from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
+from dagshub_annotation_converter.ir.base import IRAnnotationBase, IRTaskAnnotation
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 
 class AnnotationResultABC(ParentModel):
     @abstractmethod
-    def to_ir_annotation(self) -> Sequence[IRAnnotationBase]:
+    def to_ir_annotation(self) -> Sequence[IRTaskAnnotation]:
         """
         Convert LabelStudio annotation to 0..n DAGsHub IR annotations.
 
@@ -20,7 +20,7 @@ class AnnotationResultABC(ParentModel):
 
     @staticmethod
     @abstractmethod
-    def from_ir_annotation(ir_annotation: IRAnnotationBase) -> Sequence["AnnotationResultABC"]:
+    def from_ir_annotation(ir_annotation: IRTaskAnnotation) -> Sequence["AnnotationResultABC"]:
         """
         Convert DagsHub IR annotation to 1..n LabelStudio annotations.
         """

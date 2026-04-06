@@ -256,7 +256,7 @@ def _load_mot_from_gt_content(gt_content: str, context: MOTContext) -> IRVideoSe
         tracks[track_id].append(ann)
     return IRVideoSequence(
         tracks=[
-            IRVideoAnnotationTrack.from_annotations(track_annotations, track_id=str(track_id))
+            IRVideoAnnotationTrack.from_annotations(track_annotations, object_id=str(track_id))
             for track_id, track_annotations in tracks.items()
         ],
         sequence_length=context.sequence_length,
@@ -471,7 +471,7 @@ def export_to_mot(
     )
     expanded_annotations: List[Tuple[int, IRVideoBBoxFrameAnnotation]] = []
     for track in sequence.tracks:
-        mot_track_id = _mot_track_id_from_identifier(track.track_id)
+        mot_track_id = _mot_track_id_from_identifier(track.object_id)
         for ann in _interpolate_track_for_mot(track, context, end_frame=context_end_frame):
             expanded_annotations.append((mot_track_id, ann))
 

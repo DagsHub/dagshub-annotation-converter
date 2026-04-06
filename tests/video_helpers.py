@@ -14,17 +14,17 @@ def sequence_from_annotations(
     resolved_filename = filename
 
     for ann in annotations:
-        track_id = ann.imported_id
-        if track_id is None:
+        object_id = ann.imported_id
+        if object_id is None:
             raise ValueError("Expected imported_id on test annotation to build IRVideoSequence")
-        grouped[track_id].append(ann.model_copy(deep=True))
+        grouped[object_id].append(ann.model_copy(deep=True))
         if resolved_filename is None and ann.filename:
             resolved_filename = ann.filename
 
     return IRVideoSequence(
         tracks=[
-            IRVideoAnnotationTrack.from_annotations(track_annotations, track_id=track_id)
-            for track_id, track_annotations in sorted(
+            IRVideoAnnotationTrack.from_annotations(track_annotations, object_id=object_id)
+            for object_id, track_annotations in sorted(
                 grouped.items(),
                 key=lambda item: (not item[0].isdigit(), int(item[0]) if item[0].isdigit() else item[0]),
             )
@@ -36,7 +36,7 @@ def sequence_from_annotations(
 
 def flatten_sequence_with_track_ids(sequence: IRVideoSequence) -> List[Tuple[str, IRVideoBBoxFrameAnnotation]]:
     return [
-        (track.track_id, ann)
+        (track.object_id, ann)
         for track in sequence.tracks
         for ann in track.annotations
     ]
@@ -44,7 +44,7 @@ def flatten_sequence_with_track_ids(sequence: IRVideoSequence) -> List[Tuple[str
 
 def annotations_by_track_frame(sequence: IRVideoSequence) -> Dict[Tuple[str, int], IRVideoBBoxFrameAnnotation]:
     return {
-        (track.track_id, ann.frame_number): ann
+        (track.object_id, ann.frame_number): ann
         for track in sequence.tracks
         for ann in track.annotations
     }

@@ -83,7 +83,7 @@ def parse_video_track(
           ...
         </track>
     """
-    track_id = track_elem.attrib["id"]
+    object_id = track_elem.attrib["id"]
     label = track_elem.attrib["label"]
 
     annotations = []
@@ -132,7 +132,7 @@ def parse_video_track(
         annotations.append(ann)
 
     canonical_annotations = _canonicalize_track_annotations(annotations)
-    return IRVideoAnnotationTrack.from_annotations(canonical_annotations, track_id=track_id)
+    return IRVideoAnnotationTrack.from_annotations(canonical_annotations, object_id=object_id)
 
 
 def parse_video_meta(meta_elem: ElementBase) -> Tuple[Optional[int], Optional[int], Optional[int]]:
@@ -174,7 +174,7 @@ def export_video_track_to_xml(
     label = first_ann.ensure_has_one_category()
 
     track_elem = etree.Element("track")
-    track_elem.set("id", track.track_id)
+    track_elem.set("id", track.object_id)
     track_elem.set("label", label)
     track_elem.set("source", "manual")
     sorted_anns = sorted(

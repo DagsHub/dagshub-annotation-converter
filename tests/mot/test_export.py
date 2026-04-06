@@ -284,7 +284,7 @@ class TestMOTFileExport:
             visibility=1.0,
         )
         sequence = IRVideoSequence(
-            tracks=[IRVideoAnnotationTrack.from_annotations([ann], track_id="track_person_1")]
+            tracks=[IRVideoAnnotationTrack.from_annotations([ann], object_id="track_person_1")]
         )
 
         output_path = tmp_path / "gt.txt"

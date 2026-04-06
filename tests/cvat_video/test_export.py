@@ -28,7 +28,7 @@ def _make_sequence(
     image_width: int,
     image_height: int,
     *,
-    track_id: str = "1",
+    object_id: str = "1",
     filename: Optional[str] = None,
 ) -> IRVideoSequence:
     ann = IRVideoBBoxFrameAnnotation(
@@ -42,7 +42,7 @@ def _make_sequence(
         categories={"person": 1.0},
         coordinate_style=CoordinateStyle.DENORMALIZED,
     )
-    track = IRVideoAnnotationTrack.from_annotations([ann], track_id=track_id)
+    track = IRVideoAnnotationTrack.from_annotations([ann], object_id=object_id)
     return IRVideoSequence(tracks=[track], filename=filename)
 
 
@@ -109,7 +109,7 @@ class TestCVATVideoExport:
         assert "<source>earth-space-small.mp4</source>" in xml_text
 
     def test_export_preserves_non_numeric_track_identifier(self):
-        sequence = _make_sequence(image_width=1920, image_height=1080, track_id="track_person_1")
+        sequence = _make_sequence(image_width=1920, image_height=1080, object_id="track_person_1")
         xml_root = etree.fromstring(export_cvat_video_to_xml_bytes(sequence, video_name="video.mp4"))
 
         track_elem = xml_root.find("track")
@@ -128,8 +128,8 @@ class TestCVATVideoExport:
             assert "<source>earth-space-small.mp4</source>" in xml
 
     def test_multi_export_writes_one_zip_per_video(self, tmp_path):
-        seq_a = _make_sequence(image_width=1920, image_height=1080, track_id="1", filename="earth-space-small.mp4")
-        seq_b = _make_sequence(image_width=1920, image_height=1080, track_id="2", filename="jelly.mp4")
+        seq_a = _make_sequence(image_width=1920, image_height=1080, object_id="1", filename="earth-space-small.mp4")
+        seq_b = _make_sequence(image_width=1920, image_height=1080, object_id="2", filename="jelly.mp4")
 
         outputs = export_cvat_videos_to_zips([seq_a, seq_b], tmp_path)
         out_names = sorted([p.name for p in outputs])
@@ -143,8 +143,8 @@ class TestCVATVideoExport:
             assert "<source>jelly.mp4</source>" in xml
 
     def test_multi_export_uses_video_files_for_missing_dimensions(self, tmp_path, monkeypatch):
-        seq_a = _make_sequence(image_width=0, image_height=0, track_id="1", filename="earth-space-small.mp4")
-        seq_b = _make_sequence(image_width=0, image_height=0, track_id="2", filename="jelly.mp4")
+        seq_a = _make_sequence(image_width=0, image_height=0, object_id="1", filename="earth-space-small.mp4")
+        seq_b = _make_sequence(image_width=0, image_height=0, object_id="2", filename="jelly.mp4")
 
         from dagshub_annotation_converter.util.video import VideoProbeResult
 

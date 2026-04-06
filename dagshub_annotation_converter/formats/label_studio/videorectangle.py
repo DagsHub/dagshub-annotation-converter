@@ -4,13 +4,13 @@ from typing import Any, Dict, List, Optional, Sequence
 from pydantic import Field
 
 from dagshub_annotation_converter.formats.label_studio.base import AnnotationResultABC
-from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
 from dagshub_annotation_converter.ir.video import (
     CoordinateStyle,
     IRVideoAnnotationTrack,
     IRVideoBBoxFrameAnnotation,
 )
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
+
 
 class VideoRectangleSequenceItem(ParentModel):
     frame: int
@@ -54,17 +54,12 @@ class VideoRectangleAnnotation(AnnotationResultABC):
     origin: str = "manual"
     meta: Optional[Dict[str, Any]] = None
 
-    def to_ir_annotation(self) -> Sequence[IRVideoBBoxFrameAnnotation]:
-        return self.to_ir_annotations()
+    def to_ir_annotation(self) -> Sequence[IRVideoAnnotationTrack]:
+        return [self.to_ir_track()]
 
     @staticmethod
-    def from_ir_annotation(ir_annotation: IRAnnotationBase) -> Sequence["VideoRectangleAnnotation"]:
-        raise NotImplementedError(
-            "VideoRectangleAnnotation requires multiple IR annotations per track. Use from_ir_annotations() instead."
-        )
-
-    def to_ir_annotations(self) -> List[IRVideoBBoxFrameAnnotation]:
-        return self.to_ir_track().to_annotations()
+    def from_ir_annotation(ir_annotation: IRVideoAnnotationTrack) -> Sequence["VideoRectangleAnnotation"]:
+        return [VideoRectangleAnnotation.from_ir_track(ir_annotation)]
 
     def to_ir_track(self) -> IRVideoAnnotationTrack:
         if not self.value.labels:
@@ -103,18 +98,7 @@ class VideoRectangleAnnotation(AnnotationResultABC):
             )
             annotations.append(ann)
 
-        return IRVideoAnnotationTrack.from_annotations(annotations, track_id=self.id)
-
-    @staticmethod
-    def from_ir_annotations(
-        ir_annotations: List[IRVideoBBoxFrameAnnotation],
-        frames_count: Optional[int] = None,
-    ) -> "VideoRectangleAnnotation":
-        if not ir_annotations:
-            raise ValueError("Cannot create VideoRectangleAnnotation from empty annotations")
-        track_id = ir_annotations[0].imported_id or "0"
-        track = IRVideoAnnotationTrack.from_annotations(ir_annotations, track_id=track_id)
-        return VideoRectangleAnnotation.from_ir_track(track, frames_count=frames_count)
+        return IRVideoAnnotationTrack.from_annotations(annotations, object_id=self.id)
 
     @staticmethod
     def from_ir_track(
@@ -128,7 +112,7 @@ class VideoRectangleAnnotation(AnnotationResultABC):
             raise ValueError("All annotations in the track must be IRVideoBBoxFrameAnnotation")
 
         first = track.annotations[0]
-        ls_id = track.track_id
+        ls_id = track.object_id
         label = first.ensure_has_one_category()
 
         track = track.normalized()

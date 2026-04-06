@@ -1,11 +1,11 @@
 from typing import List, Optional, Sequence
 
-from dagshub_annotation_converter.ir.image.common import CoordinateStyle
+from dagshub_annotation_converter.ir.common import CoordinateStyle
+from dagshub_annotation_converter.ir.base import IRAnnotationCollection
 from dagshub_annotation_converter.ir.video.annotations.base import IRVideoFrameAnnotationBase
-from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 
-class IRVideoAnnotationTrack(ParentModel):
+class IRVideoAnnotationTrack(IRAnnotationCollection):
     """A single object track across video frames.
 
     Assumptions:
@@ -14,14 +14,13 @@ class IRVideoAnnotationTrack(ParentModel):
       - ``annotations`` is a list of per-frame snapshots (bbox, keypoint, etc.)
         ordered by ``frame_number``.  Not every frame needs an entry — gaps are
         filled by interpolation at export time where the format requires it.
-      - ``track_id`` is a stable identifier for the object within the sequence.
+      - ``object_id`` is a stable identifier for the object within the sequence.
         It is propagated to each annotation's ``imported_id`` on construction.
       - Coordinate style (normalized vs. denormalized) may vary across
         annotations; use :meth:`normalized` / :meth:`denormalized` to ensure
         a uniform style before export.
     """
 
-    track_id: str
     annotations: List[IRVideoFrameAnnotationBase]
 
     def resolved_video_width(self) -> Optional[int]:
@@ -40,7 +39,7 @@ class IRVideoAnnotationTrack(ParentModel):
     def from_annotations(
         cls,
         annotations: Sequence[IRVideoFrameAnnotationBase],
-        track_id: str,
+        object_id: str,
     ) -> "IRVideoAnnotationTrack":
         if not annotations:
             raise ValueError("Cannot create IRVideoAnnotationTrack from empty annotations")
@@ -50,9 +49,9 @@ class IRVideoAnnotationTrack(ParentModel):
             key=lambda a: a.frame_number,
         )
         for ann in copied_annotations:
-            ann.imported_id = track_id
+            ann.imported_id = object_id
         return cls(
-            track_id=track_id,
+            object_id=object_id,
             annotations=copied_annotations,
         )
 
@@ -67,7 +66,7 @@ class IRVideoAnnotationTrack(ParentModel):
         )
 
         for ann in self.annotations:
-            ann.imported_id = self.track_id
+            ann.imported_id = self.object_id
             if ann.video_width is None and resolved_width is not None:
                 ann.video_width = resolved_width
             if ann.video_height is None and resolved_height is not None:
@@ -85,7 +84,7 @@ class IRVideoAnnotationTrack(ParentModel):
             if ann.coordinate_style == CoordinateStyle.DENORMALIZED:
                 ann = ann.normalized()
             normalized_annotations.append(ann)
-        return IRVideoAnnotationTrack(track_id=self.track_id, annotations=normalized_annotations)
+        return IRVideoAnnotationTrack(object_id=self.object_id, annotations=normalized_annotations)
 
     def denormalized(
         self,
@@ -98,12 +97,12 @@ class IRVideoAnnotationTrack(ParentModel):
             if ann.coordinate_style == CoordinateStyle.NORMALIZED:
                 ann = ann.denormalized()
             denormalized_annotations.append(ann)
-        return IRVideoAnnotationTrack(track_id=self.track_id, annotations=denormalized_annotations)
+        return IRVideoAnnotationTrack(object_id=self.object_id, annotations=denormalized_annotations)
 
     def to_annotations(self) -> List[IRVideoFrameAnnotationBase]:
         annotations: List[IRVideoFrameAnnotationBase] = []
         for ann in self.annotations:
             copied = ann.model_copy(deep=True)
-            copied.imported_id = self.track_id
+            copied.imported_id = self.object_id
             annotations.append(copied)
         return annotations

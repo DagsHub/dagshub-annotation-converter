@@ -5,7 +5,7 @@ from typing import List, Dict, Sequence
 from dagshub_annotation_converter.converters.cvat import load_cvat_from_xml_file
 from dagshub_annotation_converter.features import FEATURE_CVAT_POSE_GROUPING_KEY
 from dagshub_annotation_converter.ir.image import IRPoseImageAnnotation, IRBBoxImageAnnotation
-from dagshub_annotation_converter.ir.image.annotations.base import IRAnnotationBase
+from dagshub_annotation_converter.ir.base import IRAnnotationBase
 from tests.util import set_env_var
 
 _filepath = Path(__file__).parent / "res/pose_grouping.xml"
