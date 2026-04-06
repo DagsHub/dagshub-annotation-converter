@@ -28,8 +28,8 @@ from dagshub_annotation_converter.ir.video import (
     IRVideoBBoxFrameAnnotation,
     IRVideoSequence
 )
+from dagshub_annotation_converter.util.video import VideoProbeResult
 from tests.video_helpers import annotations_by_track_frame, flatten_sequence_with_track_ids
-
 LS_VIDEO_PATH = "/data/video.mp4"
 
 
@@ -417,8 +417,6 @@ class TestCVATVideoToLabelStudioRoundtrip:
             sequence_length=42,
         )
         # Add a minimal track so the task is non-None
-        from dagshub_annotation_converter.ir.video import IRVideoBBoxFrameAnnotation, IRVideoAnnotationTrack
-        from dagshub_annotation_converter.ir.image.common import CoordinateStyle
         ann = IRVideoBBoxFrameAnnotation(
             frame_number=0,
             left=0.1, top=0.1, width=0.2, height=0.2,
@@ -606,8 +604,6 @@ class TestLabelStudioVideoLocalProbeFallback:
 
         local_video = tmp_path / "video.mp4"
         local_video.write_text("stub")
-
-        from dagshub_annotation_converter.util.video import VideoProbeResult
 
         monkeypatch.setattr(
             "dagshub_annotation_converter.formats.label_studio.task.probe_video",

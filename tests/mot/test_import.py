@@ -15,6 +15,7 @@ from dagshub_annotation_converter.converters.mot import (
 from dagshub_annotation_converter.formats.mot.bbox import _export_bbox_to_line, import_bbox_from_line
 from dagshub_annotation_converter.formats.mot.context import MOTContext
 from dagshub_annotation_converter.ir.video import CoordinateStyle, IRVideoBBoxFrameAnnotation
+from dagshub_annotation_converter.util.video import VideoProbeResult
 
 
 class TestMOTLineImport:
@@ -238,8 +239,6 @@ class TestMOTDirectoryImport:
         with ZipFile(zip_path, "w") as z:
             z.writestr("gt/gt.txt", "1,1,100,150,50,120,1,1,1.0\n")
             z.writestr("gt/labels.txt", "person\n")
-
-        from dagshub_annotation_converter.util.video import VideoProbeResult
 
         probed_paths = []
 

@@ -126,6 +126,10 @@ class VideoRectangleAnnotation(AnnotationResultABC):
             enabled = ann.keyframe
             next_ann = sorted_anns[idx + 1] if idx + 1 < len(sorted_anns) else None
             if enabled and next_ann is not None and not next_ann.is_visible:
+                # Label Studio only stops interpolation at the next serialized
+                # keyframe. Invisible IR frames are omitted from the sequence,
+                # so disable interpolation on the last visible keyframe before
+                # a gap to avoid drawing boxes through absent-object frames.
                 enabled = False
 
             seq_item = VideoRectangleSequenceItem(

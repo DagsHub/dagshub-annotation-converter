@@ -108,8 +108,6 @@ def parse_video_track(
             visibility = 1.0
 
         meta = {}
-        if "z_order" in box_elem.attrib:
-            meta["z_order"] = int(box_elem.attrib["z_order"])
 
         left, top, width, height, rotation = calculate_bbox(xtl, ytl, xbr, ybr, rotation)
 
@@ -192,7 +190,6 @@ def export_video_track_to_xml(
         if not outside and ann.visibility < 1.0:
             occluded = 1
         keyframe = 1
-        z_order = ann.meta.get("z_order", 0)
 
         box_elem = etree.SubElement(track_elem, "box")
         box_elem.set("frame", str(ann.frame_number))
@@ -203,7 +200,8 @@ def export_video_track_to_xml(
         box_elem.set("ytl", f"{ytl:.2f}")
         box_elem.set("xbr", f"{xbr:.2f}")
         box_elem.set("ybr", f"{ybr:.2f}")
-        box_elem.set("z_order", str(z_order))
+        if "z_order" in ann.meta:
+            box_elem.set("z_order", str(ann.meta["z_order"]))
         if ann.rotation != 0.0:
             box_elem.set("rotation", f"{ann.rotation:.2f}")
 
@@ -235,7 +233,8 @@ def export_video_track_to_xml(
                 boundary_elem.set("ytl", f"{ytl:.2f}")
                 boundary_elem.set("xbr", f"{xbr:.2f}")
                 boundary_elem.set("ybr", f"{ybr:.2f}")
-                boundary_elem.set("z_order", str(z_order))
+                if "z_order" in ann.meta:
+                    boundary_elem.set("z_order", str(ann.meta["z_order"]))
 
     return track_elem
 

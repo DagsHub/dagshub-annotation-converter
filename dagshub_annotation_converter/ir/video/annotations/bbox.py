@@ -21,7 +21,7 @@ class IRVideoBBoxFrameAnnotation(IRVideoFrameAnnotationBase):
 
     @property
     def interpolation_enabled(self) -> bool:
-        return bool(self.keyframe)
+        return self.keyframe
 
     def _require_dimensions_for_coordinate_conversion(self):
         if self.video_width is None or self.video_height is None:
@@ -49,6 +49,12 @@ class IRVideoBBoxFrameAnnotation(IRVideoFrameAnnotationBase):
     def _lerp(start: float, end: float, step_ratio: float) -> float:
         return start + (end - start) * step_ratio
 
+    @staticmethod
+    def _lerp_angle_degrees(start: float, end: float, step_ratio: float) -> float:
+        """Interpolate rotation via the shortest angular path."""
+        delta = (end - start + 180.0) % 360.0 - 180.0
+        return start + delta * step_ratio
+
     def interpolate(
         self,
         next_annotation: IRVideoFrameAnnotationBase,
@@ -68,7 +74,7 @@ class IRVideoBBoxFrameAnnotation(IRVideoFrameAnnotationBase):
         interpolated.top = self._lerp(self.top, next_annotation.top, step_ratio)
         interpolated.width = self._lerp(self.width, next_annotation.width, step_ratio)
         interpolated.height = self._lerp(self.height, next_annotation.height, step_ratio)
-        interpolated.rotation = self._lerp(self.rotation, next_annotation.rotation, step_ratio)
+        interpolated.rotation = self._lerp_angle_degrees(self.rotation, next_annotation.rotation, step_ratio)
         interpolated.visibility = self._lerp(self.visibility, next_annotation.visibility, step_ratio)
         if self.timestamp is not None and next_annotation.timestamp is not None:
             interpolated.timestamp = self._lerp(self.timestamp, next_annotation.timestamp, step_ratio)

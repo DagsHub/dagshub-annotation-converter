@@ -169,6 +169,39 @@ def test_bbox_interpolate_between_frames(epsilon):
     assert math.isclose(interpolated.timestamp, 0.2, abs_tol=epsilon)
 
 
+def test_bbox_interpolate_rotation_uses_shortest_path(epsilon):
+    start = IRVideoBBoxFrameAnnotation(
+        frame_number=0,
+        keyframe=True,
+        left=100,
+        top=150,
+        width=50,
+        height=120,
+        video_width=1920,
+        video_height=1080,
+        categories={"person": 1.0},
+        coordinate_style=CoordinateStyle.DENORMALIZED,
+        rotation=350.0,
+    )
+    end = IRVideoBBoxFrameAnnotation(
+        frame_number=4,
+        keyframe=True,
+        left=140,
+        top=158,
+        width=70,
+        height=100,
+        video_width=1920,
+        video_height=1080,
+        categories={"person": 1.0},
+        coordinate_style=CoordinateStyle.DENORMALIZED,
+        rotation=10.0,
+    )
+
+    interpolated = start.interpolate(end, 0.5)
+
+    assert math.isclose(interpolated.rotation % 360.0, 0.0, abs_tol=epsilon)
+
+
 def test_track_normalize_coordinates_uses_shared_dimensions(epsilon):
     ann_a = IRVideoBBoxFrameAnnotation(
         frame_number=0,

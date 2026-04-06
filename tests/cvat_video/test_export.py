@@ -22,6 +22,7 @@ from dagshub_annotation_converter.ir.video import (
     IRVideoBBoxFrameAnnotation,
     IRVideoSequence,
 )
+from dagshub_annotation_converter.util.video import VideoProbeResult
 
 
 def _make_sequence(
@@ -48,8 +49,6 @@ def _make_sequence(
 
 class TestCVATVideoExport:
     def test_export_uses_probed_dimensions_when_missing(self, monkeypatch):
-        from dagshub_annotation_converter.util.video import VideoProbeResult
-
         sequence = _make_sequence(image_width=0, image_height=0)
         monkeypatch.setattr(
             "dagshub_annotation_converter.converters.cvat.probe_video",
@@ -62,8 +61,6 @@ class TestCVATVideoExport:
         assert "<height>720</height>" in xml_text
 
     def test_export_uses_probed_frame_count_when_seq_length_missing(self, monkeypatch):
-        from dagshub_annotation_converter.util.video import VideoProbeResult
-
         sequence = _make_sequence(image_width=1920, image_height=1080)
         monkeypatch.setattr(
             "dagshub_annotation_converter.converters.cvat.probe_video",
@@ -145,8 +142,6 @@ class TestCVATVideoExport:
     def test_multi_export_uses_video_files_for_missing_dimensions(self, tmp_path, monkeypatch):
         seq_a = _make_sequence(image_width=0, image_height=0, object_id="1", filename="earth-space-small.mp4")
         seq_b = _make_sequence(image_width=0, image_height=0, object_id="2", filename="jelly.mp4")
-
-        from dagshub_annotation_converter.util.video import VideoProbeResult
 
         def fake_probe(path):
             name = path.name
