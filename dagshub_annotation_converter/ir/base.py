@@ -52,8 +52,8 @@ class IRAnnotationBase(ParentModel):
         Returns a copy with all parameters in the annotation normalized
         """
         if self.coordinate_style == CoordinateStyle.NORMALIZED:
-            return self.model_copy()
-        normalized = self.model_copy()
+            return self.model_copy(deep=True)
+        normalized = self.model_copy(deep=True)
         normalized._normalize()
         normalized.coordinate_style = CoordinateStyle.NORMALIZED
         return normalized
@@ -70,8 +70,8 @@ class IRAnnotationBase(ParentModel):
         Returns a copy with all parameters in the annotation denormalized
         """
         if self.coordinate_style == CoordinateStyle.DENORMALIZED:
-            return self.model_copy()
-        denormalized = self.model_copy()
+            return self.model_copy(deep=True)
+        denormalized = self.model_copy(deep=True)
         denormalized._denormalize()
         denormalized.coordinate_style = CoordinateStyle.DENORMALIZED
         return denormalized

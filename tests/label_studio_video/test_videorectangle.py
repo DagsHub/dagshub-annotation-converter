@@ -269,6 +269,37 @@ class TestVideoRectangleAnnotation:
         assert math.isclose(seq_item.y, 20.0, abs_tol=epsilon)
         assert seq_item.frame == 1  # Should be 1-based in LS
 
+    def test_from_ir_annotation_uses_resolved_dimensions_after_normalization(self):
+        ir_annotations = [
+            IRVideoBBoxFrameAnnotation(
+                frame_number=0,
+                left=0.1,
+                top=0.1,
+                width=0.2,
+                height=0.2,
+                video_width=None,
+                video_height=None,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.NORMALIZED,
+            ),
+            IRVideoBBoxFrameAnnotation(
+                frame_number=1,
+                left=0.2,
+                top=0.2,
+                width=0.1,
+                height=0.1,
+                video_width=1920,
+                video_height=1080,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.NORMALIZED,
+            ),
+        ]
+
+        ls_ann = VideoRectangleAnnotation.from_ir_annotation(_track_from_annotations(ir_annotations))[0]
+
+        assert ls_ann.original_width == 1920
+        assert ls_ann.original_height == 1080
+
     def test_from_ir_annotation_uses_ls_standard_sequence_keys(self):
         ir_annotations = [
             IRVideoBBoxFrameAnnotation(

@@ -214,7 +214,7 @@ def export_video_track_to_xml(
         #   - and there is room for the boundary frame (either more annotations follow
         #     or the boundary frame fits within the known sequence length).
         boundary_frame = ann.frame_number + 1
-        has_future_annotation = idx < len(sorted_anns) + 1
+        has_future_annotation = idx + 1 < len(sorted_anns)
         has_known_room_for_boundary = max_frame is not None and boundary_frame <= max_frame
         should_add_stop_boundary = (
             not ann.keyframe and outside == 0 and (has_future_annotation or has_known_room_for_boundary)
@@ -258,6 +258,17 @@ def build_cvat_video_xml(
         image_width = image_width or 1920
         image_height = image_height or 1080
         seq_length = seq_length or 1
+
+    if image_width is None or image_height is None:
+        raise ValueError(
+            "Cannot build CVAT video XML without frame dimensions. "
+            "Provide image_width/image_height or use annotations with valid dimensions."
+        )
+    if seq_length is None:
+        raise ValueError(
+            "Cannot build CVAT video XML without sequence length. "
+            "Provide seq_length or use annotations with valid frame coverage."
+        )
 
     root = etree.Element("annotations")
 

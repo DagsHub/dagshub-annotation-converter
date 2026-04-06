@@ -124,6 +124,28 @@ def test_normalize_coordinates(epsilon):
     assert normalized.frame_number == 0
 
 
+def test_normalized_copy_does_not_share_mutable_fields():
+    ann = IRVideoBBoxFrameAnnotation(
+        frame_number=0,
+        left=192,
+        top=108,
+        width=384,
+        height=216,
+        video_width=1920,
+        video_height=1080,
+        categories={"person": 1.0},
+        coordinate_style=CoordinateStyle.DENORMALIZED,
+        meta={"source": {"name": "camera-a"}},
+    )
+
+    normalized = ann.normalized()
+    normalized.categories["car"] = 0.5
+    normalized.meta["source"]["name"] = "camera-b"
+
+    assert ann.categories == {"person": 1.0}
+    assert ann.meta == {"source": {"name": "camera-a"}}
+
+
 def test_bbox_interpolate_between_frames(epsilon):
     start = IRVideoBBoxFrameAnnotation(
         frame_number=0,
@@ -240,6 +262,48 @@ def test_track_normalize_coordinates_uses_shared_dimensions(epsilon):
     assert math.isclose(second.top, 0.2, abs_tol=epsilon)
     assert math.isclose(second.width, 0.1, abs_tol=epsilon)
     assert math.isclose(second.height, 0.1, abs_tol=epsilon)
+
+
+def test_track_normalized_does_not_mutate_source_track():
+    ann_a = IRVideoBBoxFrameAnnotation(
+        frame_number=0,
+        left=192,
+        top=108,
+        width=384,
+        height=216,
+        video_width=1920,
+        video_height=1080,
+        categories={"person": 1.0},
+        coordinate_style=CoordinateStyle.DENORMALIZED,
+    )
+    ann_b = IRVideoBBoxFrameAnnotation(
+        frame_number=1,
+        left=0.2,
+        top=0.2,
+        width=0.1,
+        height=0.1,
+        video_width=None,
+        video_height=None,
+        categories={"person": 1.0},
+        coordinate_style=CoordinateStyle.NORMALIZED,
+        imported_id="original-id",
+    )
+
+    track = IRVideoAnnotationTrack.from_annotations([ann_a, ann_b], object_id="track-1")
+    track.annotations[1].imported_id = "original-id"
+
+    normalized_track = track.normalized()
+
+    assert track.annotations[0].coordinate_style == CoordinateStyle.DENORMALIZED
+    assert track.annotations[1].coordinate_style == CoordinateStyle.NORMALIZED
+    assert track.annotations[1].video_width is None
+    assert track.annotations[1].video_height is None
+    assert track.annotations[1].imported_id == "original-id"
+
+    assert normalized_track.annotations[0].coordinate_style == CoordinateStyle.NORMALIZED
+    assert normalized_track.annotations[1].video_width == 1920
+    assert normalized_track.annotations[1].video_height == 1080
+    assert normalized_track.annotations[1].imported_id == "track-1"
 
 
 def test_track_denormalize_coordinates_accepts_explicit_dimensions(epsilon):

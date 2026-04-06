@@ -78,26 +78,32 @@ class IRVideoAnnotationTrack(IRAnnotationCollection):
         video_width: Optional[int] = None,
         video_height: Optional[int] = None,
     ) -> "IRVideoAnnotationTrack":
-        self._with_resolved_dimensions(video_width, video_height)
+        track = self.model_copy(deep=True)
+        track._with_resolved_dimensions(video_width, video_height)
         normalized_annotations: List[IRVideoFrameAnnotationBase] = []
-        for ann in self.annotations:
+        for ann in track.annotations:
             if ann.coordinate_style == CoordinateStyle.DENORMALIZED:
                 ann = ann.normalized()
+            else:
+                ann = ann.model_copy(deep=True)
             normalized_annotations.append(ann)
-        return IRVideoAnnotationTrack(object_id=self.object_id, annotations=normalized_annotations)
+        return IRVideoAnnotationTrack(object_id=track.object_id, annotations=normalized_annotations)
 
     def denormalized(
         self,
         video_width: Optional[int] = None,
         video_height: Optional[int] = None,
     ) -> "IRVideoAnnotationTrack":
-        self._with_resolved_dimensions(video_width, video_height)
+        track = self.model_copy(deep=True)
+        track._with_resolved_dimensions(video_width, video_height)
         denormalized_annotations: List[IRVideoFrameAnnotationBase] = []
-        for ann in self.annotations:
+        for ann in track.annotations:
             if ann.coordinate_style == CoordinateStyle.NORMALIZED:
                 ann = ann.denormalized()
+            else:
+                ann = ann.model_copy(deep=True)
             denormalized_annotations.append(ann)
-        return IRVideoAnnotationTrack(object_id=self.object_id, annotations=denormalized_annotations)
+        return IRVideoAnnotationTrack(object_id=track.object_id, annotations=denormalized_annotations)
 
     def to_annotations(self) -> List[IRVideoFrameAnnotationBase]:
         annotations: List[IRVideoFrameAnnotationBase] = []

@@ -111,12 +111,11 @@ class VideoRectangleAnnotation(AnnotationResultABC):
         if not all(isinstance(ann, IRVideoBBoxFrameAnnotation) for ann in track.annotations):
             raise ValueError("All annotations in the track must be IRVideoBBoxFrameAnnotation")
 
-        first = track.annotations[0]
-        ls_id = track.object_id
-        label = first.ensure_has_one_category()
-
         track = track.normalized()
         sorted_anns: List[IRVideoBBoxFrameAnnotation] = sorted(track.annotations, key=lambda a: a.frame_number)  # type: ignore[assignment]
+        first = sorted_anns[0]
+        ls_id = track.object_id
+        label = first.ensure_has_one_category()
 
         sequence = []
         for idx, ann in enumerate(sorted_anns):

@@ -16,6 +16,7 @@ from dagshub_annotation_converter.formats.label_studio.videorectangle import (
     VideoRectangleSequenceItem,
     VideoRectangleValue,
 )
+from dagshub_annotation_converter.formats.cvat.video import build_cvat_video_xml
 from dagshub_annotation_converter.ir.video import (
     CoordinateStyle,
     IRVideoAnnotationTrack,
@@ -75,6 +76,11 @@ class TestCVATVideoExport:
         sequence = _make_sequence(image_width=0, image_height=0)
         with pytest.raises(ValueError, match="Cannot determine frame dimensions for CVAT video export"):
             export_cvat_video_to_xml_bytes(sequence, video_name="video.mp4")
+
+    def test_build_xml_raises_without_resolved_dimensions(self):
+        sequence = _make_sequence(image_width=0, image_height=0)
+        with pytest.raises(ValueError, match="Cannot build CVAT video XML without frame dimensions"):
+            build_cvat_video_xml(sequence, video_name="video.mp4")
 
     def test_export_raises_without_video_reference(self):
         sequence = _make_sequence(image_width=1920, image_height=1080)
