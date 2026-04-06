@@ -1,4 +1,5 @@
 import math
+from typing import List, Optional
 
 from dagshub_annotation_converter.formats.label_studio.videorectangle import (
     VideoRectangleAnnotation,
@@ -9,8 +10,8 @@ from dagshub_annotation_converter.ir.video import CoordinateStyle, IRVideoAnnota
 
 
 def _track_from_annotations(
-    annotations: list[IRVideoBBoxFrameAnnotation],
-    object_id: str | None = None,
+    annotations: List[IRVideoBBoxFrameAnnotation],
+    object_id: Optional[str] = None,
 ) -> IRVideoAnnotationTrack:
     if not annotations:
         raise ValueError("Cannot create a track from empty annotations")
