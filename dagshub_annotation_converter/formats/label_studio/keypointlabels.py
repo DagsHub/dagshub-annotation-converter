@@ -1,16 +1,16 @@
-from typing import Sequence, List
+from typing import List, Sequence
 
 from dagshub_annotation_converter.formats.label_studio.base import ImageAnnotationResultABC
 from dagshub_annotation_converter.formats.label_studio.rectanglelabels import (
-    RectangleLabelsAnnotationValue,
     RectangleLabelsAnnotation,
+    RectangleLabelsAnnotationValue,
 )
 from dagshub_annotation_converter.ir.image import (
+    CoordinateStyle,
     IRPoseImageAnnotation,
     IRPosePoint,
-    CoordinateStyle,
-    IRImageAnnotationBase,
 )
+from dagshub_annotation_converter.ir.base import IRAnnotationBase
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
 
@@ -25,7 +25,7 @@ class KeyPointLabelsAnnotation(ImageAnnotationResultABC):
     value: KeyPointLabelsAnnotationValue
     type: str = "keypointlabels"
 
-    def to_ir_annotation(self) -> List[IRPoseImageAnnotation]:
+    def to_ir_annotation(self) -> Sequence[IRPoseImageAnnotation]:
         ann = IRPoseImageAnnotation.from_points(
             categories={self.value.keypointlabels[0]: 1.0},
             points=[IRPosePoint(x=self.value.x / 100, y=self.value.y / 100)],
@@ -38,7 +38,7 @@ class KeyPointLabelsAnnotation(ImageAnnotationResultABC):
         return [ann]
 
     @staticmethod
-    def from_ir_annotation(ir_annotation: IRImageAnnotationBase) -> Sequence["ImageAnnotationResultABC"]:
+    def from_ir_annotation(ir_annotation: IRAnnotationBase) -> Sequence["KeyPointLabelsAnnotation"]:
         assert isinstance(ir_annotation, IRPoseImageAnnotation)
 
         ir_annotation = ir_annotation.normalized()

@@ -1,17 +1,46 @@
 import logging
 from collections import defaultdict
 from os import PathLike
-from typing import Sequence, List, Dict, Union, Optional
+from pathlib import Path
+from typing import Dict, List, Optional, Sequence, Union
 from zipfile import ZipFile
 
 import lxml.etree
 
+from dagshub_annotation_converter.features import ConverterFeatures
 from dagshub_annotation_converter.formats.cvat import annotation_parsers
 from dagshub_annotation_converter.formats.cvat.context import parse_image_tag
-from dagshub_annotation_converter.ir.image import IRImageAnnotationBase, IRBBoxImageAnnotation, IRPoseImageAnnotation
-from dagshub_annotation_converter.features import ConverterFeatures
+from dagshub_annotation_converter.formats.cvat.video import (
+    cvat_video_xml_to_string,
+    parse_video_meta,
+    parse_video_track,
+)
+from dagshub_annotation_converter.ir.image import IRBBoxImageAnnotation, IRImageAnnotationBase, IRPoseImageAnnotation
+from dagshub_annotation_converter.ir.video import IRVideoAnnotationTrack, IRVideoSequence
+from dagshub_annotation_converter.util.video import probe_video
 
 logger = logging.getLogger(__name__)
+
+CVATImageAnnotations = Dict[str, Sequence[IRImageAnnotationBase]]
+CVATVideoAnnotations = IRVideoSequence
+CVATAnnotations = Union[CVATImageAnnotations, CVATVideoAnnotations]
+
+
+def _resolve_video_name_for_export(
+    sequence: IRVideoSequence,
+    video_name: Optional[str],
+    video_file: Optional[Union[str, PathLike]],
+) -> str:
+    if video_name:
+        return video_name
+    if sequence.filename:
+        return Path(sequence.filename).name
+    if video_file is not None:
+        return Path(video_file).name
+    raise ValueError(
+        "Cannot determine video name for CVAT video export. "
+        "Provide video_name explicitly, set sequence.filename, or provide video_file."
+    )
 
 
 def parse_image_annotations(img: lxml.etree.ElementBase) -> Sequence[IRImageAnnotationBase]:
@@ -88,25 +117,316 @@ def _maybe_group_poses(annotations: List[IRImageAnnotationBase]) -> List[IRImage
     return res
 
 
-def load_cvat_from_xml_string(
-    xml_text: bytes,
-) -> Dict[str, Sequence[IRImageAnnotationBase]]:
-    annotations = {}
-    root_elem = lxml.etree.XML(xml_text)
+def _detect_cvat_mode(root_elem: lxml.etree.ElementBase) -> str:
+    """Detect CVAT annotation mode: returns ``"image"`` or ``"video"``."""
+    mode_elem = root_elem.find(".//meta/task/mode")
+    if mode_elem is not None and mode_elem.text:
+        if mode_elem.text == "interpolation":
+            return "video"
+        if mode_elem.text == "annotation":
+            return "image"
 
+    has_tracks = len(root_elem.findall(".//track")) > 0
+    has_images = len(root_elem.findall(".//image")) > 0
+
+    if has_tracks and not has_images:
+        return "video"
+    if has_images and not has_tracks:
+        return "image"
+    if has_tracks and has_images:
+        logger.warning("CVAT XML contains both <track> and <image> elements, treating as video mode")
+        return "video"
+    return "image"
+
+
+def _parse_cvat_images(root_elem: lxml.etree.ElementBase) -> CVATImageAnnotations:
+    annotations: CVATImageAnnotations = {}
     for image_node in root_elem.xpath("//image"):
         image_info = parse_image_tag(image_node)
         annotations[image_info.name] = parse_image_annotations(image_node)
-
     return annotations
 
 
-def load_cvat_from_xml_file(xml_file: Union[str, PathLike]) -> Dict[str, Sequence[IRImageAnnotationBase]]:
+def _parse_cvat_videos(
+    root_elem: lxml.etree.ElementBase,
+    image_width: Optional[int],
+    image_height: Optional[int],
+) -> CVATVideoAnnotations:
+    seq_length: Optional[int] = None
+    source_name: Optional[str] = None
+    meta_elem = root_elem.find("meta")
+    if meta_elem is not None:
+        meta_width, meta_height, seq_length = parse_video_meta(meta_elem)
+        if image_width is None:
+            image_width = meta_width
+        if image_height is None:
+            image_height = meta_height
+        source_elem = meta_elem.find(".//task/source")
+        if source_elem is not None and source_elem.text:
+            source_name = source_elem.text
+
+    if image_width is None or image_height is None:
+        missing = []
+        if image_width is None:
+            missing.append("image_width")
+        if image_height is None:
+            missing.append("image_height")
+        raise ValueError(
+            f"Cannot determine frame dimensions for CVAT video annotations.\n"
+            f"Missing: {', '.join(missing)}.\n"
+            f"Pass {', '.join(missing)} to load_cvat_from_xml_bytes / load_cvat_from_xml_file / load_cvat_from_zip."
+        )
+
+    tracks: List[IRVideoAnnotationTrack] = []
+    for track_elem in root_elem.findall(".//track"):
+        tracks.append(parse_video_track(track_elem, image_width, image_height))
+
+    sequence = IRVideoSequence(
+        tracks=tracks,
+        filename=source_name,
+        sequence_length=seq_length,
+        video_width=image_width,
+        video_height=image_height,
+    )
+    if source_name is not None:
+        for _, ann in sequence.iter_track_annotations():
+            if ann.filename is None:
+                ann.filename = source_name
+    return sequence
+
+
+def load_cvat_from_xml_bytes(
+    xml_bytes: bytes,
+    image_width: Optional[int] = None,
+    image_height: Optional[int] = None,
+) -> CVATAnnotations:
+    """Load CVAT annotations from XML string, auto-detecting image or video mode."""
+    root_elem = lxml.etree.XML(xml_bytes)
+    mode = _detect_cvat_mode(root_elem)
+
+    if mode == "video":
+        return _parse_cvat_videos(root_elem, image_width, image_height)
+    else:
+        return _parse_cvat_images(root_elem)
+
+
+def load_cvat_from_xml_file(
+    xml_file: Union[str, PathLike],
+    image_width: Optional[int] = None,
+    image_height: Optional[int] = None,
+) -> CVATAnnotations:
+    """Load CVAT annotations from XML file, auto-detecting image or video mode."""
     with open(xml_file, "rb") as f:
-        return load_cvat_from_xml_string(f.read())
+        return load_cvat_from_xml_bytes(f.read(), image_width, image_height)
 
 
-def load_cvat_from_zip(zip_path: Union[str, PathLike]) -> Dict[str, Sequence[IRImageAnnotationBase]]:
+def load_cvat_from_zip(
+    zip_path: Union[str, PathLike],
+    image_width: Optional[int] = None,
+    image_height: Optional[int] = None,
+) -> CVATAnnotations:
+    """Load CVAT annotations from ZIP archive, auto-detecting image or video mode."""
     with ZipFile(zip_path) as proj_zip:
         with proj_zip.open("annotations.xml") as f:
-            return load_cvat_from_xml_string(f.read())
+            return load_cvat_from_xml_bytes(f.read(), image_width, image_height)
+
+
+def load_cvat_from_fs(
+    import_dir: Union[str, PathLike],
+    image_width: Optional[int] = None,
+    image_height: Optional[int] = None,
+) -> Dict[str, CVATAnnotations]:
+    """Load CVAT annotations from all XML/ZIP files in a directory and all subfolders."""
+    import_dir = Path(import_dir)
+    results: Dict[str, CVATAnnotations] = {}
+
+    for xml_path in sorted(import_dir.rglob("*.xml")):
+        rel = str(xml_path.relative_to(import_dir))
+        try:
+            results[rel] = load_cvat_from_xml_file(xml_path, image_width, image_height)
+        except Exception as e:
+            logger.warning("Skipping %s: failed to parse as CVAT XML: %s", rel, e)
+
+    for zip_path in sorted(import_dir.rglob("*.zip")):
+        rel = str(zip_path.relative_to(import_dir))
+        try:
+            results[rel] = load_cvat_from_zip(zip_path, image_width, image_height)
+        except Exception as e:
+            logger.warning("Skipping %s: failed to parse as CVAT ZIP: %s", rel, e)
+
+    return results
+
+
+def export_cvat_video_to_xml_bytes(
+    sequence: IRVideoSequence,
+    video_name: Optional[str] = None,
+    image_width: Optional[int] = None,
+    image_height: Optional[int] = None,
+    seq_length: Optional[int] = None,
+    video_file: Optional[Union[str, PathLike]] = None,
+) -> bytes:
+    """Export video annotations to CVAT XML bytes, resolving dimensions from args/sequence/video_file."""
+    resolved_video_name = _resolve_video_name_for_export(sequence, video_name, video_file)
+
+    resolved_width = image_width if image_width is not None and image_width > 0 else sequence.resolved_video_width()
+    resolved_height = image_height if image_height is not None and image_height > 0 \
+        else sequence.resolved_video_height()
+
+    if seq_length is None:
+        seq_length = sequence.sequence_length
+
+    # Probe video before falling back to annotation coverage — probed frame count
+    # reflects the actual video length, not just how far annotations reach.
+    if ((resolved_width is None or resolved_height is None) or seq_length is None) and video_file is not None:
+        try:
+            probe = probe_video(Path(video_file))
+            if resolved_width is None:
+                resolved_width = probe.width
+            if resolved_height is None:
+                resolved_height = probe.height
+            if seq_length is None and probe.frame_count > 0:
+                seq_length = probe.frame_count
+        except (ImportError, ValueError) as e:
+            logger.warning(f"Could not probe video from {video_file}: {e}")
+
+    if seq_length is None:
+        seq_length = sequence.resolved_sequence_length()
+
+    if resolved_width is None or resolved_height is None:
+        raise ValueError(
+            "Cannot determine frame dimensions for CVAT video export. "
+            "Provide image_width/image_height, use annotations with valid dimensions, "
+            "or provide video_file for probing."
+        )
+
+    prepared_sequence = sequence.model_copy(deep=True)
+    prepared_sequence.video_width = resolved_width
+    prepared_sequence.video_height = resolved_height
+    if seq_length is not None and seq_length > 0:
+        prepared_sequence.sequence_length = seq_length
+
+    prepared_sequence.fill_annotation_dimensions(resolved_width, resolved_height)
+
+    return cvat_video_xml_to_string(
+        prepared_sequence,
+        resolved_video_name,
+        resolved_width,
+        resolved_height,
+        seq_length,
+    )
+
+
+def export_cvat_video_to_file(
+    sequence: IRVideoSequence,
+    output_path: Union[str, PathLike],
+    video_name: Optional[str] = None,
+    image_width: Optional[int] = None,
+    image_height: Optional[int] = None,
+    seq_length: Optional[int] = None,
+    video_file: Optional[Union[str, PathLike]] = None,
+) -> Path:
+    """Export video annotations to a CVAT XML file."""
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    xml_content = export_cvat_video_to_xml_bytes(
+        sequence,
+        video_name,
+        image_width,
+        image_height,
+        seq_length,
+        video_file,
+    )
+
+    with open(output_path, "wb") as f:
+        f.write(xml_content)
+
+    logger.info(f"Exported {len(sequence.tracks)} CVAT video tracks to {output_path}")
+    return output_path
+
+
+def export_cvat_video_to_zip(
+    sequence: IRVideoSequence,
+    output_path: Union[str, PathLike],
+    video_name: Optional[str] = None,
+    image_width: Optional[int] = None,
+    image_height: Optional[int] = None,
+    seq_length: Optional[int] = None,
+    video_file: Optional[Union[str, PathLike]] = None,
+) -> Path:
+    """Export video annotations to a CVAT-compatible ZIP containing ``annotations.xml``."""
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with ZipFile(output_path, "w") as z:
+        xml_content = export_cvat_video_to_xml_bytes(
+            sequence,
+            video_name,
+            image_width,
+            image_height,
+            seq_length,
+            video_file,
+        )
+        z.writestr("annotations.xml", xml_content)
+
+    logger.info(f"Exported CVAT video annotations to {output_path}")
+    return output_path
+
+
+def export_cvat_videos_to_zips(
+    sequences: Sequence[IRVideoSequence],
+    output_dir: Union[str, PathLike],
+    image_width: Optional[int] = None,
+    image_height: Optional[int] = None,
+    seq_length: Optional[int] = None,
+    video_files: Optional[Dict[str, Union[str, PathLike]]] = None,
+) -> List[Path]:
+    """Export one CVAT zip per video sequence."""
+
+    def resolve_video_file(video_name: str) -> Optional[Union[str, PathLike]]:
+        if video_files is None:
+            return None
+        if video_name in video_files:
+            return video_files[video_name]
+        video_stem = Path(video_name).stem
+        if video_stem in video_files:
+            return video_files[video_stem]
+        video_basename = Path(video_name).name
+        if video_basename in video_files:
+            return video_files[video_basename]
+        for key, value in video_files.items():
+            key_path = Path(key)
+            if key_path.name == video_name or key_path.name == video_basename:
+                return value
+            if key_path.stem == video_stem:
+                return value
+        return None
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    outputs: List[Path] = []
+    for sequence in sequences:
+        if not sequence.filename:
+            raise ValueError(
+                "Cannot determine video name for CVAT multi-export. "
+                "Each sequence must have sequence.filename set."
+            )
+        video_name = Path(sequence.filename).name
+        zip_name = f"{video_name}.zip"
+        output_path = output_dir / zip_name
+        try:
+            export_cvat_video_to_zip(
+                sequence,
+                output_path,
+                video_name=video_name,
+                image_width=image_width,
+                image_height=image_height,
+                seq_length=seq_length,
+                video_file=resolve_video_file(video_name),
+            )
+        except Exception:
+            logger.warning("Failed to export sequence %s", sequence.filename)
+            raise
+        outputs.append(output_path)
+    return outputs
