@@ -177,7 +177,7 @@
       </points>
       <points label="2" source="manual" outside="0" occluded="0" points="969.80,406.69">
       </points>
-      <points label="1" source="manual" outside="0" occluded="0" points="797.51,449.77">
+      <points label="1" source="manual" outside="0" occluded="1" points="797.51,449.77">
       </points>
       <points label="7" source="manual" outside="0" occluded="0" points="966.08,497.59">
       </points>

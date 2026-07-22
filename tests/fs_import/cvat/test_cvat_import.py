@@ -1,6 +1,12 @@
 from pathlib import Path
 
 from dagshub_annotation_converter.converters.cvat import load_cvat_from_xml_file
+from dagshub_annotation_converter.formats.label_studio.task import (
+    LabelStudioTask,
+    parse_ls_task,
+)
+from dagshub_annotation_converter.formats.yolo.context import YoloContext
+from dagshub_annotation_converter.formats.yolo.pose import export_pose
 from dagshub_annotation_converter.ir.image import (
     IRBBoxImageAnnotation,
     IRSegmentationImageAnnotation,
@@ -33,3 +39,27 @@ def test_cvat_import():
     actual_annotations = [[type(ann) for ann in annotations[file]] for file in expected_files]
 
     assert expected_annotations == actual_annotations
+
+
+def test_cvat_occluded_pose_point_survives_label_studio_to_yolo():
+    annotation_file = Path(__file__).parent / "annotations.xml"
+    annotations = load_cvat_from_xml_file(annotation_file)
+
+    assert isinstance(annotations, dict)
+    [cvat_pose] = annotations["004.png"]
+    assert isinstance(cvat_pose, IRPoseImageAnnotation)
+    assert cvat_pose.points[0].visible is False
+
+    label_studio_task = LabelStudioTask.from_ir_annotations([cvat_pose])
+    parsed_task = parse_ls_task(label_studio_task.model_dump_json())
+    [round_tripped_pose] = parsed_task.to_ir_annotations()
+
+    assert isinstance(round_tripped_pose, IRPoseImageAnnotation)
+    assert round_tripped_pose.points[0].visible is False
+
+    yolo_context = YoloContext(annotation_type="pose")
+    yolo_context.categories.add(name="Yoda")
+    yolo_annotation = export_pose(round_tripped_pose, yolo_context)
+    visibility_values = yolo_annotation.split()[7::3]
+
+    assert visibility_values == ["0", "1", "1", "1", "1", "1", "1"]
