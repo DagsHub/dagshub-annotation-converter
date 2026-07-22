@@ -347,6 +347,30 @@ def test_add_single_keypoint():
     assert kp.value.keypointlabels == ["cat"]
 
 
+def test_keypoint_visibility_round_trip():
+    task = LabelStudioTask.from_ir_annotations(
+        [
+            IRPoseImageAnnotation.from_points(
+                image_height=200,
+                image_width=200,
+                categories={"person": 1.0},
+                coordinate_style=CoordinateStyle.NORMALIZED,
+                points=[
+                    IRPosePoint(x=0.25, y=0.25, visible=True),
+                    IRPosePoint(x=0.50, y=0.50, visible=False),
+                    IRPosePoint(x=0.75, y=0.75, visible=None),
+                ],
+            )
+        ]
+    )
+
+    parsed_task = parse_ls_task(task.model_dump_json())
+    [round_tripped_pose] = parsed_task.to_ir_annotations()
+
+    assert isinstance(round_tripped_pose, IRPoseImageAnnotation)
+    assert [point.visible for point in round_tripped_pose.points] == [True, False, None]
+
+
 def test_round_trip_with_pose_and_single_keypoint():
     # Task contains: Pose with 3 keypoints and a bounding box, and a single keypoint
     ls_task = {
