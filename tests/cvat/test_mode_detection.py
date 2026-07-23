@@ -14,3 +14,17 @@ def test_image_elements_override_interpolation_metadata():
     )
 
     assert _detect_cvat_mode(root) == "image"
+
+
+def test_ambiguous_structure_preserves_metadata_behavior():
+    root = lxml.etree.XML(
+        b"""
+        <annotations>
+          <meta><task><mode>annotation</mode></task></meta>
+          <image id="0" name="frame.jpg" width="100" height="100" />
+          <track id="0" label="object" />
+        </annotations>
+        """
+    )
+
+    assert _detect_cvat_mode(root) == "image"
