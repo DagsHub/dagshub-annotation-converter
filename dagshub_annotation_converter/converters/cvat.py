@@ -118,14 +118,7 @@ def _maybe_group_poses(annotations: List[IRImageAnnotationBase]) -> List[IRImage
 
 
 def _detect_cvat_mode(root_elem: lxml.etree.ElementBase) -> str:
-    """Detect CVAT annotation mode: returns ``"image"`` or ``"video"``."""
-    mode_elem = root_elem.find(".//meta/task/mode")
-    if mode_elem is not None and mode_elem.text:
-        if mode_elem.text == "interpolation":
-            return "video"
-        if mode_elem.text == "annotation":
-            return "image"
-
+    """Detect CVAT mode from unambiguous structure, falling back to task metadata."""
     has_tracks = len(root_elem.findall(".//track")) > 0
     has_images = len(root_elem.findall(".//image")) > 0
 
@@ -133,6 +126,14 @@ def _detect_cvat_mode(root_elem: lxml.etree.ElementBase) -> str:
         return "video"
     if has_images and not has_tracks:
         return "image"
+
+    mode_elem = root_elem.find(".//meta/task/mode")
+    if mode_elem is not None and mode_elem.text:
+        if mode_elem.text == "interpolation":
+            return "video"
+        if mode_elem.text == "annotation":
+            return "image"
+
     if has_tracks and has_images:
         logger.warning("CVAT XML contains both <track> and <image> elements, treating as video mode")
         return "video"

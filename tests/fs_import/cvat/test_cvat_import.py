@@ -41,6 +41,25 @@ def test_cvat_import():
     assert expected_annotations == actual_annotations
 
 
+def test_cvat_image_export_with_interpolation_metadata_imports_as_file_mapping(tmp_path):
+    annotation_file = tmp_path / "annotations.xml"
+    annotation_file.write_text(
+        """<?xml version="1.0" encoding="utf-8"?>
+<annotations>
+  <version>1.1</version>
+  <meta><task><mode>interpolation</mode></task></meta>
+  <image id="0" name="frames/000001.jpg" width="1920" height="1080" />
+</annotations>
+"""
+    )
+
+    annotations = load_cvat_from_xml_file(annotation_file)
+
+    # The Data Engine importer consumes image annotations via Mapping.items().
+    assert isinstance(annotations, dict)
+    assert list(annotations.items()) == [("frames/000001.jpg", [])]
+
+
 def test_cvat_occluded_pose_point_survives_label_studio_to_yolo():
     annotation_file = Path(__file__).parent / "annotations.xml"
     annotations = load_cvat_from_xml_file(annotation_file)
