@@ -18,14 +18,14 @@ pip install dagshub-annotation-converter
 ## Importers (Images and Video):
 - YOLO [BBox](https://docs.ultralytics.com/datasets/detect/), [Segmentation](https://docs.ultralytics.com/datasets/segment/) and [Poses](https://docs.ultralytics.com/datasets/pose/): [`load_yolo_from_fs`](dagshub_annotation_converter/converters/yolo.py)
 - COCO [BBox Object Detection and Stuff Segmentation](https://cocodataset.org/#format-data): [`load_coco_from_file`](dagshub_annotation_converter/converters/coco.py)
-- [Label Studio](https://labelstud.io/guide/task_format): [`parse_ls_task`](dagshub_annotation_converter/formats/label_studio/task.py) (Only reading JSON tasks from the filesystem is implemented, importing from a project is left up to user):
+- [Label Studio](https://labelstud.io/guide/task_format) (BBox, Polygons, Keypoints, Ellipses, Brush masks, Video BBox): [`parse_ls_task`](dagshub_annotation_converter/formats/label_studio/task.py) (Only reading JSON tasks from the filesystem is implemented, importing from a project is left up to user):
 ```python
 from dagshub_annotation_converter.formats.label_studio.task import LabelStudioTask
 task_obj = LabelStudioTask.from_json("path/to/label_studio_task.json")
 
 annotations = task_obj.to_ir_annotations()
 ```
-- [CVAT for image (BBox, Segmentation, Poses) and video (BBox)](https://docs.cvat.ai/docs/dataset_management/formats/format-cvat/): [`load_cvat_from_zip`](dagshub_annotation_converter/converters/cvat.py)
+- [CVAT for image (BBox, Segmentation, Poses, Masks) and video (BBox)](https://docs.cvat.ai/docs/dataset_management/formats/format-cvat/): [`load_cvat_from_zip`](dagshub_annotation_converter/converters/cvat.py)
 - [MOT (Video BBox)](https://motchallenge.net) - [`load_mot_from_dir`](dagshub_annotation_converter/converters/mot.py)
 
 ## Exporters (Images and Video):

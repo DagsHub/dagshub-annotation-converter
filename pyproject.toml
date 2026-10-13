@@ -30,6 +30,7 @@ dependencies = [
   "pyyaml",
   "typing_extensions",
   "pandas",
+  "numpy",
   "pillow",
   "lxml",
 ]
