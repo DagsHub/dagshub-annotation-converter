@@ -18,7 +18,7 @@ from dagshub_annotation_converter.ir.image import (
     CoordinateStyle,
     IRBBoxImageAnnotation,
     IREllipseImageAnnotation,
-    IRMaskImageAnnotation,
+    IRBinaryMaskImageAnnotation,
     IRPoseImageAnnotation,
     IRPosePoint,
     IRSegmentationImageAnnotation,
@@ -42,7 +42,7 @@ ir_annotation_lookup: Dict[Type[Any], Type[AnnotationResultABC]] = {
     IRBBoxImageAnnotation: RectangleLabelsAnnotation,
     IRSegmentationImageAnnotation: PolygonLabelsAnnotation,
     IREllipseImageAnnotation: EllipseLabelsAnnotation,
-    IRMaskImageAnnotation: BrushLabelsAnnotation,
+    IRBinaryMaskImageAnnotation: BrushLabelsAnnotation,
     IRVideoAnnotationTrack: VideoRectangleAnnotation,
 }
 

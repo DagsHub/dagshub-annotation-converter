@@ -7,11 +7,11 @@ from dagshub_annotation_converter.ir.image.annotations.base import IRImageAnnota
 from dagshub_annotation_converter.ir.image.common import CoordinateStyle
 
 
-class IRMaskImageAnnotation(IRImageAnnotationBase):
+class IRBinaryMaskImageAnnotation(IRImageAnnotationBase):
     """
-    Pixel mask that covers the whole image.
+    Binary pixel mask that covers the whole image. Each pixel is either in the mask or not.
 
-    The mask is stored as run lengths over the image pixels in row-major order.
+    The mask is stored as uncompressed run-length encoding (RLE) over the image pixels in row-major order.
     The first run is background, then the runs alternate between foreground and background.
     The first run can be 0 if the mask starts with a foreground pixel.
 
@@ -19,12 +19,12 @@ class IRMaskImageAnnotation(IRImageAnnotationBase):
 
         mask:    0 1 1
                  1 0 0
-        counts:  [1, 3, 2]
+        rle:     [1, 3, 2]
 
     The mask is always in pixels of the image, so normalization does not change it.
     """
 
-    counts: List[int] = []
+    rle: List[int] = []
 
     def _normalize(self):
         pass
@@ -35,13 +35,13 @@ class IRMaskImageAnnotation(IRImageAnnotationBase):
     def to_mask(self) -> np.ndarray:
         """Returns the mask as a boolean array with the shape (image_height, image_width)."""
         total = self.image_width * self.image_height
-        if sum(self.counts) != total:
+        if sum(self.rle) != total:
             raise ValueError(
-                f"Mask run lengths add up to {sum(self.counts)} pixels, "
+                f"Mask run lengths add up to {sum(self.rle)} pixels, "
                 f"but the image has {total} pixels ({self.image_width}x{self.image_height})"
             )
-        values = np.arange(len(self.counts)) % 2 == 1
-        return np.repeat(values, self.counts).reshape(self.image_height, self.image_width)
+        values = np.arange(len(self.rle)) % 2 == 1
+        return np.repeat(values, self.rle).reshape(self.image_height, self.image_width)
 
     @classmethod
     def from_mask(cls, mask: np.ndarray, **kwargs) -> Self:
@@ -57,19 +57,19 @@ class IRMaskImageAnnotation(IRImageAnnotationBase):
         return cls(
             image_height=mask.shape[0],
             image_width=mask.shape[1],
-            counts=mask_to_counts(mask),
+            rle=mask_to_rle(mask),
             **kwargs,
         )
 
 
-def mask_to_counts(mask: np.ndarray) -> List[int]:
-    """Encodes a mask to run lengths in the format of ``IRMaskImageAnnotation.counts``."""
+def mask_to_rle(mask: np.ndarray) -> List[int]:
+    """Encodes a mask to run lengths in the format of ``IRBinaryMaskImageAnnotation.rle``."""
     flat = mask.ravel() != 0
     if flat.size == 0:
         return []
     change_points = np.flatnonzero(flat[1:] != flat[:-1]) + 1
     boundaries = np.concatenate(([0], change_points, [flat.size]))
-    counts = np.diff(boundaries).tolist()
+    rle = np.diff(boundaries).tolist()
     if flat[0]:
-        counts.insert(0, 0)
-    return counts
+        rle.insert(0, 0)
+    return rle

@@ -4,10 +4,14 @@ import numpy as np
 
 from dagshub_annotation_converter.formats.label_studio.base import ImageAnnotationResultABC
 from dagshub_annotation_converter.ir.base import IRAnnotationBase
-from dagshub_annotation_converter.ir.image import CoordinateStyle, IRMaskImageAnnotation
+from dagshub_annotation_converter.ir.image import CoordinateStyle, IRBinaryMaskImageAnnotation
 from dagshub_annotation_converter.util.pydantic_util import ParentModel
 
-# Label Studio stores brush masks as an RGBA image, packed with the "rle-pack" bit format.
+# Label Studio stores a brush mask as an RGBA image of the full image size, packed with the "rle-pack" bit format.
+# The label color is not stored. Label Studio sets R = G = B = A, where A is the mask opacity (0-255).
+# Edges drawn in the Label Studio editor are anti-aliased, so A can be between 0 and 255.
+# We convert to a binary mask, where every pixel with A > 0 is in the mask.
+#
 # Layout of the packed bits:
 #
 #   header: 32 bits value count | 5 bits (word size - 1) | 4 x 4 bits (run size - 1)
@@ -34,11 +38,11 @@ class BrushLabelsAnnotation(ImageAnnotationResultABC):
     value: BrushLabelsAnnotationValue
     type: str = "brushlabels"
 
-    def to_ir_annotation(self) -> Sequence[IRMaskImageAnnotation]:
+    def to_ir_annotation(self) -> Sequence[IRBinaryMaskImageAnnotation]:
         if self.value.format != "rle":
             raise ValueError(f"Unsupported brush format {self.value.format}, only 'rle' is supported")
         mask = decode_ls_rle(self.value.rle, self.original_width, self.original_height)
-        res = IRMaskImageAnnotation.from_mask(
+        res = IRBinaryMaskImageAnnotation.from_mask(
             mask,
             categories={self.value.brushlabels[0]: 1.0},
             coordinate_style=CoordinateStyle.NORMALIZED,
@@ -49,7 +53,7 @@ class BrushLabelsAnnotation(ImageAnnotationResultABC):
 
     @staticmethod
     def from_ir_annotation(ir_annotation: IRAnnotationBase) -> Sequence["BrushLabelsAnnotation"]:
-        assert isinstance(ir_annotation, IRMaskImageAnnotation)
+        assert isinstance(ir_annotation, IRBinaryMaskImageAnnotation)
 
         category = ir_annotation.ensure_has_one_category()
 

@@ -4,10 +4,10 @@ import pytest
 
 from dagshub_annotation_converter.converters.cvat import load_cvat_from_xml_bytes
 from dagshub_annotation_converter.formats.cvat import parse_mask
-from dagshub_annotation_converter.ir.image import IRMaskImageAnnotation
+from dagshub_annotation_converter.ir.image import IRBinaryMaskImageAnnotation
 
 
-def _parse(mask_xml: str, width: int = 6, height: int = 4) -> IRMaskImageAnnotation:
+def _parse(mask_xml: str, width: int = 6, height: int = 4) -> IRBinaryMaskImageAnnotation:
     image = lxml.etree.fromstring(f'<image id="0" name="img.png" width="{width}" height="{height}">{mask_xml}</image>')
     return parse_mask(image[0], image)
 
@@ -61,6 +61,6 @@ def test_mask_loads_from_cvat_xml():
     assert len(actual["empty.png"]) == 0
     assert len(actual["masked.png"]) == 1
     ann = actual["masked.png"][0]
-    assert isinstance(ann, IRMaskImageAnnotation)
+    assert isinstance(ann, IRBinaryMaskImageAnnotation)
     assert ann.to_mask()[1:3, 1:3].tolist() == [[False, True], [False, True]]
     assert ann.to_mask().sum() == 2

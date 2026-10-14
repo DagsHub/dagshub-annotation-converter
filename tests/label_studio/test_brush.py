@@ -7,7 +7,7 @@ from dagshub_annotation_converter.formats.label_studio.brushlabels import (
     encode_ls_rle,
 )
 from dagshub_annotation_converter.formats.label_studio.task import LabelStudioTask, parse_ls_task
-from dagshub_annotation_converter.ir.image import CoordinateStyle, IRMaskImageAnnotation
+from dagshub_annotation_converter.ir.image import CoordinateStyle, IRBinaryMaskImageAnnotation
 from tests.label_studio.common import generate_annotation, generate_task
 
 # 2x2 mask [[1, 0], [0, 1]], encoded by label_studio_sdk.converter.brush.mask2rle
@@ -67,7 +67,7 @@ def test_brush_parsing_to_ir():
     actual = task.to_ir_annotations()
     assert len(actual) == 1
     ann = actual[0]
-    assert isinstance(ann, IRMaskImageAnnotation)
+    assert isinstance(ann, IRBinaryMaskImageAnnotation)
     assert ann.categories == {"dog": 1.0}
     assert ann.imported_id == "abc"
     assert (ann.to_mask() == MASK_2X2).all()
@@ -75,7 +75,7 @@ def test_brush_parsing_to_ir():
 
 def test_ir_to_brush_roundtrip():
     mask = _random_mask(20, 30)
-    ir = IRMaskImageAnnotation.from_mask(mask, categories={"dog": 1.0}, meta={"source": "manual"})
+    ir = IRBinaryMaskImageAnnotation.from_mask(mask, categories={"dog": 1.0}, meta={"source": "manual"})
 
     task = LabelStudioTask()
     task.add_ir_annotation(ir)
@@ -85,14 +85,14 @@ def test_ir_to_brush_roundtrip():
     assert ls_ann.value.brushlabels == ["dog"]
 
     actual = parse_ls_task(task.model_dump_json()).to_ir_annotations()[0]
-    assert isinstance(actual, IRMaskImageAnnotation)
+    assert isinstance(actual, IRBinaryMaskImageAnnotation)
     assert (actual.to_mask() == mask).all()
     assert actual.meta == {"source": "manual"}
 
 
 def test_mask_normalization_does_not_change_mask():
     mask = _random_mask(4, 5)
-    ir = IRMaskImageAnnotation.from_mask(mask, categories={"dog": 1.0})
+    ir = IRBinaryMaskImageAnnotation.from_mask(mask, categories={"dog": 1.0})
 
     normalized = ir.normalized()
     assert normalized.coordinate_style == CoordinateStyle.NORMALIZED
@@ -100,7 +100,7 @@ def test_mask_normalization_does_not_change_mask():
     assert (normalized.denormalized().to_mask() == mask).all()
 
 
-def test_mask_counts_start_with_background():
+def test_mask_rle_starts_with_background():
     mask = np.array([[1, 1, 0], [0, 0, 1]], dtype=bool)
-    ir = IRMaskImageAnnotation.from_mask(mask, categories={"dog": 1.0})
-    assert ir.counts == [0, 2, 3, 1]
+    ir = IRBinaryMaskImageAnnotation.from_mask(mask, categories={"dog": 1.0})
+    assert ir.rle == [0, 2, 3, 1]

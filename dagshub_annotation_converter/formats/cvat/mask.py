@@ -2,12 +2,12 @@ import numpy as np
 from lxml.etree import ElementBase
 
 from dagshub_annotation_converter.formats.cvat.context import parse_image_tag, parse_metadata
-from dagshub_annotation_converter.ir.image import IRMaskImageAnnotation
+from dagshub_annotation_converter.ir.image import IRBinaryMaskImageAnnotation
 
 _keys = {"label", "rle", "left", "top", "width", "height"}
 
 
-def parse_mask(elem: ElementBase, containing_image: ElementBase) -> IRMaskImageAnnotation:
+def parse_mask(elem: ElementBase, containing_image: ElementBase) -> IRBinaryMaskImageAnnotation:
     """
     Parses a CVAT ``<mask>`` (brush) annotation.
 
@@ -22,23 +22,23 @@ def parse_mask(elem: ElementBase, containing_image: ElementBase) -> IRMaskImageA
     top = int(elem.attrib["top"])
     box_width = int(elem.attrib["width"])
     box_height = int(elem.attrib["height"])
-    counts = [int(c) for c in str(elem.attrib["rle"]).split(",")]
+    rle = [int(c) for c in str(elem.attrib["rle"]).split(",")]
 
-    if sum(counts) != box_width * box_height:
+    if sum(rle) != box_width * box_height:
         raise ValueError(
-            f"CVAT mask on image {image_info.name} has RLE of {sum(counts)} pixels, "
+            f"CVAT mask on image {image_info.name} has RLE of {sum(rle)} pixels, "
             f"but its box is {box_width}x{box_height}"
         )
 
-    box_values = np.arange(len(counts)) % 2 == 1
-    box_mask = np.repeat(box_values, counts).reshape(box_height, box_width)
+    box_values = np.arange(len(rle)) % 2 == 1
+    box_mask = np.repeat(box_values, rle).reshape(box_height, box_width)
 
     mask = np.zeros((image_info.height, image_info.width), dtype=bool)
     # Clip the box to the image, in case CVAT exported a box that goes over the edge
     visible = mask[top : top + box_height, left : left + box_width]
     visible[:] = box_mask[: visible.shape[0], : visible.shape[1]]
 
-    return IRMaskImageAnnotation.from_mask(
+    return IRBinaryMaskImageAnnotation.from_mask(
         mask,
         categories={category: 1.0},
         filename=image_info.name,
