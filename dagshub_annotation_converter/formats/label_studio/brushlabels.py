@@ -41,6 +41,8 @@ class BrushLabelsAnnotation(ImageAnnotationResultABC):
     def to_ir_annotation(self) -> Sequence[IRBinaryMaskImageAnnotation]:
         if self.value.format != "rle":
             raise ValueError(f"Unsupported brush format {self.value.format}, only 'rle' is supported")
+        if not self.value.brushlabels:
+            raise ValueError(f"Brush annotation {self.id} has no label")
         mask = decode_ls_rle(self.value.rle, self.original_width, self.original_height)
         res = IRBinaryMaskImageAnnotation.from_mask(
             mask,

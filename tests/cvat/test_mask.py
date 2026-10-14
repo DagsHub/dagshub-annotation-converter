@@ -40,6 +40,25 @@ def test_mask_box_over_image_edge_is_clipped():
     assert (ann.to_mask() == expected).all()
 
 
+def test_mask_box_over_negative_origin_is_clipped():
+    # 3x3 box at (-1, -1), only its bottom-right 2x2 corner is inside the image:
+    #   0 0 0
+    #   0 1 0
+    #   0 0 1
+    ann = _parse('<mask label="cat" rle="4, 1, 3, 1" left="-1" top="-1" width="3" height="3"></mask>')
+
+    expected = np.zeros((4, 6), dtype=bool)
+    expected[0, 0] = True
+    expected[1, 1] = True
+    assert (ann.to_mask() == expected).all()
+
+
+@pytest.mark.parametrize("rle", ["-1, 5", "1, x, 3", "1,,3"])
+def test_mask_with_malformed_rle_raises(rle):
+    with pytest.raises(ValueError, match="img.png"):
+        _parse(f'<mask label="cat" rle="{rle}" left="0" top="0" width="2" height="2"></mask>')
+
+
 def test_mask_with_wrong_rle_length_raises():
     with pytest.raises(ValueError):
         _parse('<mask label="cat" rle="1, 2" left="0" top="0" width="2" height="2"></mask>')

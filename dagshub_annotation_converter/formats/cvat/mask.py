@@ -22,8 +22,13 @@ def parse_mask(elem: ElementBase, containing_image: ElementBase) -> IRBinaryMask
     top = int(elem.attrib["top"])
     box_width = int(elem.attrib["width"])
     box_height = int(elem.attrib["height"])
-    rle = [int(c) for c in str(elem.attrib["rle"]).split(",")]
+    try:
+        rle = [int(c) for c in str(elem.attrib["rle"]).split(",")]
+    except ValueError as e:
+        raise ValueError(f"CVAT mask on image {image_info.name} has a malformed RLE: {e}") from e
 
+    if any(run < 0 for run in rle):
+        raise ValueError(f"CVAT mask on image {image_info.name} has a negative RLE run")
     if sum(rle) != box_width * box_height:
         raise ValueError(
             f"CVAT mask on image {image_info.name} has RLE of {sum(rle)} pixels, "
@@ -35,8 +40,10 @@ def parse_mask(elem: ElementBase, containing_image: ElementBase) -> IRBinaryMask
 
     mask = np.zeros((image_info.height, image_info.width), dtype=bool)
     # Clip the box to the image, in case CVAT exported a box that goes over the edge
-    visible = mask[top : top + box_height, left : left + box_width]
-    visible[:] = box_mask[: visible.shape[0], : visible.shape[1]]
+    x0, y0 = max(left, 0), max(top, 0)
+    x1, y1 = min(left + box_width, image_info.width), min(top + box_height, image_info.height)
+    if x0 < x1 and y0 < y1:
+        mask[y0:y1, x0:x1] = box_mask[y0 - top : y1 - top, x0 - left : x1 - left]
 
     return IRBinaryMaskImageAnnotation.from_mask(
         mask,

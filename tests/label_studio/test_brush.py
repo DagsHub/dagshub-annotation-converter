@@ -73,6 +73,16 @@ def test_brush_parsing_to_ir():
     assert (ann.to_mask() == MASK_2X2).all()
 
 
+def test_brush_without_label_raises():
+    annotation = generate_annotation({"format": "rle", "rle": LS_RLE_2X2, "brushlabels": []}, "brushlabels", "abc")
+    annotation["original_width"] = 2
+    annotation["original_height"] = 2
+    task = parse_ls_task(generate_task([annotation]))
+
+    with pytest.raises(ValueError, match="no label"):
+        task.to_ir_annotations()
+
+
 def test_ir_to_brush_roundtrip():
     mask = _random_mask(20, 30)
     ir = IRBinaryMaskImageAnnotation.from_mask(mask, categories={"dog": 1.0}, meta={"source": "manual"})
