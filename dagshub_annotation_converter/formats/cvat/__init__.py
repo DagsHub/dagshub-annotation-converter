@@ -4,6 +4,7 @@ from lxml.etree import ElementBase
 
 from .box import parse_box
 from .ellipse import parse_ellipse
+from .mask import parse_mask
 from .polygon import parse_polygon
 from .points import parse_points
 from .skeleton import parse_skeleton
@@ -24,12 +25,14 @@ annotation_parsers: Dict[str, CVATParserFunction] = {
     "points": parse_points,
     "skeleton": parse_skeleton,
     "ellipse": parse_ellipse,
+    "mask": parse_mask,
 }
 
 __all__ = [
     "annotation_parsers",
     parse_box.__name__,
     parse_ellipse.__name__,
+    parse_mask.__name__,
     parse_polygon.__name__,
     parse_points.__name__,
     parse_skeleton.__name__,

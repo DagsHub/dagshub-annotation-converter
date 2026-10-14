@@ -8,6 +8,7 @@ from pydantic import BeforeValidator, Field, SerializeAsAny
 from typing_extensions import Annotated, Self
 
 from dagshub_annotation_converter.formats.label_studio.base import AnnotationResultABC, IRTaskAnnotation
+from dagshub_annotation_converter.formats.label_studio.brushlabels import BrushLabelsAnnotation
 from dagshub_annotation_converter.formats.label_studio.ellipselabels import EllipseLabelsAnnotation
 from dagshub_annotation_converter.formats.label_studio.keypointlabels import KeyPointLabelsAnnotation
 from dagshub_annotation_converter.formats.label_studio.polygonlabels import PolygonLabelsAnnotation
@@ -17,6 +18,7 @@ from dagshub_annotation_converter.ir.image import (
     CoordinateStyle,
     IRBBoxImageAnnotation,
     IREllipseImageAnnotation,
+    IRBinaryMaskImageAnnotation,
     IRPoseImageAnnotation,
     IRPosePoint,
     IRSegmentationImageAnnotation,
@@ -31,6 +33,7 @@ task_lookup: Dict[str, Type[AnnotationResultABC]] = {
     "rectanglelabels": RectangleLabelsAnnotation,
     "keypointlabels": KeyPointLabelsAnnotation,
     "ellipselabels": EllipseLabelsAnnotation,
+    "brushlabels": BrushLabelsAnnotation,
     "videorectangle": VideoRectangleAnnotation,
 }
 
@@ -39,6 +42,7 @@ ir_annotation_lookup: Dict[Type[Any], Type[AnnotationResultABC]] = {
     IRBBoxImageAnnotation: RectangleLabelsAnnotation,
     IRSegmentationImageAnnotation: PolygonLabelsAnnotation,
     IREllipseImageAnnotation: EllipseLabelsAnnotation,
+    IRBinaryMaskImageAnnotation: BrushLabelsAnnotation,
     IRVideoAnnotationTrack: VideoRectangleAnnotation,
 }
 
