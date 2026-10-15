@@ -80,15 +80,16 @@ def encode_ls_rle(mask: np.ndarray) -> List[int]:
     bits: List[str] = [f"{num_values:032b}", f"{_WORD_SIZE - 1:05b}"]
     bits.extend(f"{size - 1:04b}" for size in _RUN_SIZES)
 
+    # We only write run blocks, never literal blocks.
+    # Label Studio encodes with @thi.ng/rle-pack `encode` (https://github.com/thi-ng/umbrella/tree/develop/packages/rle-pack),
+    # which writes literal blocks for values that do not repeat.
+    # We don't need them: every pixel is 4 equal channel values, so every run is at least 4 values long.
+    # A run block can also hold a run of 1, so the output is still valid if that ever changes.
     max_run = 2 ** _RUN_SIZES[-1]
     for value, length in _runs(flat):
         while length > 0:
             chunk = min(length, max_run)
             length -= chunk
-            if chunk == 1:
-                # Literal block (0) with run size index 0 and a length of one value
-                bits.append(f"0{0:02b}{0:0{_RUN_SIZES[0]}b}{value:0{_WORD_SIZE}b}")
-                continue
             size_index = next(i for i, size in enumerate(_RUN_SIZES) if chunk <= 2**size)
             size = _RUN_SIZES[size_index]
             bits.append(f"1{size_index:02b}{chunk - 1:0{size}b}{value:0{_WORD_SIZE}b}")
